@@ -1,6 +1,6 @@
 standard = "1993"
 
-preferred_case = "UPPER"
+preferred_case = "lower"
 
 ### project code
 [libraries.project]
