@@ -25,7 +25,7 @@ BEGIN
     -- video only when we are within the visible area
     vga_s.video_on <= vga_s.video_on_h AND vga_s.video_on_v;
 
-    PROCESS(clock_25MHz)
+    vga_controller: PROCESS (clock_25MHz)
     BEGIN
         IF RISING_EDGE(clock_25MHz) THEN
             -- horizontal sync
@@ -72,5 +72,5 @@ BEGIN
             hsync <= vga_s.hsync;
             vsync <= vga_s.vsync;
         END IF;
-    END PROCESS;
+    END PROCESS vga_controller;
 END display;
