@@ -7,6 +7,10 @@ preferred_case = "lower"
 files = ["src/**/*.vhd"]
 is_third_party = false
 
+[libraries.project_config]
+files = ["project_config/**/*.vhd"]
+is_third_party = false
+
 ### linting rules
 [lint]
 unused = "error"
