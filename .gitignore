@@ -13,3 +13,6 @@ output_files/
 # ignore the .vscode directory, which contains user-specific settings
 .vscode/
 
+# ignore generated log files
+log/
+
