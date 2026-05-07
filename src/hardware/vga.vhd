@@ -5,7 +5,7 @@ LIBRARY PROJECT_CONFIG;
 USE PROJECT_CONFIG.TYPES.ALL;
 
 ENTITY vga IS
-    PORT(
+    PORT (
         clock_25MHz : IN STD_LOGIC;
         r_in        : IN STD_LOGIC;
         g_in        : IN STD_LOGIC;
