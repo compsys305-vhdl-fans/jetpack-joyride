@@ -16,3 +16,9 @@ output_files/
 # ignore generated log files
 log/
 
+# quartus files
+*.qpf
+*.qsf
+*.qws
+*.sopcinfo
+qar_info.json
