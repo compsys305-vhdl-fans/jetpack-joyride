@@ -15,6 +15,7 @@ ENTITY vga IS
         b_out       : OUT STD_LOGIC;
         hsync       : OUT STD_LOGIC;
         vsync       : OUT STD_LOGIC;
+        in_screen   : OUT STD_LOGIC;
         screen      : OUT SCREEN
     );
 END vga;
@@ -26,6 +27,7 @@ BEGIN
     vga_s.video_on <= vga_s.video_on_h AND vga_s.video_on_v;
 
     vga_controller: PROCESS (clock_25MHz)
+        VARIABLE req_on : STD_LOGIC;
     BEGIN
         IF RISING_EDGE(clock_25MHz) THEN
             -- horizontal sync
@@ -50,6 +52,12 @@ BEGIN
                 END IF;
             END IF;
 
+            IF (vga_s.pixel_y <= 491) AND (vga_s.pixel_y >= 490) THEN
+                vga_s.vsync <= '0';
+            ELSE
+                vga_s.vsync <= '1';
+            END IF;
+
             -- generate video on/off signals
             IF (vga_s.pixel_x <= 639) THEN
                 vga_s.video_on_h <= '1';
@@ -64,6 +72,14 @@ BEGIN
             ELSE
                 vga_s.video_on_v <= '0';
             END IF;
+
+            -- Whether the *requested* pixel position is within the visible screen.
+            IF (vga_s.pixel_x <= 639) AND (vga_s.pixel_y <= 479) THEN
+                req_on := '1';
+            ELSE
+                req_on := '0';
+            END IF;
+            in_screen <= req_on;
 
             -- drive display outputs
             r_out <= r_in AND vga_s.video_on;
