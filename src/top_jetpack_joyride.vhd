@@ -63,7 +63,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     -- lfsr signals
     SIGNAL lfsr_reset : STD_LOGIC := '0';
     SIGNAL random_num : STD_LOGIC_VECTOR(19 DOWNTO 0);
-    
+
 BEGIN
     -- placeholder; we should have port maps and stuff, but ideally no logic here (apart from logic inversion for active-low buttons and stuff)
     mouse_inst: mouse port map(
