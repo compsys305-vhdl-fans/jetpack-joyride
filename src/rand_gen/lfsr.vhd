@@ -35,7 +35,7 @@ BEGIN
             load_prev <= load;
             IF load = '1' and load_prev = '0' THEN
                 seed := mouse_x & mouse_y;
-                IF seed = (OTHERS => '0') THEN
+                IF seed = x"00000" THEN
                     lfsr_s <= x"DEAD" & "0000";  -- avoid all-zero state
                 ELSE
                     lfsr_s <= seed;
