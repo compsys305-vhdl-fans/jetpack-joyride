@@ -21,6 +21,7 @@ END ENTITY lfsr;
 
 ARCHITECTURE galois of lfsr IS
     SIGNAL lfsr_s : STD_LOGIC_VECTOR(19 DOWNTO 0) := x"DEAD" & "0000";
+    SIGNAL load_prev : STD_LOGIC := '0';
 BEGIN
     lfsr_process: PROCESS (clock, reset)
         VARIABLE fb : STD_LOGIC;
@@ -29,8 +30,10 @@ BEGIN
     BEGIN
         IF reset = '1' THEN
             lfsr_s <= x"DEAD" & "0000";
+            load_prev <= '0';
         ELSIF RISING_EDGE(clock) THEN
-            IF load = '1' THEN
+            load_prev <= load;
+            IF load = '1' and load_prev = '0' THEN
                 seed := mouse_x & mouse_y;
                 IF seed = (OTHERS => '0') THEN
                     lfsr_s <= x"DEAD" & "0000";  -- avoid all-zero state
