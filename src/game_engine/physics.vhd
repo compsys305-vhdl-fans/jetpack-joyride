@@ -47,7 +47,7 @@ ARCHITECTURE behaviour OF physics IS
     CONSTANT PLAYER_MIN_Y_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := "1111110000"; -- -16 pixels/frame
     CONSTANT PLAYER_MAX_Y_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := "0000010000"; -- +16 pixels/frame
 
-    CONSTANT PB_FLAP_BOOST : STD_LOGIC_VECTOR(9 DOWNTO 0) := "0000001000";  -- the amount of speed that each flap of the profit bird
+    CONSTANT PB_FLAP_BOOST : STD_LOGIC_VECTOR(9 DOWNTO 0) := "0000001000";  -- upward speed magnitude added by each profit bird flap
 
     SIGNAL player_y_pos : STD_LOGIC_VECTOR(9 DOWNTO 0) := (OTHERS => '0');
     SIGNAL player_y_speed : STD_LOGIC_VECTOR(9 DOWNTO 0) := (OTHERS => '0');
@@ -80,7 +80,7 @@ BEGIN
                         NULL;
                     WHEN "10" =>  -- profit bird
                         IF mouse_left = '1' AND mouse_left_prev = '0' THEN
-                            next_y_speed := PB_FLAP_BOOST;
+                            next_y_speed := "0000000000" - PB_FLAP_BOOST;
                         ELSE
                             next_y_speed := next_y_speed + PLAYER_Y_ACCELERATION;
                         END IF;
