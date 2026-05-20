@@ -44,11 +44,12 @@ ARCHITECTURE behaviour OF physics IS
     CONSTANT PLAYER_MIN_Y_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := "1111110000"; -- -16 pixels/frame
     CONSTANT PLAYER_MAX_Y_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := "0000010000"; -- +16 pixels/frame
 
-    CONSTANT LS_JUMP_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := "1111110100"; -- -12 pixels/frame
-    CONSTANT LS_THRUSTER_START_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := "1111111100"; -- -4 pixels/frame
+    CONSTANT LS_MIN_Y_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := "1111100100"; -- -28 pixels/frame
+    CONSTANT LS_JUMP_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := "1111100110"; -- -26 pixels/frame
+    CONSTANT LS_THRUSTER_START_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := "1111111000"; -- -8 pixels/frame
     CONSTANT LS_THRUSTER_ACCELERATION : STD_LOGIC_VECTOR(9 DOWNTO 0) := "0000000010";
     CONSTANT LS_GLIDE_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := "0000000011";
-    CONSTANT LS_THRUST_FRAMES : INTEGER := 10;
+    CONSTANT LS_THRUST_FRAMES : INTEGER := 6;
 
     CONSTANT PB_FLAP_BOOST : STD_LOGIC_VECTOR(9 DOWNTO 0) := "0000001100";  -- upward speed magnitude added by each profit bird flap (12)
 
@@ -91,7 +92,7 @@ BEGIN
                                 next_y_speed := LS_GLIDE_SPEED;
                                 next_ls_thrust := 0;
                             ELSIF next_ls_thrust > 0 AND next_y_speed >= LS_THRUSTER_START_SPEED THEN
-                                next_y_speed := next_y_speed - LS_THRUSTER_ACCELERATION;
+                                next_y_speed := next_y_speed + PLAYER_Y_ACCELERATION - LS_THRUSTER_ACCELERATION;
                                 next_ls_thrust := next_ls_thrust - 1;
                             ELSE
                                 next_y_speed := next_y_speed + PLAYER_Y_ACCELERATION;
@@ -112,9 +113,11 @@ BEGIN
                         NULL;
                 END CASE;
 
-                IF (next_y_speed < PLAYER_MIN_Y_SPEED) THEN
+                IF player_vehicle = "01" AND next_y_speed < LS_MIN_Y_SPEED THEN
+                    next_y_speed := LS_MIN_Y_SPEED;
+                ELSIF player_vehicle /= "01" AND next_y_speed < PLAYER_MIN_Y_SPEED THEN
                     next_y_speed := PLAYER_MIN_Y_SPEED;
-                ELSIF (next_y_speed > PLAYER_MAX_Y_SPEED) THEN
+                ELSIF next_y_speed > PLAYER_MAX_Y_SPEED THEN
                     next_y_speed := PLAYER_MAX_Y_SPEED;
                 END IF;
 
