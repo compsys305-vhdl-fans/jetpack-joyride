@@ -35,9 +35,6 @@ ARCHITECTURE behaviour OF physics IS
         -- 11: crazy freaking teleporter (cft) -> no gravity
             -- has a hologram in front of the player that moves up and down in a sinusoidal pattern, and the player can teleport to the hologram's position by clicking down.
             -- no holding mechanics
-    -- because of these different vehicles, there are some internal metrics that must be kept track of.
-    SIGNAL ls_thrust : INTEGER := 0;  -- how much thrust the lil stomper has left. max is 100, min is 0. when it reaches 0, the player will start falling at a reduced rate until they hit the ground, at which point the thrust will reset to 100.
-    
     -----------------------------------
     -- i need to add more stuff here --
     -----------------------------------
@@ -47,9 +44,16 @@ ARCHITECTURE behaviour OF physics IS
     CONSTANT PLAYER_MIN_Y_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := "1111110000"; -- -16 pixels/frame
     CONSTANT PLAYER_MAX_Y_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := "0000010000"; -- +16 pixels/frame
 
+    CONSTANT LS_JUMP_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := "1111110100"; -- -12 pixels/frame
+    CONSTANT LS_THRUSTER_START_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := "1111111100"; -- -4 pixels/frame
+    CONSTANT LS_THRUSTER_ACCELERATION : STD_LOGIC_VECTOR(9 DOWNTO 0) := "0000000010";
+    CONSTANT LS_GLIDE_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := "0000000011";
+    CONSTANT LS_THRUST_FRAMES : INTEGER := 10;
+
     CONSTANT PB_FLAP_BOOST : STD_LOGIC_VECTOR(9 DOWNTO 0) := "0000001100";  -- upward speed magnitude added by each profit bird flap (12)
 
-    SIGNAL player_y_pos : STD_LOGIC_VECTOR(9 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL ls_thrust : INTEGER RANGE 0 TO LS_THRUST_FRAMES := LS_THRUST_FRAMES;
+    SIGNAL player_y_pos : STD_LOGIC_VECTOR(9 DOWNTO 0) := PLAYER_MAX_Y;
     SIGNAL player_y_speed : STD_LOGIC_VECTOR(9 DOWNTO 0) := (OTHERS => '0');
     SIGNAL mouse_left_prev : STD_LOGIC := '0';
 BEGIN
@@ -57,11 +61,13 @@ BEGIN
     PROCESS (vert_sync)
         VARIABLE next_y_pos : STD_LOGIC_VECTOR(9 DOWNTO 0);
         VARIABLE next_y_speed : STD_LOGIC_VECTOR(9 DOWNTO 0);
+        VARIABLE next_ls_thrust : INTEGER RANGE 0 TO LS_THRUST_FRAMES;
     BEGIN
         IF RISING_EDGE(vert_sync) THEN
             IF playing = '1' THEN
                 next_y_pos := player_y_pos;
                 next_y_speed := player_y_speed;
+                next_ls_thrust := ls_thrust;
 
                 -- calculate the player's new speed and position based on;
                     -- the current speed and position
@@ -77,7 +83,22 @@ BEGIN
                             next_y_speed := next_y_speed + PLAYER_Y_ACCELERATION;
                         END IF;
                     WHEN "01" =>  -- lil stomper
-                        NULL;
+                        IF player_y_pos = PLAYER_MAX_Y AND mouse_left = '1' THEN
+                            next_y_speed := LS_JUMP_SPEED;
+                            next_ls_thrust := LS_THRUST_FRAMES;
+                        ELSIF mouse_left = '1' THEN
+                            IF next_y_speed >= "0000000000" THEN
+                                next_y_speed := LS_GLIDE_SPEED;
+                                next_ls_thrust := 0;
+                            ELSIF next_ls_thrust > 0 AND next_y_speed >= LS_THRUSTER_START_SPEED THEN
+                                next_y_speed := next_y_speed - LS_THRUSTER_ACCELERATION;
+                                next_ls_thrust := next_ls_thrust - 1;
+                            ELSE
+                                next_y_speed := next_y_speed + PLAYER_Y_ACCELERATION;
+                            END IF;
+                        ELSE
+                            next_y_speed := next_y_speed + PLAYER_Y_ACCELERATION;
+                        END IF;
                     WHEN "10" =>  -- profit bird
                         IF mouse_left = '1' AND mouse_left_prev = '0' THEN
                             next_y_speed := "0000000000" - PB_FLAP_BOOST;
@@ -106,11 +127,18 @@ BEGIN
                 ELSIF (next_y_pos > PLAYER_MAX_Y) THEN
                     next_y_pos := PLAYER_MAX_Y;
                     next_y_speed := (OTHERS => '0');
+                    next_ls_thrust := LS_THRUST_FRAMES;
                 END IF;
 
                 player_y_pos <= next_y_pos;
                 player_y_speed <= next_y_speed;
+                ls_thrust <= next_ls_thrust;
                 mouse_left_prev <= mouse_left;
+            ELSE
+                player_y_pos <= PLAYER_MAX_Y;
+                player_y_speed <= (OTHERS => '0');
+                ls_thrust <= LS_THRUST_FRAMES;
+                mouse_left_prev <= '0';
             END IF;
         END IF;
     END PROCESS;
