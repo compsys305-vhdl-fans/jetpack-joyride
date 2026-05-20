@@ -26,8 +26,8 @@ ENTITY top_jetpack_joyride IS
         vga_r : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
         vga_g : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
         vga_b : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-        vga_hsync : OUT STD_LOGIC;
-        vga_vsync : OUT STD_LOGIC
+        vga_hs : OUT STD_LOGIC;
+        vga_vs : OUT STD_LOGIC
     );
 END ENTITY top_jetpack_joyride;
 
@@ -135,7 +135,7 @@ BEGIN
         r_out => vga_red,
         g_out => vga_green,
         b_out => vga_blue,
-        hsync => vga_hsync,
+        hsync => vga_hs,
         vsync => vga_vsync_sig,
         in_screen => open,  -- currently unused
         screen => screen_pos
@@ -147,7 +147,7 @@ BEGIN
     vga_r <= vga_red;
     vga_g <= vga_green;
     vga_b <= vga_blue;
-    vga_vsync <= vga_vsync_sig;
+    vga_vs <= vga_vsync_sig;
 
     lfsr_inst: lfsr port map(
         clock => clock_50,
