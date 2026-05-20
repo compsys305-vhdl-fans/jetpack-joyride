@@ -76,6 +76,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
         PORT (
             clock_50MHz, vert_sync : IN STD_LOGIC;
             mouse_left : IN STD_LOGIC;
+            debug_vehicle_select : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
             playing : OUT STD_LOGIC;
             player_vehicle : OUT STD_LOGIC_VECTOR(1 DOWNTO 0);
             player_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0)
@@ -89,6 +90,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL player_y : STD_LOGIC_VECTOR(9 DOWNTO 0);
     SIGNAL playing : STD_LOGIC;
     SIGNAL player_vehicle : STD_LOGIC_VECTOR(1 DOWNTO 0);
+    SIGNAL debug_vehicle_select : STD_LOGIC_VECTOR(1 DOWNTO 0);
 
     -- mouse signals
     SIGNAL left_button, right_button : STD_LOGIC;
@@ -148,6 +150,7 @@ BEGIN
     vga_g <= vga_green;
     vga_b <= vga_blue;
     vga_vs <= vga_vsync_sig;
+    debug_vehicle_select <= sw(1 DOWNTO 0);
 
     lfsr_inst: lfsr port map(
         clock => clock_50,
@@ -163,12 +166,15 @@ BEGIN
         clock_50MHz => clock_50,
         vert_sync => vga_vsync_sig,
         mouse_left => left_button,
+        debug_vehicle_select => debug_vehicle_select,
         playing => playing,
         player_vehicle => player_vehicle,
         player_y => player_y
     );
 
     mouse_reset <= NOT KEY(0);  -- active low reset
+    ledr(1 DOWNTO 0) <= player_vehicle;
+    ledr(9 DOWNTO 2) <= sw(9 DOWNTO 2);
 
     -- illuminate the whole row of the player's y position, to test that the player_y signal is working correctly
     PROCESS (pixel_row, player_y)

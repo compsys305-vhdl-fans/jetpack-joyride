@@ -63,6 +63,12 @@ BEGIN
                             player_y_speed <= player_y_speed + "0000000010";  
                         END IF;
                         player_y_pos <= player_y_pos + player_y_speed;
+                    WHEN "01" =>  -- lil stomper
+                        NULL;
+                    WHEN "10" =>  -- profit bird
+                        NULL;
+                    WHEN "11" =>  -- crazy freaking teleporter
+                        NULL;
                     WHEN OTHERS =>
                         -- ignore the other cases for now
                         NULL;

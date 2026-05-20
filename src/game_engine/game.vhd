@@ -6,6 +6,7 @@ ENTITY game IS
     PORT (
         clock_50MHz, vert_sync : IN STD_LOGIC;
         mouse_left : IN STD_LOGIC;
+        debug_vehicle_select : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
         playing : OUT STD_LOGIC;  -- whether the game is currently being played or not. if not, the physics should not update, and the player should be reset to the starting position.
         player_vehicle : OUT STD_LOGIC_VECTOR(1 DOWNTO 0);
         player_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0)
@@ -28,9 +29,12 @@ ARCHITECTURE behaviour OF game IS
     END COMPONENT physics;
 
     SIGNAL player_y_pos : STD_LOGIC_VECTOR(9 DOWNTO 0) := (OTHERS => '0');
-    SIGNAL player_vehicle_type : STD_LOGIC_VECTOR(1 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL active_vehicle : STD_LOGIC_VECTOR(1 DOWNTO 0) := (OTHERS => '0');
     SIGNAL is_playing : STD_LOGIC := '0';
 BEGIN
+    -- Vehicle choice is centralized here. Replace this with powerup/game-state logic later.
+    active_vehicle <= debug_vehicle_select;
+
     -- instantiate the physics engine
     -- the physics engine takes care of update the player's y position. because we are currently just testing, we can just send the y position to the top level entity, which can render it. 
     physics_inst : physics PORT MAP (
@@ -38,7 +42,7 @@ BEGIN
         vert_sync => vert_sync,
         mouse_left => mouse_left,
         playing => is_playing,
-        player_vehicle => player_vehicle_type,
+        player_vehicle => active_vehicle,
         player_y => player_y_pos
     );
 
@@ -54,6 +58,6 @@ BEGIN
     -- some stuff goes here, such as handling the global game state, and connecting the physics and rendering engines together.
     
     playing <= is_playing;
-    player_vehicle <= player_vehicle_type;
+    player_vehicle <= active_vehicle;
     player_y <= player_y_pos;
 END ARCHITECTURE behaviour;
