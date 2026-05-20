@@ -41,14 +41,25 @@ ARCHITECTURE behaviour OF physics IS
     -----------------------------------
     -- i need to add more stuff here --
     -----------------------------------
+    CONSTANT PLAYER_MIN_Y : STD_LOGIC_VECTOR(9 DOWNTO 0) := "0000001010";
+    CONSTANT PLAYER_MAX_Y : STD_LOGIC_VECTOR(9 DOWNTO 0) := "0111001100";
+    CONSTANT PLAYER_Y_ACCELERATION : STD_LOGIC_VECTOR(9 DOWNTO 0) := "0000000010";
+    CONSTANT PLAYER_MIN_Y_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := "1111110000"; -- -16 pixels/frame
+    CONSTANT PLAYER_MAX_Y_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := "0000010000"; -- +16 pixels/frame
+
     SIGNAL player_y_pos : STD_LOGIC_VECTOR(9 DOWNTO 0) := (OTHERS => '0');
     SIGNAL player_y_speed : STD_LOGIC_VECTOR(9 DOWNTO 0) := (OTHERS => '0');
 BEGIN
     -- some stuff goes here
     PROCESS (vert_sync)
+        VARIABLE next_y_pos : STD_LOGIC_VECTOR(9 DOWNTO 0);
+        VARIABLE next_y_speed : STD_LOGIC_VECTOR(9 DOWNTO 0);
     BEGIN
         IF RISING_EDGE(vert_sync) THEN
             IF playing = '1' THEN
+                next_y_pos := player_y_pos;
+                next_y_speed := player_y_speed;
+
                 -- calculate the player's new speed and position based on;
                     -- the current speed and position
                     -- the player's current vehicle
@@ -57,12 +68,11 @@ BEGIN
                     WHEN "00" =>  -- jetpack
                         IF mouse_left = '1' THEN
                             -- screen space has 0 at the top, so thrust is negative y
-                            player_y_speed <= player_y_speed - "0000000010";  
+                            next_y_speed := next_y_speed - PLAYER_Y_ACCELERATION;
                         ELSE
                             -- gravity is positive y
-                            player_y_speed <= player_y_speed + "0000000010";  
+                            next_y_speed := next_y_speed + PLAYER_Y_ACCELERATION;
                         END IF;
-                        player_y_pos <= player_y_pos + player_y_speed;
                     WHEN "01" =>  -- lil stomper
                         NULL;
                     WHEN "10" =>  -- profit bird
@@ -74,15 +84,25 @@ BEGIN
                         NULL;
                 END CASE;
 
-                -- make sure the player is not clipped to the ground or ceiling
-                -- applying clamping at the end ensures it overrides the previous assignment if bounds are exceeded
-                IF (player_y_pos + player_y_speed < "0000001010") THEN
-                    player_y_pos <= "0000001010";
-                    player_y_speed <= (OTHERS => '0');
-                ELSIF (player_y_pos + player_y_speed > "0111001100") THEN
-                    player_y_pos <= "0111001100";
-                    player_y_speed <= (OTHERS => '0');
+                IF (next_y_speed < PLAYER_MIN_Y_SPEED) THEN
+                    next_y_speed := PLAYER_MIN_Y_SPEED;
+                ELSIF (next_y_speed > PLAYER_MAX_Y_SPEED) THEN
+                    next_y_speed := PLAYER_MAX_Y_SPEED;
                 END IF;
+
+                next_y_pos := next_y_pos + next_y_speed;
+
+                -- make sure the player is not clipped to the ground or ceiling
+                IF (next_y_pos < PLAYER_MIN_Y) THEN
+                    next_y_pos := PLAYER_MIN_Y;
+                    next_y_speed := (OTHERS => '0');
+                ELSIF (next_y_pos > PLAYER_MAX_Y) THEN
+                    next_y_pos := PLAYER_MAX_Y;
+                    next_y_speed := (OTHERS => '0');
+                END IF;
+
+                player_y_pos <= next_y_pos;
+                player_y_speed <= next_y_speed;
             END IF;
         END IF;
     END PROCESS;
