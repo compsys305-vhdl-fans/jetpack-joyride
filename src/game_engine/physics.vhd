@@ -49,6 +49,7 @@ ARCHITECTURE behaviour OF physics IS
 
     SIGNAL player_y_pos : STD_LOGIC_VECTOR(9 DOWNTO 0) := (OTHERS => '0');
     SIGNAL player_y_speed : STD_LOGIC_VECTOR(9 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL mouse_left_prev : STD_LOGIC := '0';
 BEGIN
     -- some stuff goes here
     PROCESS (vert_sync)
@@ -76,7 +77,11 @@ BEGIN
                     WHEN "01" =>  -- lil stomper
                         NULL;
                     WHEN "10" =>  -- profit bird
-                        NULL;
+                        IF mouse_left = '1' AND mouse_left_prev = '0' THEN
+                            next_y_speed := PLAYER_MIN_Y_SPEED;
+                        ELSE
+                            next_y_speed := next_y_speed + PLAYER_Y_ACCELERATION;
+                        END IF;
                     WHEN "11" =>  -- crazy freaking teleporter
                         NULL;
                     WHEN OTHERS =>
@@ -103,6 +108,7 @@ BEGIN
 
                 player_y_pos <= next_y_pos;
                 player_y_speed <= next_y_speed;
+                mouse_left_prev <= mouse_left;
             END IF;
         END IF;
     END PROCESS;
