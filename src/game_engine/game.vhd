@@ -1,0 +1,59 @@
+LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
+USE IEEE.NUMERIC_STD.ALL;
+
+ENTITY game IS
+    PORT (
+        clock_50MHz, vert_sync : IN STD_LOGIC;
+        mouse_left : IN STD_LOGIC;
+        playing : OUT STD_LOGIC;  -- whether the game is currently being played or not. if not, the physics should not update, and the player should be reset to the starting position.
+        player_vehicle : OUT STD_LOGIC_VECTOR(1 DOWNTO 0);
+        player_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0)
+    );
+END game;
+
+ARCHITECTURE behaviour OF game IS
+    -- this file is the top level of the game engine. it will instantiate the physics engine, and the rendering engine, and connect them together. it will also handle any global game state, such as whether the game is currently being played or not, and the player's current vehicle.
+    -- the game should start in a non-playing state, but currently we'll just let it start for testing purposes. the player can start the game by clicking the mouse button, which will set the playing signal to '1', and the physics engine will start updating the player's position.
+
+    -- physics component declarations
+    COMPONENT physics IS
+        PORT (
+            clock_50MHz, vert_sync : IN STD_LOGIC;
+            mouse_left : IN STD_LOGIC;
+            playing : IN STD_LOGIC;
+            player_vehicle : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
+            player_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0)
+        );
+    END COMPONENT physics;
+
+    SIGNAL player_y_pos : STD_LOGIC_VECTOR(9 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL player_vehicle_type : STD_LOGIC_VECTOR(1 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL is_playing : STD_LOGIC := '0';
+BEGIN
+    -- instantiate the physics engine
+    -- the physics engine takes care of update the player's y position. because we are currently just testing, we can just send the y position to the top level entity, which can render it. 
+    physics_inst : physics PORT MAP (
+        clock_50MHz => clock_50MHz,
+        vert_sync => vert_sync,
+        mouse_left => mouse_left,
+        playing => is_playing,
+        player_vehicle => player_vehicle_type,
+        player_y => player_y_pos
+    );
+
+    -- start the physics on mouse click
+    start: PROCESS (clock_50MHz) BEGIN
+        IF RISING_EDGE(clock_50MHz) THEN
+            IF mouse_left = '1' THEN
+                is_playing <= '1';
+            END IF;
+        END IF;
+    END PROCESS start;
+
+    -- some stuff goes here, such as handling the global game state, and connecting the physics and rendering engines together.
+    
+    playing <= is_playing;
+    player_vehicle <= player_vehicle_type;
+    player_y <= player_y_pos;
+END ARCHITECTURE behaviour;
