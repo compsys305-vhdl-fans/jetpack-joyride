@@ -26,20 +26,6 @@ architecture rtl of image_loader is
     
     type image_data_t is array (natural range <>) of unsigned(11 downto 0);
     
-    function is_data_line(line_text : line) return boolean is
-    begin
-        if line_text = null then
-            return false;
-        end if;
-
-        if line_text.all'length = 0 then
-            return false;
-        end if;
-
-        return line_text.all(line_text.all'low) >= '0'
-            and line_text.all(line_text.all'low) <= '9';
-    end function;
-
     impure function init_image return image_data_t is
         file mif_handle : text open read_mode is MIF_FILE;
         variable row_line : line;
@@ -47,11 +33,22 @@ architecture rtl of image_loader is
         variable separator : character;
         variable data_word : std_logic_vector(11 downto 0);
         variable image_data : image_data_t(0 to IMAGE_WIDTH * IMAGE_HEIGHT - 1) := (others => (others => '0'));
+        variable has_data : boolean;
     begin
         while not endfile(mif_handle) loop
             readline(mif_handle, row_line);
 
-            if is_data_line(row_line) then
+            has_data := false;
+            if row_line /= null then
+                if row_line.all'length > 0 then
+                    if (row_line.all(row_line.all'low) >= '0')
+                        and (row_line.all(row_line.all'low) <= '9') then
+                        has_data := true;
+                    end if;
+                end if;
+            end if;
+
+            if has_data then
                 read(row_line, addr);
                 read(row_line, separator);
                 if separator = ':' then
