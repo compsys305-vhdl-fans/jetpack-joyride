@@ -23,10 +23,8 @@ ARCHITECTURE behaviour OF physics IS
     -- there are (currently) 4 vehicles that the player can be using;
         -- 00: jetpack (jj) -> moves up when mouse is held down
             -- the gravity and jetpack thrust are the same, just in opposite directions, so the player movement is sinusoidal.
-        -- 01: lil stomper (ls) -> has a thrust that is stronger than gravity, but only for a short time. 
-            -- if the player holds the mouse button down for too long, the thrust will run out and they will fall at a reduced rate, until they hit the ground, at which point the thrust will reset.
-            -- if the player is falling, and they start holding again, they will fall at the reduced rate, even if they have thrust again
-            -- the player is allowed to not take the full thrust of the lil stomper, and can release the mouse button early to start falling sooner, but they will still fall at the reduced rate until they hit the ground.
+        -- 01: lil stomper (ls) -> jumps from the ground, then gets a small upward thruster assist while the mouse is held.
+            -- holding changes the jump height, but the lil stomper is clamped below the ceiling so it cannot hit the top of the screen.
         -- 10: profit bird (pb) -> flaps
             -- click to flap, no holding mechanics
             -- quite similar to flappy bird
@@ -44,16 +42,13 @@ ARCHITECTURE behaviour OF physics IS
     CONSTANT PLAYER_MIN_Y_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := "1111110000"; -- -16 pixels/frame
     CONSTANT PLAYER_MAX_Y_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := "0000010000"; -- +16 pixels/frame
 
+    CONSTANT LS_MIN_Y : STD_LOGIC_VECTOR(9 DOWNTO 0) := "0000101000"; -- 40 pixels from top
     CONSTANT LS_MIN_Y_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := "1111100100"; -- -28 pixels/frame
     CONSTANT LS_JUMP_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := "1111100110"; -- -26 pixels/frame
-    CONSTANT LS_THRUSTER_START_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := "1111111000"; -- -8 pixels/frame
     CONSTANT LS_THRUSTER_ACCELERATION : STD_LOGIC_VECTOR(9 DOWNTO 0) := "0000000010";
-    CONSTANT LS_GLIDE_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := "0000000011";
-    CONSTANT LS_THRUST_FRAMES : INTEGER := 6;
 
     CONSTANT PB_FLAP_BOOST : STD_LOGIC_VECTOR(9 DOWNTO 0) := "0000001100";  -- upward speed magnitude added by each profit bird flap (12)
 
-    SIGNAL ls_thrust : INTEGER RANGE 0 TO LS_THRUST_FRAMES := LS_THRUST_FRAMES;
     SIGNAL player_y_pos : STD_LOGIC_VECTOR(9 DOWNTO 0) := PLAYER_MAX_Y;
     SIGNAL player_y_speed : STD_LOGIC_VECTOR(9 DOWNTO 0) := (OTHERS => '0');
     SIGNAL mouse_left_prev : STD_LOGIC := '0';
@@ -62,13 +57,11 @@ BEGIN
     PROCESS (vert_sync)
         VARIABLE next_y_pos : STD_LOGIC_VECTOR(9 DOWNTO 0);
         VARIABLE next_y_speed : STD_LOGIC_VECTOR(9 DOWNTO 0);
-        VARIABLE next_ls_thrust : INTEGER RANGE 0 TO LS_THRUST_FRAMES;
     BEGIN
         IF RISING_EDGE(vert_sync) THEN
             IF playing = '1' THEN
                 next_y_pos := player_y_pos;
                 next_y_speed := player_y_speed;
-                next_ls_thrust := ls_thrust;
 
                 -- calculate the player's new speed and position based on;
                     -- the current speed and position
@@ -86,19 +79,12 @@ BEGIN
                     WHEN "01" =>  -- lil stomper
                         IF player_y_pos = PLAYER_MAX_Y AND mouse_left = '1' THEN
                             next_y_speed := LS_JUMP_SPEED;
-                            next_ls_thrust := LS_THRUST_FRAMES;
-                        ELSIF mouse_left = '1' THEN
-                            IF next_y_speed >= "0000000000" THEN
-                                next_y_speed := LS_GLIDE_SPEED;
-                                next_ls_thrust := 0;
-                            ELSIF next_ls_thrust > 0 AND next_y_speed >= LS_THRUSTER_START_SPEED THEN
-                                next_y_speed := next_y_speed + PLAYER_Y_ACCELERATION - LS_THRUSTER_ACCELERATION;
-                                next_ls_thrust := next_ls_thrust - 1;
-                            ELSE
-                                next_y_speed := next_y_speed + PLAYER_Y_ACCELERATION;
-                            END IF;
                         ELSE
                             next_y_speed := next_y_speed + PLAYER_Y_ACCELERATION;
+
+                            IF mouse_left = '1' THEN
+                                next_y_speed := next_y_speed - LS_THRUSTER_ACCELERATION;
+                            END IF;
                         END IF;
                     WHEN "10" =>  -- profit bird
                         IF mouse_left = '1' AND mouse_left_prev = '0' THEN
@@ -124,23 +110,23 @@ BEGIN
                 next_y_pos := next_y_pos + next_y_speed;
 
                 -- make sure the player is not clipped to the ground or ceiling
-                IF (next_y_pos < PLAYER_MIN_Y) THEN
+                IF player_vehicle = "01" AND next_y_pos < LS_MIN_Y THEN
+                    next_y_pos := LS_MIN_Y;
+                    next_y_speed := (OTHERS => '0');
+                ELSIF (next_y_pos < PLAYER_MIN_Y) THEN
                     next_y_pos := PLAYER_MIN_Y;
                     next_y_speed := (OTHERS => '0');
                 ELSIF (next_y_pos > PLAYER_MAX_Y) THEN
                     next_y_pos := PLAYER_MAX_Y;
                     next_y_speed := (OTHERS => '0');
-                    next_ls_thrust := LS_THRUST_FRAMES;
                 END IF;
 
                 player_y_pos <= next_y_pos;
                 player_y_speed <= next_y_speed;
-                ls_thrust <= next_ls_thrust;
                 mouse_left_prev <= mouse_left;
             ELSE
                 player_y_pos <= PLAYER_MAX_Y;
                 player_y_speed <= (OTHERS => '0');
-                ls_thrust <= LS_THRUST_FRAMES;
                 mouse_left_prev <= '0';
             END IF;
         END IF;
