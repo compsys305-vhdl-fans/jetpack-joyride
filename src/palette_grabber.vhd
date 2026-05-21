@@ -6,8 +6,7 @@ ENTITY palette_grabber IS
     GENERIC (
         IMAGE_WIDTH : POSITIVE;
         IMAGE_HEIGHT : POSITIVE;
-        DISPLAY_WIDTH : POSITIVE;
-        DISPLAY_HEIGHT : POSITIVE;
+        SCALE_SHIFT : NATURAL := 0;
         MIF_FILE : STRING;
         TRANSPARENT_INDEX : NATURAL := 0
     );
@@ -49,8 +48,10 @@ ARCHITECTURE rtl OF palette_grabber IS
 
     CONSTANT image_width_u : UNSIGNED(15 DOWNTO 0) := TO_UNSIGNED(IMAGE_WIDTH, 16);
     CONSTANT image_height_u : UNSIGNED(15 DOWNTO 0) := TO_UNSIGNED(IMAGE_HEIGHT, 16);
-    CONSTANT display_width_u : UNSIGNED(15 DOWNTO 0) := TO_UNSIGNED(DISPLAY_WIDTH, 16);
-    CONSTANT display_height_u : UNSIGNED(15 DOWNTO 0) := TO_UNSIGNED(DISPLAY_HEIGHT, 16);
+    CONSTANT display_width_u : UNSIGNED(15 DOWNTO 0)
+        := SHIFT_LEFT(image_width_u, SCALE_SHIFT);
+    CONSTANT display_height_u : UNSIGNED(15 DOWNTO 0)
+        := SHIFT_LEFT(image_height_u, SCALE_SHIFT);
     CONSTANT transparent_index_u : UNSIGNED(7 DOWNTO 0) := TO_UNSIGNED(TRANSPARENT_INDEX, 8);
 BEGIN
     sprite_loader : image_loader
@@ -69,22 +70,17 @@ BEGIN
         );
 
     PROCESS (screen_x, screen_y, sprite_x, sprite_y)
-        VARIABLE rel_x : natural;
-        VARIABLE rel_y : natural;
-        VARIABLE scaled_x : natural;
-        VARIABLE scaled_y : natural;
+        VARIABLE rel_x : UNSIGNED(15 DOWNTO 0);
+        VARIABLE rel_y : UNSIGNED(15 DOWNTO 0);
     BEGIN
         IF (screen_x >= sprite_x) AND (screen_x < sprite_x + display_width_u)
             AND (screen_y >= sprite_y) AND (screen_y < sprite_y + display_height_u) THEN
             in_sprite <= '1';
-            rel_x := to_integer(screen_x - sprite_x);
-            rel_y := to_integer(screen_y - sprite_y);
+            rel_x := screen_x - sprite_x;
+            rel_y := screen_y - sprite_y;
 
-            scaled_x := (rel_x * IMAGE_WIDTH) / DISPLAY_WIDTH;
-            scaled_y := (rel_y * IMAGE_HEIGHT) / DISPLAY_HEIGHT;
-
-            local_x <= to_unsigned(scaled_x, local_x'length);
-            local_y <= to_unsigned(scaled_y, local_y'length);
+            local_x <= SHIFT_RIGHT(rel_x, SCALE_SHIFT);
+            local_y <= SHIFT_RIGHT(rel_y, SCALE_SHIFT);
         ELSE
             in_sprite <= '0';
             local_x <= (OTHERS => '0');

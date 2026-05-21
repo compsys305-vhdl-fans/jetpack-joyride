@@ -73,6 +73,9 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     END COMPONENT lfsr;
 
     COMPONENT game IS
+        GENERIC (
+            PLAYER_HEIGHT : POSITIVE
+        );
         PORT (
             clock_50MHz, vert_sync : IN STD_LOGIC;
             mouse_left : IN STD_LOGIC;
@@ -88,8 +91,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
         GENERIC (
             IMAGE_WIDTH : POSITIVE;
             IMAGE_HEIGHT : POSITIVE;
-            DISPLAY_WIDTH : POSITIVE;
-            DISPLAY_HEIGHT : POSITIVE;
+            SCALE_SHIFT : NATURAL := 0;
             MIF_FILE : STRING;
             TRANSPARENT_INDEX : NATURAL := 0
         );
@@ -136,8 +138,9 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     CONSTANT PLAYER_X : UNSIGNED(9 DOWNTO 0) := TO_UNSIGNED(120, 10);
     CONSTANT PLAYER_SPRITE_WIDTH : POSITIVE := 16;
     CONSTANT PLAYER_SPRITE_HEIGHT : POSITIVE := 16;
-    CONSTANT PLAYER_DISPLAY_WIDTH : POSITIVE := 32;
-    CONSTANT PLAYER_DISPLAY_HEIGHT : POSITIVE := 32;
+    CONSTANT PLAYER_SCALE_SHIFT : NATURAL := 1;
+    CONSTANT PLAYER_DISPLAY_WIDTH : POSITIVE := PLAYER_SPRITE_WIDTH * (2 ** PLAYER_SCALE_SHIFT);
+    CONSTANT PLAYER_DISPLAY_HEIGHT : POSITIVE := PLAYER_SPRITE_HEIGHT * (2 ** PLAYER_SCALE_SHIFT);
     SIGNAL teleporter_preview_on : STD_LOGIC;
 
 BEGIN
@@ -193,7 +196,11 @@ BEGIN
         random_out => random_num
     );
 
-    game_inst: game port map(
+    game_inst: game
+        GENERIC MAP (
+            PLAYER_HEIGHT => PLAYER_DISPLAY_HEIGHT
+        )
+        PORT MAP (
         clock_50MHz => clock_50,
         vert_sync => vga_vsync_sig,
         mouse_left => left_button,
@@ -208,8 +215,7 @@ BEGIN
         GENERIC MAP (
             IMAGE_WIDTH => PLAYER_SPRITE_WIDTH,
             IMAGE_HEIGHT => PLAYER_SPRITE_HEIGHT,
-            DISPLAY_WIDTH => PLAYER_DISPLAY_WIDTH,
-            DISPLAY_HEIGHT => PLAYER_DISPLAY_HEIGHT,
+            SCALE_SHIFT => PLAYER_SCALE_SHIFT,
             MIF_FILE => "../res/barry/run1.mif",
             TRANSPARENT_INDEX => 0
         )

@@ -3,6 +3,9 @@ USE IEEE.STD_LOGIC_1164.ALL;
 USE IEEE.NUMERIC_STD.ALL;
 
 ENTITY game IS
+    GENERIC (
+        PLAYER_HEIGHT : POSITIVE
+    );
     PORT (
         clock_50MHz, vert_sync : IN STD_LOGIC;
         mouse_left : IN STD_LOGIC;
@@ -20,6 +23,9 @@ ARCHITECTURE behaviour OF game IS
 
     -- physics component declarations
     COMPONENT physics IS
+        GENERIC (
+            PLAYER_HEIGHT : POSITIVE
+        );
         PORT (
             clock_50MHz, vert_sync : IN STD_LOGIC;
             mouse_left : IN STD_LOGIC;
@@ -40,7 +46,11 @@ BEGIN
 
     -- instantiate the physics engine
     -- the physics engine takes care of update the player's y position. because we are currently just testing, we can just send the y position to the top level entity, which can render it. 
-    physics_inst : physics PORT MAP (
+    physics_inst : physics
+        GENERIC MAP (
+            PLAYER_HEIGHT => PLAYER_HEIGHT
+        )
+        PORT MAP (
         clock_50MHz => clock_50MHz,
         vert_sync => vert_sync,
         mouse_left => mouse_left,
