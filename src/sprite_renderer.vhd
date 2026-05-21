@@ -41,9 +41,17 @@ ARCHITECTURE rtl OF sprite_renderer IS
     SIGNAL local_x : UNSIGNED(15 DOWNTO 0);
     SIGNAL local_y : UNSIGNED(15 DOWNTO 0);
 
-    -- Player Sprite Signals (Sprite ID 0)
-    SIGNAL player_pixel_index : UNSIGNED(7 DOWNTO 0);
-    SIGNAL player_valid       : STD_LOGIC;
+    -- Animation Signals (25MHz clock -> 5,000,000 cycles = 200 ms)
+    CONSTANT ANIM_MAX   : INTEGER := 5000000 - 1;
+    SIGNAL anim_counter : INTEGER RANGE 0 TO ANIM_MAX := 0;
+    SIGNAL anim_frame   : STD_LOGIC := '0';
+
+    -- Player Sprite Signals
+    SIGNAL player_run1_pixel_index, player_run2_pixel_index : UNSIGNED(7 DOWNTO 0);
+    SIGNAL player_run1_valid, player_run2_valid             : STD_LOGIC;
+    
+    SIGNAL player_air1_pixel_index, player_air2_pixel_index : UNSIGNED(7 DOWNTO 0);
+    SIGNAL player_air1_valid, player_air2_valid             : STD_LOGIC;
 
     -- Routing signals
     SIGNAL active_pixel_index : UNSIGNED(7 DOWNTO 0);
@@ -52,32 +60,64 @@ ARCHITECTURE rtl OF sprite_renderer IS
     
 BEGIN
 
+    -- 0. Internal Animation Clock
+    PROCESS(clock)
+    BEGIN
+        IF RISING_EDGE(clock) THEN
+            IF anim_counter = ANIM_MAX THEN
+                anim_counter <= 0;
+                anim_frame <= NOT anim_frame;
+            ELSE
+                anim_counter <= anim_counter + 1;
+            END IF;
+        END IF;
+    END PROCESS;
+
     -- 1. Apply bit-shift scaling to incoming relative coordinates
     local_x <= SHIFT_RIGHT(rel_x, scale_shift);
     local_y <= SHIFT_RIGHT(rel_y, scale_shift);
 
     -- 2. Instantiate all ROMs
-    player_rom: image_loader
-        GENERIC MAP (
-            IMAGE_WIDTH => 16,
-            IMAGE_HEIGHT => 16,
-            MIF_FILE => "../res/barry/run1.mif"
-        )
-        PORT MAP (
-            clock => clock,
-            x => local_x,
-            y => local_y,
-            pixel_index => player_pixel_index,
-            valid => player_valid
-        );
+    player_run1_rom: image_loader
+        GENERIC MAP (IMAGE_WIDTH => 16, IMAGE_HEIGHT => 16, MIF_FILE => "../res/barry/run1.mif")
+        PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => player_run1_pixel_index, valid => player_run1_valid);
+
+    player_run2_rom: image_loader
+        GENERIC MAP (IMAGE_WIDTH => 16, IMAGE_HEIGHT => 16, MIF_FILE => "../res/barry/run2.mif")
+        PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => player_run2_pixel_index, valid => player_run2_valid);
+
+    player_air1_rom: image_loader
+        GENERIC MAP (IMAGE_WIDTH => 16, IMAGE_HEIGHT => 16, MIF_FILE => "../res/barry/active1.mif")
+        PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => player_air1_pixel_index, valid => player_air1_valid);
+
+    player_air2_rom: image_loader
+        GENERIC MAP (IMAGE_WIDTH => 16, IMAGE_HEIGHT => 16, MIF_FILE => "../res/barry/active2.mif")
+        PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => player_air2_pixel_index, valid => player_air2_valid);
 
     -- 3. Multiplex outputs based on sprite_id
-    PROCESS(sprite_id, player_pixel_index, player_valid)
+    PROCESS(sprite_id, anim_frame, 
+            player_run1_pixel_index, player_run1_valid, player_run2_pixel_index, player_run2_valid,
+            player_air1_pixel_index, player_air1_valid, player_air2_pixel_index, player_air2_valid)
     BEGIN
         CASE sprite_id IS
-            WHEN x"00" => 
-                active_pixel_index <= player_pixel_index;
-                active_valid <= player_valid;
+            WHEN x"00" => -- Running (Animated)
+                IF anim_frame = '0' THEN
+                    active_pixel_index <= player_run1_pixel_index;
+                    active_valid       <= player_run1_valid;
+                ELSE
+                    active_pixel_index <= player_run2_pixel_index;
+                    active_valid       <= player_run2_valid;
+                END IF;
+                
+            WHEN x"02" => -- Flying / Active (Animated)
+                IF anim_frame = '0' THEN
+                    active_pixel_index <= player_air1_pixel_index;
+                    active_valid       <= player_air1_valid;
+                ELSE
+                    active_pixel_index <= player_air2_pixel_index;
+                    active_valid       <= player_air2_valid;
+                END IF;
+
             -- Add more sprites here later
             WHEN OTHERS =>
                 active_pixel_index <= (OTHERS => '0');
