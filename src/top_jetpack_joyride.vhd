@@ -79,7 +79,8 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             debug_vehicle_select : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
             playing : OUT STD_LOGIC;
             player_vehicle : OUT STD_LOGIC_VECTOR(1 DOWNTO 0);
-            player_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0)
+            player_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
+            teleporter_preview_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0)
         );
     END COMPONENT game;
 
@@ -91,6 +92,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL playing : STD_LOGIC;
     SIGNAL player_vehicle : STD_LOGIC_VECTOR(1 DOWNTO 0);
     SIGNAL debug_vehicle_select : STD_LOGIC_VECTOR(1 DOWNTO 0);
+    SIGNAL teleporter_preview_y : STD_LOGIC_VECTOR(9 DOWNTO 0);
 
     -- mouse signals
     SIGNAL left_button, right_button : STD_LOGIC;
@@ -111,6 +113,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
 
     CONSTANT PLAYER_X : UNSIGNED(9 DOWNTO 0) := TO_UNSIGNED(120, 10);
     CONSTANT PLAYER_SIZE : UNSIGNED(9 DOWNTO 0) := TO_UNSIGNED(16, 10);
+    SIGNAL teleporter_preview_on : STD_LOGIC;
 
 BEGIN
     -- placeholder; we should have port maps and stuff, but ideally no logic here (apart from logic inversion for active-low buttons and stuff)
@@ -172,7 +175,8 @@ BEGIN
         debug_vehicle_select => debug_vehicle_select,
         playing => playing,
         player_vehicle => player_vehicle,
-        player_y => player_y
+        player_y => player_y,
+        teleporter_preview_y => teleporter_preview_y
     );
 
     mouse_reset <= NOT KEY(0);  -- active low reset
@@ -197,11 +201,24 @@ BEGIN
         END IF;
     END PROCESS;
 
-    PROCESS (player_on) BEGIN
+    PROCESS (pixel_row, teleporter_preview_y)
+    BEGIN
+        IF UNSIGNED(pixel_row) = UNSIGNED(teleporter_preview_y) THEN
+            teleporter_preview_on <= '1';
+        ELSE
+            teleporter_preview_on <= '0';
+        END IF;
+    END PROCESS;
+
+    PROCESS (player_on, teleporter_preview_on) BEGIN
         IF player_on = '1' THEN
             red_sig <= x"8";
             green_sig <= x"A";
             blue_sig <= x"F";
+        ELSIF teleporter_preview_on = '1' THEN
+            red_sig <= x"F";
+            green_sig <= x"6";
+            blue_sig <= x"0";
         ELSE
             red_sig <= (OTHERS => '0');
             green_sig <= (OTHERS => '0');

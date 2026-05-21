@@ -10,7 +10,8 @@ ENTITY physics IS
         playing : IN STD_LOGIC;  -- whether the game is currently being played or not. if not, the physics should not update, and the player should be reset to the starting position.
         -- player specific signals
         player_vehicle : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
-        player_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0)
+        player_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
+        teleporter_preview_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0)
     );
 END physics;
 
@@ -50,8 +51,15 @@ ARCHITECTURE behaviour OF physics IS
 
     CONSTANT PB_FLAP_BOOST : STD_LOGIC_VECTOR(9 DOWNTO 0) := "0000001100";  -- upward speed magnitude added by each profit bird flap (12)
 
+    CONSTANT TELEPORTER_PREVIEW_ACCELERATION : STD_LOGIC_VECTOR(9 DOWNTO 0) := "0000000001";
+    CONSTANT TELEPORTER_PREVIEW_MIN_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := PLAYER_MIN_Y_SPEED;
+    CONSTANT TELEPORTER_PREVIEW_MAX_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := PLAYER_MAX_Y_SPEED;
+    CONSTANT TELEPORTER_PREVIEW_MID_Y : STD_LOGIC_VECTOR(9 DOWNTO 0) := "0011101111"; -- 239
+
     SIGNAL player_y_pos : STD_LOGIC_VECTOR(9 DOWNTO 0) := PLAYER_MAX_Y;
     SIGNAL player_y_speed : STD_LOGIC_VECTOR(9 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL teleporter_preview_pos : STD_LOGIC_VECTOR(9 DOWNTO 0) := PLAYER_MAX_Y;
+    SIGNAL teleporter_preview_speed : STD_LOGIC_VECTOR(9 DOWNTO 0) := (OTHERS => '0');
     SIGNAL ls_thruster_tick : STD_LOGIC := '0';
     SIGNAL mouse_left_prev : STD_LOGIC := '0';
 BEGIN
@@ -59,12 +67,17 @@ BEGIN
     PROCESS (vert_sync)
         VARIABLE next_y_pos : STD_LOGIC_VECTOR(9 DOWNTO 0);
         VARIABLE next_y_speed : STD_LOGIC_VECTOR(9 DOWNTO 0);
+        VARIABLE next_preview_pos : STD_LOGIC_VECTOR(9 DOWNTO 0);
+        VARIABLE next_preview_speed : STD_LOGIC_VECTOR(9 DOWNTO 0);
     BEGIN
         IF RISING_EDGE(vert_sync) THEN
             IF playing = '1' THEN
                 next_y_pos := player_y_pos;
                 next_y_speed := player_y_speed;
                 ls_thruster_tick <= '0';
+
+                next_preview_pos := teleporter_preview_pos;
+                next_preview_speed := teleporter_preview_speed;
 
                 -- calculate the player's new speed and position based on;
                     -- the current speed and position
@@ -105,7 +118,11 @@ BEGIN
                             next_y_speed := next_y_speed + PLAYER_Y_ACCELERATION;
                         END IF;
                     WHEN "11" =>  -- crazy freaking teleporter
-                        NULL;
+                        IF next_preview_pos > TELEPORTER_PREVIEW_MID_Y THEN
+                            next_preview_speed := next_preview_speed - TELEPORTER_PREVIEW_ACCELERATION;
+                        ELSIF next_preview_pos < TELEPORTER_PREVIEW_MID_Y THEN
+                            next_preview_speed := next_preview_speed + TELEPORTER_PREVIEW_ACCELERATION;
+                        END IF;
                 END CASE;
 
                 IF player_vehicle = "01" AND next_y_speed < LS_MIN_Y_SPEED THEN
@@ -129,10 +146,37 @@ BEGIN
 
                 player_y_pos <= next_y_pos;
                 player_y_speed <= next_y_speed;
+
+                IF player_vehicle = "11" THEN
+                    IF next_preview_speed < TELEPORTER_PREVIEW_MIN_SPEED THEN
+                        next_preview_speed := TELEPORTER_PREVIEW_MIN_SPEED;
+                    ELSIF next_preview_speed > TELEPORTER_PREVIEW_MAX_SPEED THEN
+                        next_preview_speed := TELEPORTER_PREVIEW_MAX_SPEED;
+                    END IF;
+
+                    next_preview_pos := next_preview_pos + next_preview_speed;
+
+                    IF next_preview_pos < PLAYER_MIN_Y THEN
+                        next_preview_pos := PLAYER_MIN_Y;
+                        next_preview_speed := (OTHERS => '0');
+                    ELSIF next_preview_pos > PLAYER_MAX_Y THEN
+                        next_preview_pos := PLAYER_MAX_Y;
+                        next_preview_speed := (OTHERS => '0');
+                    END IF;
+
+                    teleporter_preview_pos <= next_preview_pos;
+                    teleporter_preview_speed <= next_preview_speed;
+                ELSE
+                    teleporter_preview_pos <= PLAYER_MAX_Y;
+                    teleporter_preview_speed <= (OTHERS => '0');
+                END IF;
+
                 mouse_left_prev <= mouse_left;
             ELSE
                 player_y_pos <= PLAYER_MAX_Y;
                 player_y_speed <= (OTHERS => '0');
+                teleporter_preview_pos <= PLAYER_MAX_Y;
+                teleporter_preview_speed <= (OTHERS => '0');
                 ls_thruster_tick <= '0';
                 mouse_left_prev <= '0';
             END IF;
@@ -140,4 +184,5 @@ BEGIN
     END PROCESS;
 
     player_y <= player_y_pos;
+    teleporter_preview_y <= teleporter_preview_pos;
 END ARCHITECTURE behaviour;
