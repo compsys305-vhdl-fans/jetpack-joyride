@@ -6,6 +6,8 @@ ENTITY palette_grabber IS
     GENERIC (
         IMAGE_WIDTH : POSITIVE;
         IMAGE_HEIGHT : POSITIVE;
+        DISPLAY_WIDTH : POSITIVE := IMAGE_WIDTH;
+        DISPLAY_HEIGHT : POSITIVE := IMAGE_HEIGHT;
         MIF_FILE : STRING;
         TRANSPARENT_INDEX : NATURAL := 0
     );
@@ -47,6 +49,8 @@ ARCHITECTURE rtl OF palette_grabber IS
 
     CONSTANT image_width_u : UNSIGNED(15 DOWNTO 0) := TO_UNSIGNED(IMAGE_WIDTH, 16);
     CONSTANT image_height_u : UNSIGNED(15 DOWNTO 0) := TO_UNSIGNED(IMAGE_HEIGHT, 16);
+    CONSTANT display_width_u : UNSIGNED(15 DOWNTO 0) := TO_UNSIGNED(DISPLAY_WIDTH, 16);
+    CONSTANT display_height_u : UNSIGNED(15 DOWNTO 0) := TO_UNSIGNED(DISPLAY_HEIGHT, 16);
     CONSTANT transparent_index_u : UNSIGNED(7 DOWNTO 0) := TO_UNSIGNED(TRANSPARENT_INDEX, 8);
 BEGIN
     sprite_loader : image_loader
@@ -64,13 +68,23 @@ BEGIN
             valid => loader_valid
         );
 
-    PROCESS (screen_x, screen_y, sprite_x, sprite_y)
+    PROCESS (screen_x, screen_y, sprite_x, sprite_y, display_width_u, display_height_u)
+        VARIABLE rel_x : natural;
+        VARIABLE rel_y : natural;
+        VARIABLE scaled_x : natural;
+        VARIABLE scaled_y : natural;
     BEGIN
-        IF (screen_x >= sprite_x) AND (screen_x < sprite_x + image_width_u)
-            AND (screen_y >= sprite_y) AND (screen_y < sprite_y + image_height_u) THEN
+        IF (screen_x >= sprite_x) AND (screen_x < sprite_x + display_width_u)
+            AND (screen_y >= sprite_y) AND (screen_y < sprite_y + display_height_u) THEN
             in_sprite <= '1';
-            local_x <= screen_x - sprite_x;
-            local_y <= screen_y - sprite_y;
+            rel_x := to_integer(screen_x - sprite_x);
+            rel_y := to_integer(screen_y - sprite_y);
+
+            scaled_x := (rel_x * IMAGE_WIDTH) / DISPLAY_WIDTH;
+            scaled_y := (rel_y * IMAGE_HEIGHT) / DISPLAY_HEIGHT;
+
+            local_x <= to_unsigned(scaled_x, local_x'length);
+            local_y <= to_unsigned(scaled_y, local_y'length);
         ELSE
             in_sprite <= '0';
             local_x <= (OTHERS => '0');
