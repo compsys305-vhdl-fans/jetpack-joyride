@@ -106,9 +106,6 @@ BEGIN
                         END IF;
                     WHEN "11" =>  -- crazy freaking teleporter
                         NULL;
-                    WHEN OTHERS =>
-                        -- ignore the other cases for now
-                        NULL;
                 END CASE;
 
                 IF player_vehicle = "01" AND next_y_speed < LS_MIN_Y_SPEED THEN
