@@ -34,9 +34,12 @@ architecture rtl of image_loader is
         variable data_word : std_logic_vector(11 downto 0);
         variable image_data : image_data_t(0 to IMAGE_WIDTH * IMAGE_HEIGHT - 1) := (others => (others => '0'));
         variable has_data : boolean;
+        variable line_count : natural := 0;
+        constant MAX_MIF_LINES : natural := 10000;
     begin
-        while not endfile(mif_handle) loop
+        while (not endfile(mif_handle)) and (line_count < MAX_MIF_LINES) loop
             readline(mif_handle, row_line);
+            line_count := line_count + 1;
 
             has_data := false;
             if row_line /= null then
