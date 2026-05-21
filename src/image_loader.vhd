@@ -43,7 +43,7 @@ architecture rtl of image_loader is
     signal rom_q_u : unsigned(11 downto 0) := (others => '0');
     signal in_range : std_logic := '0';
 begin
-    rom_inst : altsyhowncram
+    rom_inst : altsyncram
         generic map (
             operation_mode => "ROM",
             width_a => 12,
