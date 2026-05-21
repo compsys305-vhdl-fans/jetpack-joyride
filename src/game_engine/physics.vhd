@@ -123,6 +123,11 @@ BEGIN
                         ELSIF next_preview_pos < TELEPORTER_PREVIEW_MID_Y THEN
                             next_preview_speed := next_preview_speed + TELEPORTER_PREVIEW_ACCELERATION;
                         END IF;
+
+                        IF mouse_left = '1' AND mouse_left_prev = '0' THEN
+                            next_y_pos := next_preview_pos;
+                            next_y_speed := (OTHERS => '0');
+                        END IF;
                 END CASE;
 
                 IF player_vehicle = "01" AND next_y_speed < LS_MIN_Y_SPEED THEN
