@@ -68,7 +68,7 @@ BEGIN
             valid => loader_valid
         );
 
-    PROCESS (screen_x, screen_y, sprite_x, sprite_y, display_width_u, display_height_u)
+    PROCESS (screen_x, screen_y, sprite_x, sprite_y)
         VARIABLE rel_x : natural;
         VARIABLE rel_y : natural;
         VARIABLE scaled_x : natural;
