@@ -7,6 +7,14 @@ preferred_case = "lower"
 files = ["src/**/*.vhd"]
 is_third_party = false
 
+### Quartus megafunctions
+[libraries.altera_mf]
+files = [
+	"/opt/intelFPGA/25.1/quartus/eda/sim_lib/altera_mf.vhd",
+	"/opt/intelFPGA/25.1/quartus/eda/sim_lib/altera_mf_components.vhd"
+]
+is_third_party = true
+
 ### hardware drivers
 [libraries.hardware]
 files = ["src/hardware/**/*.vhd"]

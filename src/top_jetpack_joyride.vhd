@@ -92,6 +92,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             TRANSPARENT_INDEX : NATURAL := 0
         );
         PORT (
+            clock : IN STD_LOGIC;
             screen_x : IN UNSIGNED(15 DOWNTO 0);
             screen_y : IN UNSIGNED(15 DOWNTO 0);
             sprite_x : IN UNSIGNED(15 DOWNTO 0);
@@ -207,6 +208,7 @@ BEGIN
             TRANSPARENT_INDEX => 0
         )
         PORT MAP (
+            clock => clock_25,
             screen_x => RESIZE(UNSIGNED(pixel_column), 16),
             screen_y => RESIZE(UNSIGNED(pixel_row), 16),
             sprite_x => RESIZE(PLAYER_X, 16),

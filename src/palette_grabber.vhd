@@ -10,6 +10,7 @@ ENTITY palette_grabber IS
         TRANSPARENT_INDEX : NATURAL := 0
     );
     PORT (
+        clock : IN STD_LOGIC;
         screen_x : IN UNSIGNED(15 DOWNTO 0);
         screen_y : IN UNSIGNED(15 DOWNTO 0);
         sprite_x : IN UNSIGNED(15 DOWNTO 0);
@@ -27,6 +28,7 @@ ARCHITECTURE rtl OF palette_grabber IS
             MIF_FILE : STRING
         );
         PORT (
+            clock : IN STD_LOGIC;
             x : IN UNSIGNED(15 DOWNTO 0);
             y : IN UNSIGNED(15 DOWNTO 0);
             pixel_index : OUT UNSIGNED(7 DOWNTO 0);
@@ -54,6 +56,7 @@ BEGIN
             MIF_FILE => MIF_FILE
         )
         PORT MAP (
+            clock => clock,
             x => local_x,
             y => local_y,
             pixel_index => loader_pixel_index,

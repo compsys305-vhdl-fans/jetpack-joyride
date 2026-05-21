@@ -1,9 +1,9 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.std_logic_textio.all;
-library std;
-use std.textio.all;
+
+library altera_mf;
+use altera_mf.altera_mf_components.all;
 
 use work.image_palette_pkg.all;
 
@@ -14,6 +14,7 @@ entity image_loader is
         MIF_FILE : string
     );
     port (
+        clock : in std_logic;
         x : in unsigned(15 downto 0);
         y : in unsigned(15 downto 0);
         pixel_index : out unsigned(7 downto 0);
@@ -23,62 +24,64 @@ entity image_loader is
 end entity image_loader;
 
 architecture rtl of image_loader is
-    
-    type image_data_t is array (natural range <>) of unsigned(11 downto 0);
-    
-    impure function init_image return image_data_t is
-        file mif_handle : text open read_mode is MIF_FILE;
-        variable row_line : line;
-        variable addr : integer;
-        variable separator : character;
-        variable data_word : std_logic_vector(11 downto 0);
-        variable image_data : image_data_t(0 to IMAGE_WIDTH * IMAGE_HEIGHT - 1) := (others => (others => '0'));
-        variable has_data : boolean;
-        variable line_count : natural := 0;
-        constant MAX_MIF_LINES : natural := 10000;
+    function clog2(value : natural) return natural is
+        variable result : natural := 0;
+        variable tmp : natural := value - 1;
     begin
-        while (not endfile(mif_handle)) and (line_count < MAX_MIF_LINES) loop
-            readline(mif_handle, row_line);
-            line_count := line_count + 1;
-
-            has_data := false;
-            if row_line /= null then
-                if row_line.all'length > 0 then
-                    if (row_line.all(row_line.all'low) >= '0')
-                        and (row_line.all(row_line.all'low) <= '9') then
-                        has_data := true;
-                    end if;
-                end if;
-            end if;
-
-            if has_data then
-                read(row_line, addr);
-                read(row_line, separator);
-                if separator = ':' then
-                    hread(row_line, data_word);
-                    if addr >= image_data'low and addr <= image_data'high then
-                        image_data(addr) := unsigned(data_word);
-                    end if;
-                end if;
-            end if;
+        while tmp > 0 loop
+            tmp := tmp / 2;
+            result := result + 1;
         end loop;
-
-        return image_data;
+        return result;
     end function;
 
-    constant image_data : image_data_t(0 to IMAGE_WIDTH * IMAGE_HEIGHT - 1) := init_image;
-    
+    constant IMAGE_DEPTH : natural := IMAGE_WIDTH * IMAGE_HEIGHT;
+    constant ADDR_WIDTH : natural := clog2(IMAGE_DEPTH);
+
+    signal rom_addr : unsigned(ADDR_WIDTH - 1 downto 0) := (others => '0');
+    signal rom_q : std_logic_vector(11 downto 0) := (others => '0');
+    signal rom_q_u : unsigned(11 downto 0) := (others => '0');
+    signal in_range : std_logic := '0';
 begin
+    rom_inst : altsyhowncram
+        generic map (
+            operation_mode => "ROM",
+            width_a => 12,
+            numwords_a => IMAGE_DEPTH,
+            widthad_a => ADDR_WIDTH,
+            outdata_reg_a => "UNREGISTERED",
+            init_file => MIF_FILE
+        )
+        port map (
+            address_a => std_logic_vector(rom_addr),
+            clock0 => clock,
+            q_a => rom_q,
+            data_a => (others => '0'),
+            wren_a => '0',
+            rden_a => '1'
+        );
+
+    rom_q_u <= unsigned(rom_q);
 
     process(x, y)
         variable pixel_addr : natural;
-        variable palette_index : natural;
     begin
         if (x < IMAGE_WIDTH and y < IMAGE_HEIGHT) then
+            in_range <= '1';
             pixel_addr := to_integer(y) * IMAGE_WIDTH + to_integer(x);
-            palette_index := to_integer(image_data(pixel_addr)(2 downto 0));
+            rom_addr <= to_unsigned(pixel_addr, ADDR_WIDTH);
+        else
+            in_range <= '0';
+            rom_addr <= (others => '0');
+        end if;
+    end process;
 
-            pixel_index <= resize(image_data(pixel_addr), pixel_index'length);
+    process(rom_q_u, in_range)
+        variable palette_index : natural;
+    begin
+        if in_range = '1' then
+            palette_index := to_integer(rom_q_u(2 downto 0));
+            pixel_index <= resize(rom_q_u, pixel_index'length);
             color <= IMAGE_PALETTE(palette_index);
             valid <= '1';
         else
