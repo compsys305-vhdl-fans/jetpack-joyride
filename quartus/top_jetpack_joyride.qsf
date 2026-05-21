@@ -475,7 +475,17 @@ set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to VGA_R[1]
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to VGA_R[2]
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to VGA_R[3]
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to VGA_VS
-set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
+set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
+set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
+set_global_assignment -name POWER_PRESET_COOLING_SOLUTION "23 MM HEAT SINK WITH 200 LFPM AIRFLOW"
+set_global_assignment -name POWER_BOARD_THERMAL_MODEL "NONE (CONSERVATIVE)"
+set_global_assignment -name VHDL_FILE ../src/image_loader.vhd
+set_global_assignment -name MIF_FILE ../res/barry/run2.mif
+set_global_assignment -name MIF_FILE ../res/barry/run1.mif
+set_global_assignment -name MIF_FILE ../res/barry/active2.mif
+set_global_assignment -name MIF_FILE ../res/barry/active1.mif
+set_global_assignment -name VHDL_FILE ../res/barry/palette.vhd
+set_global_assignment -name VHDL_FILE ../src/palette_grabber.vhd
 set_global_assignment -name MIF_FILE ../background.mif
 set_global_assignment -name VHDL_FILE ../src/top_jetpack_joyride.vhd
 set_global_assignment -name VHDL_FILE ../src/game_engine/game.vhd
@@ -485,7 +495,4 @@ set_global_assignment -name VHDL_FILE ../src/hardware/src/mouse.vhd -library HAR
 set_global_assignment -name VHDL_FILE ../src/hardware/src/vga_types.vhd -library HARDWARE
 set_global_assignment -name VHDL_FILE ../src/rand_gen/lfsr.vhd
 set_global_assignment -name VERILOG_FILE DE0_CV_golden_top.v
-set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
-set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
-set_global_assignment -name POWER_PRESET_COOLING_SOLUTION "23 MM HEAT SINK WITH 200 LFPM AIRFLOW"
-set_global_assignment -name POWER_BOARD_THERMAL_MODEL "NONE (CONSERVATIVE)"
+set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
