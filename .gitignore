@@ -25,3 +25,5 @@ log/
 *_model_dump.txt
 qar_info.json
 quartus/devkits/
+
+meta/.venv
