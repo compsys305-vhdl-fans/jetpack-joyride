@@ -26,9 +26,18 @@ architecture rtl of image_loader is
     
     type image_data_t is array (natural range <>) of unsigned(11 downto 0);
     
-    function is_data_line(line_text : string) return boolean is
+    function is_data_line(line_text : line) return boolean is
     begin
-        return line_text'length > 0 and line_text(line_text'low) >= '0' and line_text(line_text'low) <= '9';
+        if line_text = null then
+            return false;
+        end if;
+
+        if line_text.all'length = 0 then
+            return false;
+        end if;
+
+        return line_text.all(line_text.all'low) >= '0'
+            and line_text.all(line_text.all'low) <= '9';
     end function;
 
     impure function init_image return image_data_t is
@@ -42,7 +51,7 @@ architecture rtl of image_loader is
         while not endfile(mif_handle) loop
             readline(mif_handle, row_line);
 
-            if is_data_line(row_line.all) then
+            if is_data_line(row_line) then
                 read(row_line, addr);
                 read(row_line, separator);
                 if separator = ':' then
@@ -61,7 +70,7 @@ architecture rtl of image_loader is
     
 begin
 
-    process(x, y, image_data)
+    process(x, y)
         variable pixel_addr : natural;
         variable palette_index : natural;
     begin
