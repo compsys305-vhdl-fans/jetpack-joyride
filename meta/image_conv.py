@@ -93,7 +93,7 @@ def write_image_mif(
         address = 0
         for y, row in enumerate(index_rows):
             for color_index in row:
-                mif_file.write(f"{address} : {color_index:03X};\n")
+                mif_file.write(f"{address}:{color_index:03X};\n")
                 address += 1
 
         mif_file.write("END;\n")
@@ -112,18 +112,18 @@ def write_vhdl_palette(
     with output_path.open("w", encoding="utf-8") as vhdl_file:
         vhdl_file.write("LIBRARY IEEE;\n")
         vhdl_file.write("USE IEEE.STD_LOGIC_1164.ALL;\n\n")
-        vhdl_file.write("TYPE rgb444_palette_t IS ARRAY (NATURAL RANGE <>) OF STD_LOGIC_VECTOR(11 DOWNTO 0);\n")
+        vhdl_file.write("PACKAGE image_palette_pkg IS\n")
         vhdl_file.write(
-            f"CONSTANT {constant_name} : rgb444_palette_t := (\n"
+            "    TYPE rgb444_palette_t IS ARRAY (NATURAL RANGE <>) OF STD_LOGIC_VECTOR(11 DOWNTO 0);\n"
         )
+        vhdl_file.write(f"    CONSTANT {constant_name} : rgb444_palette_t := (\n")
 
         for index, color in enumerate(palette.colors):
             suffix = "," if index < len(palette.colors) - 1 else ""
-            vhdl_file.write(
-                f"    {index} => x\"{rgb444_hex(color)}\"{suffix} -- {color}\n"
-            )
+            vhdl_file.write(f"        x\"{rgb444_hex(color)}\"{suffix}\n")
 
-        vhdl_file.write(");\n")
+        vhdl_file.write("    );\n")
+        vhdl_file.write("END PACKAGE image_palette_pkg;\n")
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
