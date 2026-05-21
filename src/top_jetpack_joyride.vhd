@@ -87,24 +87,19 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
         );
     END COMPONENT game;
 
-    COMPONENT palette_grabber IS
-        GENERIC (
-            IMAGE_WIDTH : POSITIVE;
-            IMAGE_HEIGHT : POSITIVE;
-            SCALE_SHIFT : NATURAL := 0;
-            MIF_FILE : STRING;
-            TRANSPARENT_INDEX : NATURAL := 0
-        );
+    COMPONENT sprite_renderer IS
         PORT (
-            clock : IN STD_LOGIC;
-            screen_x : IN UNSIGNED(15 DOWNTO 0);
-            screen_y : IN UNSIGNED(15 DOWNTO 0);
-            sprite_x : IN UNSIGNED(15 DOWNTO 0);
-            sprite_y : IN UNSIGNED(15 DOWNTO 0);
-            color : OUT STD_LOGIC_VECTOR(11 DOWNTO 0);
-            valid : OUT STD_LOGIC
+            clock          : IN STD_LOGIC;
+            sprite_id      : IN UNSIGNED(7 DOWNTO 0);
+            palette_id     : IN UNSIGNED(7 DOWNTO 0);
+            scale_shift    : IN NATURAL;
+            rel_x          : IN UNSIGNED(15 DOWNTO 0);
+            rel_y          : IN UNSIGNED(15 DOWNTO 0);
+            color          : OUT STD_LOGIC_VECTOR(11 DOWNTO 0);
+            is_transparent : OUT STD_LOGIC;
+            valid          : OUT STD_LOGIC
         );
-    END COMPONENT palette_grabber;
+    END COMPONENT sprite_renderer;
 
     SIGNAL clock_25 : STD_LOGIC := '0';
 
@@ -142,6 +137,14 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     CONSTANT PLAYER_DISPLAY_WIDTH : POSITIVE := PLAYER_SPRITE_WIDTH * (2 ** PLAYER_SCALE_SHIFT);
     CONSTANT PLAYER_DISPLAY_HEIGHT : POSITIVE := PLAYER_SPRITE_HEIGHT * (2 ** PLAYER_SCALE_SHIFT);
     SIGNAL teleporter_preview_on : STD_LOGIC;
+
+    SIGNAL player_rel_x : UNSIGNED(15 DOWNTO 0);
+    SIGNAL player_rel_y : UNSIGNED(15 DOWNTO 0);
+    SIGNAL in_player_sprite : STD_LOGIC;
+    SIGNAL player_is_transparent : STD_LOGIC;
+
+    SIGNAL player_drawn : STD_LOGIC;
+    SIGNAL in_player_sprite_d : STD_LOGIC := '0';
 
 BEGIN
     -- placeholder; we should have port maps and stuff, but ideally no logic here (apart from logic inversion for active-low buttons and stuff)
@@ -211,22 +214,40 @@ BEGIN
         teleporter_preview_y => teleporter_preview_y
     );
 
-    player_sprite: palette_grabber
-        GENERIC MAP (
-            IMAGE_WIDTH => PLAYER_SPRITE_WIDTH,
-            IMAGE_HEIGHT => PLAYER_SPRITE_HEIGHT,
-            SCALE_SHIFT => PLAYER_SCALE_SHIFT,
-            MIF_FILE => "../res/barry/run1.mif",
-            TRANSPARENT_INDEX => 0
-        )
+    PROCESS (pixel_column, pixel_row, player_y)
+        VARIABLE s_x : UNSIGNED(15 DOWNTO 0);
+        VARIABLE s_y : UNSIGNED(15 DOWNTO 0);
+        VARIABLE p_x : UNSIGNED(15 DOWNTO 0);
+        VARIABLE p_y : UNSIGNED(15 DOWNTO 0);
+    BEGIN
+        s_x := RESIZE(UNSIGNED(pixel_column), 16);
+        s_y := RESIZE(UNSIGNED(pixel_row), 16);
+        p_x := RESIZE(PLAYER_X, 16);
+        p_y := RESIZE(UNSIGNED(player_y), 16);
+        
+        IF (s_x >= p_x) AND (s_x < p_x + TO_UNSIGNED(PLAYER_DISPLAY_WIDTH, 16)) AND
+           (s_y >= p_y) AND (s_y < p_y + TO_UNSIGNED(PLAYER_DISPLAY_HEIGHT, 16)) THEN
+            in_player_sprite <= '1';
+            player_rel_x <= s_x - p_x;
+            player_rel_y <= s_y - p_y;
+        ELSE
+            in_player_sprite <= '0';
+            player_rel_x <= (OTHERS => '0');
+            player_rel_y <= (OTHERS => '0');
+        END IF;
+    END PROCESS;
+
+    player_sprite_renderer: sprite_renderer
         PORT MAP (
-            clock => clock_25,
-            screen_x => RESIZE(UNSIGNED(pixel_column), 16),
-            screen_y => RESIZE(UNSIGNED(pixel_row), 16),
-            sprite_x => RESIZE(PLAYER_X, 16),
-            sprite_y => RESIZE(UNSIGNED(player_y), 16),
-            color => sprite_color,
-            valid => sprite_valid
+            clock          => clock_25,
+            sprite_id      => x"00", -- Player Sprite ID
+            palette_id     => x"00", -- Barry Palette ID
+            scale_shift    => PLAYER_SCALE_SHIFT,
+            rel_x          => player_rel_x,
+            rel_y          => player_rel_y,
+            color          => sprite_color,
+            is_transparent => player_is_transparent,
+            valid          => sprite_valid
         );
 
     mouse_reset <= NOT KEY(0);  -- active low reset
@@ -242,8 +263,17 @@ BEGIN
         END IF;
     END PROCESS;
 
-    PROCESS (sprite_valid, sprite_color, teleporter_preview_on) BEGIN
-        IF sprite_valid = '1' THEN
+    PROCESS(clock_25)
+    BEGIN
+        IF RISING_EDGE(clock_25) THEN
+            in_player_sprite_d <= in_player_sprite;
+        END IF;
+    END PROCESS;
+
+    player_drawn <= in_player_sprite_d AND sprite_valid AND (NOT player_is_transparent);
+
+    PROCESS (player_drawn, sprite_color, teleporter_preview_on) BEGIN
+        IF player_drawn = '1' THEN
             red_sig <= sprite_color(11 DOWNTO 8);
             green_sig <= sprite_color(7 DOWNTO 4);
             blue_sig <= sprite_color(3 DOWNTO 0);

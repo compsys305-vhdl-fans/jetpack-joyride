@@ -41,7 +41,7 @@ set_global_assignment -name DEVICE 5CEBA4F23C7
 set_global_assignment -name TOP_LEVEL_ENTITY top_jetpack_joyride
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION 13
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "MON MAY  5 11:54:18 2014"
-set_global_assignment -name LAST_QUARTUS_VERSION "18.1.0 Lite Edition"
+set_global_assignment -name LAST_QUARTUS_VERSION "25.1std.0 Lite Edition"
 set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
 set_global_assignment -name CYCLONEII_RESERVE_NCEO_AFTER_CONFIGURATION "USE AS REGULAR IO"
 set_location_assignment PIN_H13 -to CLOCK2_50
@@ -479,13 +479,13 @@ set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
 set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
 set_global_assignment -name POWER_PRESET_COOLING_SOLUTION "23 MM HEAT SINK WITH 200 LFPM AIRFLOW"
 set_global_assignment -name POWER_BOARD_THERMAL_MODEL "NONE (CONSERVATIVE)"
+set_global_assignment -name VHDL_FILE ../src/sprite_palettes_pkg.vhd
+set_global_assignment -name VHDL_FILE ../src/sprite_renderer.vhd
 set_global_assignment -name VHDL_FILE ../src/image_loader.vhd
 set_global_assignment -name MIF_FILE ../res/barry/run2.mif
 set_global_assignment -name MIF_FILE ../res/barry/run1.mif
 set_global_assignment -name MIF_FILE ../res/barry/active2.mif
 set_global_assignment -name MIF_FILE ../res/barry/active1.mif
-set_global_assignment -name VHDL_FILE ../res/barry/palette.vhd
-set_global_assignment -name VHDL_FILE ../src/palette_grabber.vhd
 set_global_assignment -name MIF_FILE ../background.mif
 set_global_assignment -name VHDL_FILE ../src/top_jetpack_joyride.vhd
 set_global_assignment -name VHDL_FILE ../src/game_engine/game.vhd

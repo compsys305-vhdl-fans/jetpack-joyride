@@ -5,8 +5,6 @@ use ieee.numeric_std.all;
 library altera_mf;
 use altera_mf.altera_mf_components.all;
 
-use work.image_palette_pkg.all;
-
 entity image_loader is
     generic (
         IMAGE_WIDTH : positive;
@@ -18,7 +16,6 @@ entity image_loader is
         x : in unsigned(15 downto 0);
         y : in unsigned(15 downto 0);
         pixel_index : out unsigned(7 downto 0);
-        color : out std_logic_vector(11 downto 0);
         valid : out std_logic
     );
 end entity image_loader;
@@ -77,16 +74,12 @@ begin
     end process;
 
     process(rom_q_u, in_range)
-        variable palette_index : natural;
     begin
         if in_range = '1' then
-            palette_index := to_integer(rom_q_u(2 downto 0));
             pixel_index <= resize(rom_q_u, pixel_index'length);
-            color <= IMAGE_PALETTE(palette_index);
             valid <= '1';
         else
             pixel_index <= (others => '0');
-            color <= (others => '0');
             valid <= '0';
         end if;
     end process;
