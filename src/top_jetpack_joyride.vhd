@@ -88,8 +88,8 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
         GENERIC (
             IMAGE_WIDTH : POSITIVE;
             IMAGE_HEIGHT : POSITIVE;
-            DISPLAY_WIDTH : POSITIVE := IMAGE_WIDTH;
-            DISPLAY_HEIGHT : POSITIVE := IMAGE_HEIGHT;
+            DISPLAY_WIDTH : POSITIVE;
+            DISPLAY_HEIGHT : POSITIVE;
             MIF_FILE : STRING;
             TRANSPARENT_INDEX : NATURAL := 0
         );
