@@ -61,7 +61,7 @@ BEGIN
             valid => loader_valid
         );
 
-    PROCESS (ALL)
+    PROCESS (screen_x, screen_y, sprite_x, sprite_y)
     BEGIN
         IF (screen_x >= sprite_x) AND (screen_x < sprite_x + image_width_u)
             AND (screen_y >= sprite_y) AND (screen_y < sprite_y + image_height_u) THEN
@@ -75,7 +75,7 @@ BEGIN
         END IF;
     END PROCESS;
 
-    PROCESS (ALL)
+    PROCESS (loader_pixel_index, in_sprite, loader_valid, loader_color)
         VARIABLE is_visible : STD_LOGIC;
     BEGIN
         IF (loader_pixel_index = transparent_index_u) THEN
