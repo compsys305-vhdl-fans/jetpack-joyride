@@ -109,6 +109,9 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL lfsr_reset : STD_LOGIC := '0';
     SIGNAL random_num : STD_LOGIC_VECTOR(19 DOWNTO 0);
 
+    CONSTANT PLAYER_X : UNSIGNED(9 DOWNTO 0) := TO_UNSIGNED(120, 10);
+    CONSTANT PLAYER_SIZE : UNSIGNED(9 DOWNTO 0) := TO_UNSIGNED(16, 10);
+
 BEGIN
     -- placeholder; we should have port maps and stuff, but ideally no logic here (apart from logic inversion for active-low buttons and stuff)
     -- clock divider to generate 25MHz from 50MHz
@@ -176,10 +179,18 @@ BEGIN
     ledr(1 DOWNTO 0) <= player_vehicle;
     ledr(9 DOWNTO 2) <= sw(9 DOWNTO 2);
 
-    -- illuminate the whole row of the player's y position, to test that the player_y signal is working correctly
-    PROCESS (pixel_row, player_y)
+    -- draw a square player sprite at a fixed x position using the player_y signal
+    PROCESS (pixel_row, pixel_column, player_y)
+        VARIABLE player_y_u : UNSIGNED(9 DOWNTO 0);
+        VARIABLE pixel_row_u : UNSIGNED(9 DOWNTO 0);
+        VARIABLE pixel_col_u : UNSIGNED(9 DOWNTO 0);
     BEGIN
-        IF (pixel_row = player_y) THEN
+        player_y_u := UNSIGNED(player_y);
+        pixel_row_u := UNSIGNED(pixel_row);
+        pixel_col_u := UNSIGNED(pixel_column);
+
+        IF (pixel_col_u >= PLAYER_X) AND (pixel_col_u < PLAYER_X + PLAYER_SIZE)
+            AND (pixel_row_u >= player_y_u) AND (pixel_row_u < player_y_u + PLAYER_SIZE) THEN
             player_on <= '1';
         ELSE
             player_on <= '0';
