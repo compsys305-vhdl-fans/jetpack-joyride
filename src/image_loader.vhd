@@ -61,7 +61,7 @@ architecture rtl of image_loader is
     
 begin
 
-    process(all)
+    process(x, y, image_data)
         variable pixel_addr : natural;
         variable palette_index : natural;
     begin
