@@ -84,10 +84,26 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
         );
     END COMPONENT game;
 
+    COMPONENT palette_grabber IS
+        GENERIC (
+            IMAGE_WIDTH : POSITIVE;
+            IMAGE_HEIGHT : POSITIVE;
+            MIF_FILE : STRING;
+            TRANSPARENT_INDEX : NATURAL := 0
+        );
+        PORT (
+            screen_x : IN UNSIGNED(15 DOWNTO 0);
+            screen_y : IN UNSIGNED(15 DOWNTO 0);
+            sprite_x : IN UNSIGNED(15 DOWNTO 0);
+            sprite_y : IN UNSIGNED(15 DOWNTO 0);
+            color : OUT STD_LOGIC_VECTOR(11 DOWNTO 0);
+            valid : OUT STD_LOGIC
+        );
+    END COMPONENT palette_grabber;
+
     SIGNAL clock_25 : STD_LOGIC := '0';
 
     -- player signals
-    SIGNAL player_on : STD_LOGIC;
     SIGNAL player_y : STD_LOGIC_VECTOR(9 DOWNTO 0);
     SIGNAL playing : STD_LOGIC;
     SIGNAL player_vehicle : STD_LOGIC_VECTOR(1 DOWNTO 0);
@@ -107,12 +123,16 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL vga_red, vga_green, vga_blue : STD_LOGIC_VECTOR(3 DOWNTO 0);
     SIGNAL vga_vsync_sig : STD_LOGIC;
 
+    SIGNAL sprite_color : STD_LOGIC_VECTOR(11 DOWNTO 0);
+    SIGNAL sprite_valid : STD_LOGIC;
+
     -- lfsr signals
     SIGNAL lfsr_reset : STD_LOGIC := '0';
     SIGNAL random_num : STD_LOGIC_VECTOR(19 DOWNTO 0);
 
     CONSTANT PLAYER_X : UNSIGNED(9 DOWNTO 0) := TO_UNSIGNED(120, 10);
-    CONSTANT PLAYER_SIZE : UNSIGNED(9 DOWNTO 0) := TO_UNSIGNED(16, 10);
+    CONSTANT PLAYER_SPRITE_WIDTH : POSITIVE := 16;
+    CONSTANT PLAYER_SPRITE_HEIGHT : POSITIVE := 16;
     SIGNAL teleporter_preview_on : STD_LOGIC;
 
 BEGIN
@@ -179,27 +199,25 @@ BEGIN
         teleporter_preview_y => teleporter_preview_y
     );
 
+    player_sprite: palette_grabber
+        GENERIC MAP (
+            IMAGE_WIDTH => PLAYER_SPRITE_WIDTH,
+            IMAGE_HEIGHT => PLAYER_SPRITE_HEIGHT,
+            MIF_FILE => "res/barry/run1.mif",
+            TRANSPARENT_INDEX => 0
+        )
+        PORT MAP (
+            screen_x => RESIZE(UNSIGNED(pixel_column), 16),
+            screen_y => RESIZE(UNSIGNED(pixel_row), 16),
+            sprite_x => RESIZE(PLAYER_X, 16),
+            sprite_y => RESIZE(UNSIGNED(player_y), 16),
+            color => sprite_color,
+            valid => sprite_valid
+        );
+
     mouse_reset <= NOT KEY(0);  -- active low reset
     ledr(1 DOWNTO 0) <= player_vehicle;
     ledr(9 DOWNTO 2) <= sw(9 DOWNTO 2);
-
-    -- draw a square player sprite at a fixed x position using the player_y signal
-    PROCESS (pixel_row, pixel_column, player_y)
-        VARIABLE player_y_u : UNSIGNED(9 DOWNTO 0);
-        VARIABLE pixel_row_u : UNSIGNED(9 DOWNTO 0);
-        VARIABLE pixel_col_u : UNSIGNED(9 DOWNTO 0);
-    BEGIN
-        player_y_u := UNSIGNED(player_y);
-        pixel_row_u := UNSIGNED(pixel_row);
-        pixel_col_u := UNSIGNED(pixel_column);
-
-        IF (pixel_col_u >= PLAYER_X) AND (pixel_col_u < PLAYER_X + PLAYER_SIZE)
-            AND (pixel_row_u >= player_y_u) AND (pixel_row_u < player_y_u + PLAYER_SIZE) THEN
-            player_on <= '1';
-        ELSE
-            player_on <= '0';
-        END IF;
-    END PROCESS;
 
     PROCESS (pixel_row, teleporter_preview_y)
     BEGIN
@@ -210,11 +228,11 @@ BEGIN
         END IF;
     END PROCESS;
 
-    PROCESS (player_on, teleporter_preview_on) BEGIN
-        IF player_on = '1' THEN
-            red_sig <= x"8";
-            green_sig <= x"A";
-            blue_sig <= x"F";
+    PROCESS (sprite_valid, sprite_color, teleporter_preview_on) BEGIN
+        IF sprite_valid = '1' THEN
+            red_sig <= sprite_color(11 DOWNTO 8);
+            green_sig <= sprite_color(7 DOWNTO 4);
+            blue_sig <= sprite_color(3 DOWNTO 0);
         ELSIF teleporter_preview_on = '1' THEN
             red_sig <= x"F";
             green_sig <= x"6";
