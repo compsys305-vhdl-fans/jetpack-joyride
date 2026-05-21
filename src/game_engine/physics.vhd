@@ -80,7 +80,7 @@ BEGIN
                             next_y_speed := next_y_speed + PLAYER_Y_ACCELERATION;
                         END IF;
                     WHEN "01" =>  -- lil stomper
-                        IF player_y_pos = PLAYER_MAX_Y AND mouse_left = '1' THEN
+                        IF player_y_pos = PLAYER_MAX_Y AND mouse_left = '1' AND mouse_left_prev = '0' THEN
                             next_y_speed := LS_JUMP_SPEED;
                             ls_thruster_tick <= '0';
                         ELSE
