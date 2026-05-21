@@ -204,7 +204,7 @@ BEGIN
         GENERIC MAP (
             IMAGE_WIDTH => PLAYER_SPRITE_WIDTH,
             IMAGE_HEIGHT => PLAYER_SPRITE_HEIGHT,
-            MIF_FILE => "res/barry/run1.mif",
+            MIF_FILE => "../res/barry/run1.mif",
             TRANSPARENT_INDEX => 0
         )
         PORT MAP (
