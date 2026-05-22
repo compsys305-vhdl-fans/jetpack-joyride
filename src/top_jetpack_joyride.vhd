@@ -274,7 +274,24 @@ BEGIN
         END IF;
     END PROCESS;
 
-    player_sprite_id <= x"00" WHEN player_grounded = '1' ELSE x"02";
+    PROCESS(player_vehicle, left_button, player_grounded)
+    BEGIN
+        IF player_vehicle = "00" THEN
+            -- Jetpack gamemode: active sprite only when holding down
+            IF left_button = '1' THEN
+                player_sprite_id <= x"02";
+            ELSE
+                player_sprite_id <= x"00";
+            END IF;
+        ELSE
+            -- Other gamemodes: active sprite when in the air
+            IF player_grounded = '1' THEN
+                player_sprite_id <= x"00";
+            ELSE
+                player_sprite_id <= x"02";
+            END IF;
+        END IF;
+    END PROCESS;
 
     player_drawn <= in_player_sprite_d AND sprite_valid AND (NOT player_is_transparent);
 
