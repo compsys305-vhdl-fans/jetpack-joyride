@@ -4,7 +4,23 @@ USE IEEE.NUMERIC_STD.ALL;
 
 PACKAGE sprite_palettes_pkg IS
     -- Palette IDs
-    CONSTANT PALETTE_BARRY : UNSIGNED(7 DOWNTO 0) := x"00";
+    CONSTANT PALETTE_BARRY        : UNSIGNED(7 DOWNTO 0) := x"00";
+    CONSTANT PALETTE_LIL_STOMPER  : UNSIGNED(7 DOWNTO 0) := x"01";
+    CONSTANT PALETTE_BIRD         : UNSIGNED(7 DOWNTO 0) := x"02";
+    CONSTANT PALETTE_TELEPORTER   : UNSIGNED(7 DOWNTO 0) := x"03";
+
+    -- Sprite IDs
+    CONSTANT SPRITE_BARRY_RUN     : UNSIGNED(7 DOWNTO 0) := x"00";
+    CONSTANT SPRITE_BARRY_FLY     : UNSIGNED(7 DOWNTO 0) := x"02";
+
+    CONSTANT SPRITE_STOMPER_RUN   : UNSIGNED(7 DOWNTO 0) := x"10";
+    CONSTANT SPRITE_STOMPER_FLY   : UNSIGNED(7 DOWNTO 0) := x"11";
+    CONSTANT SPRITE_STOMPER_FALL  : UNSIGNED(7 DOWNTO 0) := x"12";
+
+    CONSTANT SPRITE_BIRD_HOLD     : UNSIGNED(7 DOWNTO 0) := x"20";
+    CONSTANT SPRITE_BIRD_NOHOLD   : UNSIGNED(7 DOWNTO 0) := x"21";
+
+    CONSTANT SPRITE_TELEPORTER    : UNSIGNED(7 DOWNTO 0) := x"30";
 
     -- We define a function to retrieve colour to allow dynamic palette arrays seamlessly
     FUNCTION get_sprite_color (
@@ -37,6 +53,38 @@ PACKAGE BODY sprite_palettes_pkg IS
         x"447"
     );
 
+    CONSTANT LIL_STOMPER_PALETTE : palette_array_t(0 TO 6) := (
+        x"0F0", -- Transparent (was x"100")
+        x"A54",
+        x"E54",
+        x"FFF",
+        x"633",
+        x"BBA",
+        x"EB9"
+    );
+
+    CONSTANT BIRD_PALETTE : palette_array_t(0 TO 7) := (
+        x"0F0", -- Transparent (was x"100")
+        x"633",
+        x"EB9",
+        x"FFF",
+        x"AAF",
+        x"C74",
+        x"A33",
+        x"A53"
+    );
+
+    CONSTANT TELEPORTER_PALETTE : palette_array_t(0 TO 7) := (
+        x"0F0", -- Transparent (was x"100")
+        x"635",
+        x"978",
+        x"EBD",
+        x"859",
+        x"EB7",
+        x"957",
+        x"DAA"
+    );
+
     FUNCTION get_sprite_color (
         palette_id : UNSIGNED(7 DOWNTO 0);
         pixel_index : UNSIGNED(7 DOWNTO 0)
@@ -52,6 +100,24 @@ PACKAGE BODY sprite_palettes_pkg IS
                 ELSE
                     RETURN TRANSPARENT_COLOR;
                 END IF;
+            WHEN PALETTE_LIL_STOMPER =>
+                IF idx >= 0 AND idx <= 6 THEN
+                    RETURN LIL_STOMPER_PALETTE(idx);
+                ELSE
+                    RETURN TRANSPARENT_COLOR;
+                END IF;
+            WHEN PALETTE_BIRD =>
+                IF idx >= 0 AND idx <= 7 THEN
+                    RETURN BIRD_PALETTE(idx);
+                ELSE
+                    RETURN TRANSPARENT_COLOR;
+                END IF;
+            WHEN PALETTE_TELEPORTER =>
+                IF idx >= 0 AND idx <= 7 THEN
+                    RETURN TELEPORTER_PALETTE(idx);
+                ELSE
+                    RETURN TRANSPARENT_COLOR;
+                END IF;
             WHEN OTHERS =>
                 RETURN TRANSPARENT_COLOR;
         END CASE;
@@ -63,20 +129,32 @@ PACKAGE BODY sprite_palettes_pkg IS
     ) RETURN INTEGER IS
     BEGIN
         CASE sprite_id IS
-            WHEN x"00" | x"02" => -- Barry (Running or Active)
-                -- Map ticks 0-9 into a frame index.
-                -- We want to swap every 200 ms, which means every 2 ticks.
-                -- Ticks 0,1 -> 0
-                -- Ticks 2,3 -> 1
-                -- Ticks 4,5 -> 0
-                -- Ticks 6,7 -> 1
-                -- Ticks 8,9 -> 0
+            WHEN SPRITE_BARRY_RUN | SPRITE_BARRY_FLY | SPRITE_STOMPER_FLY | SPRITE_STOMPER_FALL => 
+                -- 200ms per frame (2 ticks, 10Hz)
                 IF (anim_tick MOD 4) < 2 THEN
                     RETURN 0;
                 ELSE
                     RETURN 1;
                 END IF;
+
+            WHEN SPRITE_STOMPER_RUN =>
+                -- 400ms per frame (4 ticks, 10Hz)
+                IF (anim_tick MOD 8) < 4 THEN
+                    RETURN 0;
+                ELSE
+                    RETURN 1;
+                END IF;
+
+            WHEN SPRITE_TELEPORTER =>
+                -- 500ms per frame (5 ticks, 10Hz)
+                IF anim_tick < 5 THEN
+                    RETURN 0;
+                ELSE
+                    RETURN 1;
+                END IF;
+
             WHEN OTHERS =>
+                -- Non-animated sprites (e.g., Bird)
                 RETURN 0;
         END CASE;
     END FUNCTION get_anim_frame;
