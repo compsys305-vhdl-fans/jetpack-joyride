@@ -26,4 +26,8 @@ log/
 qar_info.json
 quartus/devkits/
 
+# ignore venv
 meta/.venv
+
+# ignore demo gifs
+*.gif
