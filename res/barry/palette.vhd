@@ -10,7 +10,7 @@ PACKAGE image_palette_pkg IS
         x"EB9",
         x"666",
         x"FFF",
-        x"000",
-        x"447"
+        x"447",
+        x"000"
     );
 END PACKAGE image_palette_pkg;
