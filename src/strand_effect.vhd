@@ -1,0 +1,128 @@
+LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
+USE IEEE.NUMERIC_STD.ALL;
+
+ENTITY strand_effect IS
+    PORT (
+        clock       : IN STD_LOGIC;
+        pixel_x     : IN UNSIGNED(9 DOWNTO 0);
+        pixel_y     : IN UNSIGNED(9 DOWNTO 0);
+        frame_count : IN UNSIGNED(15 DOWNTO 0);
+        r_out       : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
+        g_out       : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
+        b_out       : OUT STD_LOGIC_VECTOR(3 DOWNTO 0)
+    );
+END ENTITY strand_effect;
+
+ARCHITECTURE rtl OF strand_effect IS
+
+    -- 256-entry Sine ROM containing 8-bit signed values (amplitude 127)
+    TYPE sine_rom_type IS ARRAY(0 TO 255) OF SIGNED(7 DOWNTO 0);
+    CONSTANT SINE_ROM : sine_rom_type := (
+        TO_SIGNED(0, 8), TO_SIGNED(3, 8), TO_SIGNED(6, 8), TO_SIGNED(9, 8), TO_SIGNED(12, 8), TO_SIGNED(16, 8), TO_SIGNED(19, 8), TO_SIGNED(22, 8), 
+        TO_SIGNED(25, 8), TO_SIGNED(28, 8), TO_SIGNED(31, 8), TO_SIGNED(34, 8), TO_SIGNED(37, 8), TO_SIGNED(40, 8), TO_SIGNED(43, 8), TO_SIGNED(46, 8), 
+        TO_SIGNED(49, 8), TO_SIGNED(51, 8), TO_SIGNED(54, 8), TO_SIGNED(57, 8), TO_SIGNED(60, 8), TO_SIGNED(63, 8), TO_SIGNED(65, 8), TO_SIGNED(68, 8), 
+        TO_SIGNED(71, 8), TO_SIGNED(73, 8), TO_SIGNED(76, 8), TO_SIGNED(78, 8), TO_SIGNED(81, 8), TO_SIGNED(83, 8), TO_SIGNED(85, 8), TO_SIGNED(88, 8), 
+        TO_SIGNED(90, 8), TO_SIGNED(92, 8), TO_SIGNED(94, 8), TO_SIGNED(96, 8), TO_SIGNED(98, 8), TO_SIGNED(100, 8), TO_SIGNED(102, 8), TO_SIGNED(104, 8), 
+        TO_SIGNED(106, 8), TO_SIGNED(107, 8), TO_SIGNED(109, 8), TO_SIGNED(111, 8), TO_SIGNED(112, 8), TO_SIGNED(114, 8), TO_SIGNED(115, 8), TO_SIGNED(117, 8), 
+        TO_SIGNED(118, 8), TO_SIGNED(119, 8), TO_SIGNED(120, 8), TO_SIGNED(121, 8), TO_SIGNED(122, 8), TO_SIGNED(123, 8), TO_SIGNED(124, 8), TO_SIGNED(124, 8), 
+        TO_SIGNED(125, 8), TO_SIGNED(126, 8), TO_SIGNED(126, 8), TO_SIGNED(127, 8), TO_SIGNED(127, 8), TO_SIGNED(127, 8), TO_SIGNED(127, 8), TO_SIGNED(127, 8), 
+        TO_SIGNED(127, 8), TO_SIGNED(127, 8), TO_SIGNED(127, 8), TO_SIGNED(127, 8), TO_SIGNED(127, 8), TO_SIGNED(126, 8), TO_SIGNED(126, 8), TO_SIGNED(125, 8), 
+        TO_SIGNED(124, 8), TO_SIGNED(124, 8), TO_SIGNED(123, 8), TO_SIGNED(122, 8), TO_SIGNED(121, 8), TO_SIGNED(120, 8), TO_SIGNED(119, 8), TO_SIGNED(118, 8), 
+        TO_SIGNED(117, 8), TO_SIGNED(115, 8), TO_SIGNED(114, 8), TO_SIGNED(112, 8), TO_SIGNED(111, 8), TO_SIGNED(109, 8), TO_SIGNED(107, 8), TO_SIGNED(106, 8), 
+        TO_SIGNED(104, 8), TO_SIGNED(102, 8), TO_SIGNED(100, 8), TO_SIGNED(98, 8), TO_SIGNED(96, 8), TO_SIGNED(94, 8), TO_SIGNED(92, 8), TO_SIGNED(90, 8), 
+        TO_SIGNED(88, 8), TO_SIGNED(85, 8), TO_SIGNED(83, 8), TO_SIGNED(81, 8), TO_SIGNED(78, 8), TO_SIGNED(76, 8), TO_SIGNED(73, 8), TO_SIGNED(71, 8), 
+        TO_SIGNED(68, 8), TO_SIGNED(65, 8), TO_SIGNED(63, 8), TO_SIGNED(60, 8), TO_SIGNED(57, 8), TO_SIGNED(54, 8), TO_SIGNED(51, 8), TO_SIGNED(49, 8), 
+        TO_SIGNED(46, 8), TO_SIGNED(43, 8), TO_SIGNED(40, 8), TO_SIGNED(37, 8), TO_SIGNED(34, 8), TO_SIGNED(31, 8), TO_SIGNED(28, 8), TO_SIGNED(25, 8), 
+        TO_SIGNED(22, 8), TO_SIGNED(19, 8), TO_SIGNED(16, 8), TO_SIGNED(12, 8), TO_SIGNED(9, 8), TO_SIGNED(6, 8), TO_SIGNED(3, 8), TO_SIGNED(0, 8), 
+        TO_SIGNED(-3, 8), TO_SIGNED(-6, 8), TO_SIGNED(-9, 8), TO_SIGNED(-12, 8), TO_SIGNED(-16, 8), TO_SIGNED(-19, 8), TO_SIGNED(-22, 8), TO_SIGNED(-25, 8), 
+        TO_SIGNED(-28, 8), TO_SIGNED(-31, 8), TO_SIGNED(-34, 8), TO_SIGNED(-37, 8), TO_SIGNED(-40, 8), TO_SIGNED(-43, 8), TO_SIGNED(-46, 8), TO_SIGNED(-49, 8), 
+        TO_SIGNED(-51, 8), TO_SIGNED(-54, 8), TO_SIGNED(-57, 8), TO_SIGNED(-60, 8), TO_SIGNED(-63, 8), TO_SIGNED(-65, 8), TO_SIGNED(-68, 8), TO_SIGNED(-71, 8), 
+        TO_SIGNED(-73, 8), TO_SIGNED(-76, 8), TO_SIGNED(-78, 8), TO_SIGNED(-81, 8), TO_SIGNED(-83, 8), TO_SIGNED(-85, 8), TO_SIGNED(-88, 8), TO_SIGNED(-90, 8), 
+        TO_SIGNED(-92, 8), TO_SIGNED(-94, 8), TO_SIGNED(-96, 8), TO_SIGNED(-98, 8), TO_SIGNED(-100, 8), TO_SIGNED(-102, 8), TO_SIGNED(-104, 8), TO_SIGNED(-106, 8), 
+        TO_SIGNED(-107, 8), TO_SIGNED(-109, 8), TO_SIGNED(-111, 8), TO_SIGNED(-112, 8), TO_SIGNED(-114, 8), TO_SIGNED(-115, 8), TO_SIGNED(-117, 8), TO_SIGNED(-118, 8), 
+        TO_SIGNED(-119, 8), TO_SIGNED(-120, 8), TO_SIGNED(-121, 8), TO_SIGNED(-122, 8), TO_SIGNED(-123, 8), TO_SIGNED(-124, 8), TO_SIGNED(-124, 8), TO_SIGNED(-125, 8), 
+        TO_SIGNED(-126, 8), TO_SIGNED(-126, 8), TO_SIGNED(-127, 8), TO_SIGNED(-127, 8), TO_SIGNED(-127, 8), TO_SIGNED(-127, 8), TO_SIGNED(-127, 8), TO_SIGNED(-127, 8), 
+        TO_SIGNED(-127, 8), TO_SIGNED(-127, 8), TO_SIGNED(-127, 8), TO_SIGNED(-127, 8), TO_SIGNED(-126, 8), TO_SIGNED(-126, 8), TO_SIGNED(-125, 8), TO_SIGNED(-124, 8), 
+        TO_SIGNED(-124, 8), TO_SIGNED(-123, 8), TO_SIGNED(-122, 8), TO_SIGNED(-121, 8), TO_SIGNED(-120, 8), TO_SIGNED(-119, 8), TO_SIGNED(-118, 8), TO_SIGNED(-117, 8), 
+        TO_SIGNED(-115, 8), TO_SIGNED(-114, 8), TO_SIGNED(-112, 8), TO_SIGNED(-111, 8), TO_SIGNED(-109, 8), TO_SIGNED(-107, 8), TO_SIGNED(-106, 8), TO_SIGNED(-104, 8), 
+        TO_SIGNED(-102, 8), TO_SIGNED(-100, 8), TO_SIGNED(-98, 8), TO_SIGNED(-96, 8), TO_SIGNED(-94, 8), TO_SIGNED(-92, 8), TO_SIGNED(-90, 8), TO_SIGNED(-88, 8), 
+        TO_SIGNED(-85, 8), TO_SIGNED(-83, 8), TO_SIGNED(-81, 8), TO_SIGNED(-78, 8), TO_SIGNED(-76, 8), TO_SIGNED(-73, 8), TO_SIGNED(-71, 8), TO_SIGNED(-68, 8), 
+        TO_SIGNED(-65, 8), TO_SIGNED(-63, 8), TO_SIGNED(-60, 8), TO_SIGNED(-57, 8), TO_SIGNED(-54, 8), TO_SIGNED(-51, 8), TO_SIGNED(-49, 8), TO_SIGNED(-46, 8), 
+        TO_SIGNED(-43, 8), TO_SIGNED(-40, 8), TO_SIGNED(-37, 8), TO_SIGNED(-34, 8), TO_SIGNED(-31, 8), TO_SIGNED(-28, 8), TO_SIGNED(-25, 8), TO_SIGNED(-22, 8), 
+        TO_SIGNED(-19, 8), TO_SIGNED(-16, 8), TO_SIGNED(-12, 8), TO_SIGNED(-9, 8), TO_SIGNED(-6, 8), TO_SIGNED(-3, 8)
+    );
+
+    -- Pipelined signals for calculating the strands
+    SIGNAL phase1, phase2, phase3, phase4, phase5 : UNSIGNED(7 DOWNTO 0);
+    SIGNAL sin1, sin2, sin3, sin4, sin5 : SIGNED(7 DOWNTO 0);
+    
+    SIGNAL curve1, curve2, curve3, curve4, curve5 : SIGNED(11 DOWNTO 0);
+
+    SIGNAL r_acc, g_acc, b_acc : UNSIGNED(7 DOWNTO 0);
+    
+BEGIN
+
+    PROCESS (clock)
+        VARIABLE x_scaled1, x_scaled2, x_scaled3, x_scaled4, x_scaled5 : UNSIGNED(15 DOWNTO 0);
+        VARIABLE t_scaled1, t_scaled2, t_scaled3, t_scaled4, t_scaled5 : UNSIGNED(15 DOWNTO 0);
+        VARIABLE y_pos : SIGNED(11 DOWNTO 0);
+    BEGIN
+        IF RISING_EDGE(clock) THEN
+            -- First stage: Calculate phase of each sine wave
+            -- Parameters scaled down to fit in 8-bit phase [0, 255]
+            x_scaled1 := pixel_x * TO_UNSIGNED(1, 4);
+            x_scaled2 := pixel_x * TO_UNSIGNED(2, 4);
+            x_scaled3 := pixel_x * TO_UNSIGNED(1, 4);
+            x_scaled4 := pixel_x * TO_UNSIGNED(2, 4);
+            x_scaled5 := pixel_x * TO_UNSIGNED(3, 4);
+            
+            t_scaled1 := frame_count * TO_UNSIGNED(10, 4);
+            t_scaled2 := frame_count * TO_UNSIGNED(10, 4);
+            t_scaled3 := frame_count * TO_UNSIGNED(8, 4);
+            t_scaled4 := frame_count * TO_UNSIGNED(12, 4);
+            t_scaled5 := frame_count * TO_UNSIGNED(14, 4);
+            
+            phase1 <= x_scaled1(7 DOWNTO 0) - t_scaled1(7 DOWNTO 0) + TO_UNSIGNED(200, 8);
+            phase2 <= x_scaled2(7 DOWNTO 0) - t_scaled2(7 DOWNTO 0) + TO_UNSIGNED(164, 8);
+            phase3 <= x_scaled3(7 DOWNTO 0) + t_scaled3(7 DOWNTO 0) + TO_UNSIGNED(187, 8);
+            phase4 <= x_scaled4(7 DOWNTO 0) - t_scaled4(7 DOWNTO 0) + TO_UNSIGNED(235, 8);
+            phase5 <= x_scaled5(7 DOWNTO 0) + t_scaled5(7 DOWNTO 0) + TO_UNSIGNED(184, 8);
+
+            -- Second stage: Lookup Sine values
+            sin1 <= SINE_ROM(TO_INTEGER(phase1));
+            sin2 <= SINE_ROM(TO_INTEGER(phase2));
+            sin3 <= SINE_ROM(TO_INTEGER(phase3));
+            sin4 <= SINE_ROM(TO_INTEGER(phase4));
+            sin5 <= SINE_ROM(TO_INTEGER(phase5));
+            
+            -- Keep Y pos ready for the curve math
+            y_pos := SIGNED(RESIZE(pixel_y, 12));
+            
+            -- Third stage: Calculate the curve difference (absolute distance)
+            -- We roughly approximate the y center and sine amplitude scale
+            curve1 <= ABS(y_pos - (TO_SIGNED(240, 12) + RESIZE(sin1 * 1, 12)));
+            curve2 <= ABS(y_pos - (TO_SIGNED(240, 12) + RESIZE(sin2 * 2, 12)));
+            curve3 <= ABS(y_pos - (TO_SIGNED(240, 12) + RESIZE(sin3 * 2, 12)));
+            curve4 <= ABS(y_pos - (TO_SIGNED(240, 12) + RESIZE(sin4 * 1, 12)));
+            curve5 <= ABS(y_pos - (TO_SIGNED(240, 12) + RESIZE(sin5 * 3, 12)));
+            
+            -- Fourth stage: Map distance to glow/intensity (simple clamping/inversion)
+            r_acc <= (OTHERS => '0');
+            g_acc <= (OTHERS => '0');
+            b_acc <= (OTHERS => '0');
+            
+            IF curve1 < 8 THEN r_acc <= r_acc + 8; g_acc <= g_acc + 8; END IF;
+            IF curve2 < 8 THEN r_acc <= r_acc + 9; g_acc <= g_acc + 7; END IF;
+            IF curve3 < 8 THEN r_acc <= r_acc + 7; g_acc <= g_acc + 9; b_acc <= b_acc + 8; END IF;
+            IF curve4 < 8 THEN r_acc <= r_acc + 6; g_acc <= g_acc + 10; END IF;
+            IF curve5 < 8 THEN r_acc <= r_acc + 10; g_acc <= g_acc + 6; b_acc <= b_acc + 8; END IF;
+            
+            -- Final output bounds checking mapping
+            IF r_acc > 15 THEN r_out <= x"F"; ELSE r_out <= STD_LOGIC_VECTOR(r_acc(3 DOWNTO 0)); END IF;
+            IF g_acc > 15 THEN g_out <= x"F"; ELSE g_out <= STD_LOGIC_VECTOR(g_acc(3 DOWNTO 0)); END IF;
+            IF b_acc > 15 THEN b_out <= x"F"; ELSE b_out <= STD_LOGIC_VECTOR(b_acc(3 DOWNTO 0)); END IF;
+        END IF;
+    END PROCESS;
+
+END ARCHITECTURE rtl;
