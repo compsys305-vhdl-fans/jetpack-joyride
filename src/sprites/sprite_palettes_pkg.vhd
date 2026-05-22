@@ -130,24 +130,24 @@ PACKAGE BODY sprite_palettes_pkg IS
     BEGIN
         CASE sprite_id IS
             WHEN SPRITE_BARRY_RUN | SPRITE_BARRY_FLY | SPRITE_STOMPER_FLY | SPRITE_STOMPER_FALL => 
-                -- 200ms per frame (2 ticks, 10Hz)
-                IF (anim_tick MOD 4) < 2 THEN
+                -- 200ms per frame (3 ticks, 12Hz)
+                IF (anim_tick MOD 6) < 3 THEN
                     RETURN 0;
                 ELSE
                     RETURN 1;
                 END IF;
 
             WHEN SPRITE_STOMPER_RUN =>
-                -- 400ms per frame (4 ticks, 10Hz)
-                IF (anim_tick MOD 8) < 4 THEN
+                -- 200ms per frame (3 ticks, 12Hz)
+                IF (anim_tick MOD 6) < 3 THEN
                     RETURN 0;
                 ELSE
                     RETURN 1;
                 END IF;
 
             WHEN SPRITE_TELEPORTER =>
-                -- 500ms per frame (5 ticks, 10Hz)
-                IF anim_tick < 5 THEN
+                -- 500ms per frame (6 ticks, 12Hz)
+                IF anim_tick < 6 THEN
                     RETURN 0;
                 ELSE
                     RETURN 1;

@@ -41,10 +41,10 @@ ARCHITECTURE rtl OF sprite_renderer IS
     SIGNAL local_x : UNSIGNED(15 DOWNTO 0);
     SIGNAL local_y : UNSIGNED(15 DOWNTO 0);
 
-    -- Animation Signals (25MHz clock -> 2,500,000 cycles = 100 ms = 1 tick, 10 ticks = 1 second)
-    CONSTANT TICK_CYCLES : INTEGER := 2500000 - 1;
+    -- Animation Signals (25MHz clock -> 2,500,000 cycles; ~83 ms = 1 tick, 12 ticks = 1 second)              2083333 ~ roughly 12 ticks per second
+    CONSTANT TICK_CYCLES : INTEGER := 2083333 - 1;
     SIGNAL tick_counter  : INTEGER RANGE 0 TO TICK_CYCLES := 0;
-    SIGNAL anim_tick     : INTEGER RANGE 0 TO 9 := 0;
+    SIGNAL anim_tick     : INTEGER RANGE 0 TO 11 := 0;
 
     -- Player Sprite Signals
     SIGNAL player_run1_pixel_index, player_run2_pixel_index : UNSIGNED(7 DOWNTO 0);
@@ -82,7 +82,8 @@ BEGIN
         IF RISING_EDGE(clock) THEN
             IF tick_counter = TICK_CYCLES THEN
                 tick_counter <= 0;
-                IF anim_tick = 9 THEN
+                -- 12 tick cycle
+                IF anim_tick = 11 THEN
                     anim_tick <= 0;
                 ELSE
                     anim_tick <= anim_tick + 1;
