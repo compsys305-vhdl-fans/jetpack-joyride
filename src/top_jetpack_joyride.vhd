@@ -83,6 +83,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             playing : OUT STD_LOGIC;
             player_vehicle : OUT STD_LOGIC_VECTOR(1 DOWNTO 0);
             player_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
+            grounded : OUT STD_LOGIC;
             teleporter_preview_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0)
         );
     END COMPONENT game;
@@ -105,6 +106,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
 
     -- player signals
     SIGNAL player_y : STD_LOGIC_VECTOR(9 DOWNTO 0);
+    SIGNAL player_grounded : STD_LOGIC;
     SIGNAL playing : STD_LOGIC;
     SIGNAL player_vehicle : STD_LOGIC_VECTOR(1 DOWNTO 0);
     SIGNAL debug_vehicle_select : STD_LOGIC_VECTOR(1 DOWNTO 0);
@@ -146,6 +148,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL player_drawn : STD_LOGIC;
     SIGNAL in_player_sprite_d : STD_LOGIC := '0';
 
+    SIGNAL player_sprite_id : UNSIGNED(7 DOWNTO 0);
 BEGIN
     -- placeholder; we should have port maps and stuff, but ideally no logic here (apart from logic inversion for active-low buttons and stuff)
     -- clock divider to generate 25MHz from 50MHz
@@ -211,6 +214,7 @@ BEGIN
         playing => playing,
         player_vehicle => player_vehicle,
         player_y => player_y,
+        grounded => player_grounded,
         teleporter_preview_y => teleporter_preview_y
     );
 
@@ -240,7 +244,7 @@ BEGIN
     player_sprite_renderer: sprite_renderer
         PORT MAP (
             clock          => clock_25,
-            sprite_id      => x"00", -- Player Sprite ID
+            sprite_id      => player_sprite_id,
             palette_id     => x"00", -- Barry Palette ID
             scale_shift    => PLAYER_SCALE_SHIFT,
             rel_x          => player_rel_x,
@@ -269,6 +273,8 @@ BEGIN
             in_player_sprite_d <= in_player_sprite;
         END IF;
     END PROCESS;
+
+    player_sprite_id <= x"00" WHEN player_grounded = '1' ELSE x"02";
 
     player_drawn <= in_player_sprite_d AND sprite_valid AND (NOT player_is_transparent);
 

@@ -13,6 +13,7 @@ ENTITY game IS
         playing : OUT STD_LOGIC;  -- whether the game is currently being played or not. if not, the physics should not update, and the player should be reset to the starting position.
         player_vehicle : OUT STD_LOGIC_VECTOR(1 DOWNTO 0);
         player_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
+        grounded : OUT STD_LOGIC;
         teleporter_preview_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0)
     );
 END game;
@@ -32,12 +33,14 @@ ARCHITECTURE behaviour OF game IS
             playing : IN STD_LOGIC;
             player_vehicle : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
             player_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
+            grounded : OUT STD_LOGIC;
             teleporter_preview_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0)
         );
     END COMPONENT physics;
 
     SIGNAL player_y_pos : STD_LOGIC_VECTOR(9 DOWNTO 0) := (OTHERS => '0');
     SIGNAL teleporter_preview_pos : STD_LOGIC_VECTOR(9 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL is_player_grounded : STD_LOGIC := '0';
     SIGNAL active_vehicle : STD_LOGIC_VECTOR(1 DOWNTO 0) := (OTHERS => '0');
     SIGNAL is_playing : STD_LOGIC := '0';
 BEGIN
@@ -57,6 +60,7 @@ BEGIN
         playing => is_playing,
         player_vehicle => active_vehicle,
         player_y => player_y_pos,
+        grounded => is_player_grounded,
         teleporter_preview_y => teleporter_preview_pos
     );
 
@@ -74,5 +78,6 @@ BEGIN
     playing <= is_playing;
     player_vehicle <= active_vehicle;
     player_y <= player_y_pos;
+    grounded <= is_player_grounded;
     teleporter_preview_y <= teleporter_preview_pos;
 END ARCHITECTURE behaviour;

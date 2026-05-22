@@ -14,6 +14,7 @@ ENTITY physics IS
         -- player specific signals
         player_vehicle : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
         player_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
+        grounded : OUT STD_LOGIC;
         teleporter_preview_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0)
     );
 END physics;
@@ -200,5 +201,6 @@ BEGIN
     END PROCESS;
 
     player_y <= player_y_pos;
+    grounded <= '1' WHEN player_y_pos = PLAYER_MAX_Y ELSE '0';
     teleporter_preview_y <= teleporter_preview_pos;
 END ARCHITECTURE behaviour;
