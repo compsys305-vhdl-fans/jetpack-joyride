@@ -479,6 +479,8 @@ set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
 set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
 set_global_assignment -name POWER_PRESET_COOLING_SOLUTION "23 MM HEAT SINK WITH 200 LFPM AIRFLOW"
 set_global_assignment -name POWER_BOARD_THERMAL_MODEL "NONE (CONSERVATIVE)"
+
+set_global_assignment -name VHDL_FILE ../src/strand_effect.vhd
 set_global_assignment -name VHDL_FILE ../src/sprites/sprite_palettes_pkg.vhd
 set_global_assignment -name VHDL_FILE ../src/sprites/sprite_renderer.vhd
 set_global_assignment -name VHDL_FILE ../src/sprites/image_loader.vhd

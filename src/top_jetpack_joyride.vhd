@@ -107,7 +107,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             clock       : IN STD_LOGIC;
             pixel_x     : IN UNSIGNED(9 DOWNTO 0);
             pixel_y     : IN UNSIGNED(9 DOWNTO 0);
-            frame_count : IN UNSIGNED(15 DOWNTO 0);
+            frame_count : IN UNSIGNED(7 DOWNTO 0);
             r_out       : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
             g_out       : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
             b_out       : OUT STD_LOGIC_VECTOR(3 DOWNTO 0)
@@ -163,7 +163,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL player_sprite_id : UNSIGNED(7 DOWNTO 0);
 
     -- strand effect signals
-    SIGNAL frame_counter : UNSIGNED(15 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL frame_counter : UNSIGNED(7 DOWNTO 0) := (OTHERS => '0');
     SIGNAL strand_r, strand_g, strand_b : STD_LOGIC_VECTOR(3 DOWNTO 0);
 
 BEGIN
@@ -345,7 +345,7 @@ BEGIN
             blue_sig <= x"8";
         ELSE
             -- Map background to strand effect
-            red_sig <= strand_r;
+            red_sig <= x"F";
             green_sig <= strand_g;
             blue_sig <= strand_b;
         END IF;

@@ -7,7 +7,7 @@ ENTITY strand_effect IS
         clock       : IN STD_LOGIC;
         pixel_x     : IN UNSIGNED(9 DOWNTO 0);
         pixel_y     : IN UNSIGNED(9 DOWNTO 0);
-        frame_count : IN UNSIGNED(15 DOWNTO 0);
+        frame_count : IN UNSIGNED(7 DOWNTO 0);
         r_out       : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
         g_out       : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
         b_out       : OUT STD_LOGIC_VECTOR(3 DOWNTO 0)
@@ -71,17 +71,17 @@ BEGIN
         IF RISING_EDGE(clock) THEN
             -- First stage: Calculate phase of each sine wave
             -- Parameters scaled down to fit in 8-bit phase [0, 255]
-            x_scaled1 := pixel_x * TO_UNSIGNED(1, 4);
-            x_scaled2 := pixel_x * TO_UNSIGNED(2, 4);
-            x_scaled3 := pixel_x * TO_UNSIGNED(1, 4);
-            x_scaled4 := pixel_x * TO_UNSIGNED(2, 4);
-            x_scaled5 := pixel_x * TO_UNSIGNED(3, 4);
+            x_scaled1 := pixel_x * TO_UNSIGNED(1, 6);
+            x_scaled2 := pixel_x * TO_UNSIGNED(2, 6);
+            x_scaled3 := pixel_x * TO_UNSIGNED(1, 6);
+            x_scaled4 := pixel_x * TO_UNSIGNED(2, 6);
+            x_scaled5 := pixel_x * TO_UNSIGNED(3, 6);
             
-            t_scaled1 := frame_count * TO_UNSIGNED(10, 4);
-            t_scaled2 := frame_count * TO_UNSIGNED(10, 4);
-            t_scaled3 := frame_count * TO_UNSIGNED(8, 4);
-            t_scaled4 := frame_count * TO_UNSIGNED(12, 4);
-            t_scaled5 := frame_count * TO_UNSIGNED(14, 4);
+            t_scaled1 := frame_count * 10;
+            t_scaled2 := frame_count * 10;
+            t_scaled3 := frame_count * 8;
+            t_scaled4 := frame_count * 12;
+            t_scaled5 := frame_count * 14;
             
             phase1 <= x_scaled1(7 DOWNTO 0) - t_scaled1(7 DOWNTO 0) + TO_UNSIGNED(200, 8);
             phase2 <= x_scaled2(7 DOWNTO 0) - t_scaled2(7 DOWNTO 0) + TO_UNSIGNED(164, 8);
