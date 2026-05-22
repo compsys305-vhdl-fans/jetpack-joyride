@@ -295,7 +295,7 @@ BEGIN
 
     player_drawn <= in_player_sprite_d AND sprite_valid AND (NOT player_is_transparent);
 
-    PROCESS (player_drawn, sprite_color, teleporter_preview_on) BEGIN
+    PROCESS (player_drawn, sprite_color, teleporter_preview_on, pixel_row) BEGIN
         IF player_drawn = '1' THEN
             red_sig <= sprite_color(11 DOWNTO 8);
             green_sig <= sprite_color(7 DOWNTO 4);
@@ -304,6 +304,10 @@ BEGIN
             red_sig <= x"F";
             green_sig <= x"6";
             blue_sig <= x"0";
+        ELSIF (TO_INTEGER(UNSIGNED(pixel_row)) >= 470) THEN
+            red_sig <= x"8";
+            green_sig <= x"8";
+            blue_sig <= x"8";
         ELSE
             red_sig <= (OTHERS => '0');
             green_sig <= (OTHERS => '0');
