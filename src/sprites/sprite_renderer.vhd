@@ -104,8 +104,8 @@ BEGIN
             player_air1_pixel_index, player_air1_valid, player_air2_pixel_index, player_air2_valid)
     BEGIN
         CASE sprite_id IS
-            WHEN x"00" => -- Running (Animated 10 Hz)
-                IF (anim_tick MOD 2) = 0 THEN
+            WHEN x"00" => -- Running (Animated)
+                IF get_anim_frame(sprite_id, anim_tick) = 0 THEN
                     active_pixel_index <= player_run1_pixel_index;
                     active_valid       <= player_run1_valid;
                 ELSE
@@ -113,8 +113,8 @@ BEGIN
                     active_valid       <= player_run2_valid;
                 END IF;
                 
-            WHEN x"02" => -- Flying / Active (Animated 10 Hz)
-                IF (anim_tick MOD 2) = 0 THEN
+            WHEN x"02" => -- Flying / Active (Animated)
+                IF get_anim_frame(sprite_id, anim_tick) = 0 THEN
                     active_pixel_index <= player_air1_pixel_index;
                     active_valid       <= player_air1_valid;
                 ELSE
