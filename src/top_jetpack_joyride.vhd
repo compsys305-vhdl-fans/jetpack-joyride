@@ -345,7 +345,7 @@ BEGIN
             blue_sig <= x"8";
         ELSE
             -- Map background to strand effect
-            red_sig <= x"F";
+            red_sig <= strand_r;
             green_sig <= strand_g;
             blue_sig <= strand_b;
         END IF;

@@ -102,10 +102,10 @@ BEGIN
             -- Third stage: Calculate the curve difference (absolute distance)
             -- We roughly approximate the y center and sine amplitude scale
             curve1 <= ABS(y_pos - (TO_SIGNED(240, 12) + RESIZE(sin1 * 1, 12)));
-            curve2 <= ABS(y_pos - (TO_SIGNED(240, 12) + RESIZE(sin2 * 2, 12)));
-            curve3 <= ABS(y_pos - (TO_SIGNED(240, 12) + RESIZE(sin3 * 2, 12)));
+            curve2 <= ABS(y_pos - (TO_SIGNED(240, 12) + RESIZE(sin2 / 2, 12)));
+            curve3 <= ABS(y_pos - (TO_SIGNED(240, 12) + RESIZE(sin3 / 2, 12)));
             curve4 <= ABS(y_pos - (TO_SIGNED(240, 12) + RESIZE(sin4 * 1, 12)));
-            curve5 <= ABS(y_pos - (TO_SIGNED(240, 12) + RESIZE(sin5 * 3, 12)));
+            curve5 <= ABS(y_pos - (TO_SIGNED(240, 12) + RESIZE(sin5 / 4, 12)));
             
             -- Fourth stage: Map distance to glow/intensity (simple clamping/inversion)
             r_acc <= (OTHERS => '0');
