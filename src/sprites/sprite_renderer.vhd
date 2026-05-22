@@ -41,8 +41,8 @@ ARCHITECTURE rtl OF sprite_renderer IS
     SIGNAL local_x : UNSIGNED(15 DOWNTO 0);
     SIGNAL local_y : UNSIGNED(15 DOWNTO 0);
 
-    -- Animation Signals (25MHz clock -> 5,000,000 cycles = 200 ms)
-    CONSTANT ANIM_MAX   : INTEGER := 5000000 - 1;
+    -- Animation Signals (25MHz clock -> 2,500,000 cycles = 100 ms)
+    CONSTANT ANIM_MAX   : INTEGER := 2500000 - 1;
     SIGNAL anim_counter : INTEGER RANGE 0 TO ANIM_MAX := 0;
     SIGNAL anim_frame   : STD_LOGIC := '0';
 
