@@ -41,10 +41,10 @@ ARCHITECTURE rtl OF sprite_renderer IS
     SIGNAL local_x : UNSIGNED(15 DOWNTO 0);
     SIGNAL local_y : UNSIGNED(15 DOWNTO 0);
 
-    -- Animation Signals (25MHz clock -> 2,500,000 cycles = 100 ms)
-    CONSTANT ANIM_MAX   : INTEGER := 2500000 - 1;
-    SIGNAL anim_counter : INTEGER RANGE 0 TO ANIM_MAX := 0;
-    SIGNAL anim_frame   : STD_LOGIC := '0';
+    -- Animation Signals (25MHz clock -> 2,500,000 cycles = 100 ms = 1 tick, 10 ticks = 1 second)
+    CONSTANT TICK_CYCLES : INTEGER := 2500000 - 1;
+    SIGNAL tick_counter  : INTEGER RANGE 0 TO TICK_CYCLES := 0;
+    SIGNAL anim_tick     : INTEGER RANGE 0 TO 9 := 0;
 
     -- Player Sprite Signals
     SIGNAL player_run1_pixel_index, player_run2_pixel_index : UNSIGNED(7 DOWNTO 0);
@@ -64,11 +64,15 @@ BEGIN
     PROCESS(clock)
     BEGIN
         IF RISING_EDGE(clock) THEN
-            IF anim_counter = ANIM_MAX THEN
-                anim_counter <= 0;
-                anim_frame <= NOT anim_frame;
+            IF tick_counter = TICK_CYCLES THEN
+                tick_counter <= 0;
+                IF anim_tick = 9 THEN
+                    anim_tick <= 0;
+                ELSE
+                    anim_tick <= anim_tick + 1;
+                END IF;
             ELSE
-                anim_counter <= anim_counter + 1;
+                tick_counter <= tick_counter + 1;
             END IF;
         END IF;
     END PROCESS;
@@ -95,13 +99,13 @@ BEGIN
         PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => player_air2_pixel_index, valid => player_air2_valid);
 
     -- 3. Multiplex outputs based on sprite_id
-    PROCESS(sprite_id, anim_frame, 
+    PROCESS(sprite_id, anim_tick,
             player_run1_pixel_index, player_run1_valid, player_run2_pixel_index, player_run2_valid,
             player_air1_pixel_index, player_air1_valid, player_air2_pixel_index, player_air2_valid)
     BEGIN
         CASE sprite_id IS
-            WHEN x"00" => -- Running (Animated)
-                IF anim_frame = '0' THEN
+            WHEN x"00" => -- Running (Animated 10 Hz)
+                IF (anim_tick MOD 2) = 0 THEN
                     active_pixel_index <= player_run1_pixel_index;
                     active_valid       <= player_run1_valid;
                 ELSE
@@ -109,8 +113,8 @@ BEGIN
                     active_valid       <= player_run2_valid;
                 END IF;
                 
-            WHEN x"02" => -- Flying / Active (Animated)
-                IF anim_frame = '0' THEN
+            WHEN x"02" => -- Flying / Active (Animated 10 Hz)
+                IF (anim_tick MOD 2) = 0 THEN
                     active_pixel_index <= player_air1_pixel_index;
                     active_valid       <= player_air1_valid;
                 ELSE
