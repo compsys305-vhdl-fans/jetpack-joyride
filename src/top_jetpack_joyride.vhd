@@ -102,6 +102,18 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
         );
     END COMPONENT sprite_renderer;
 
+    COMPONENT strand_effect IS
+        PORT (
+            clock       : IN STD_LOGIC;
+            pixel_x     : IN UNSIGNED(9 DOWNTO 0);
+            pixel_y     : IN UNSIGNED(9 DOWNTO 0);
+            frame_count : IN UNSIGNED(15 DOWNTO 0);
+            r_out       : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
+            g_out       : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
+            b_out       : OUT STD_LOGIC_VECTOR(3 DOWNTO 0)
+        );
+    END COMPONENT strand_effect;
+
     SIGNAL clock_25 : STD_LOGIC := '0';
 
     -- player signals
@@ -149,6 +161,11 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL in_player_sprite_d : STD_LOGIC := '0';
 
     SIGNAL player_sprite_id : UNSIGNED(7 DOWNTO 0);
+
+    -- strand effect signals
+    SIGNAL frame_counter : UNSIGNED(15 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL strand_r, strand_g, strand_b : STD_LOGIC_VECTOR(3 DOWNTO 0);
+
 BEGIN
     -- placeholder; we should have port maps and stuff, but ideally no logic here (apart from logic inversion for active-low buttons and stuff)
     -- clock divider to generate 25MHz from 50MHz
@@ -295,7 +312,25 @@ BEGIN
 
     player_drawn <= in_player_sprite_d AND sprite_valid AND (NOT player_is_transparent);
 
-    PROCESS (player_drawn, sprite_color, teleporter_preview_on, pixel_row) BEGIN
+    strand_inst: strand_effect
+        PORT MAP(
+            clock => clock_25,
+            pixel_x => UNSIGNED(pixel_column),
+            pixel_y => UNSIGNED(pixel_row),
+            frame_count => frame_counter,
+            r_out => strand_r,
+            g_out => strand_g,
+            b_out => strand_b
+        );
+
+    PROCESS(vga_vsync_sig)
+    BEGIN
+        IF RISING_EDGE(vga_vsync_sig) THEN
+            frame_counter <= frame_counter + 1;
+        END IF;
+    END PROCESS;
+
+    PROCESS (player_drawn, sprite_color, teleporter_preview_on, pixel_row, strand_r, strand_g, strand_b) BEGIN
         IF player_drawn = '1' THEN
             red_sig <= sprite_color(11 DOWNTO 8);
             green_sig <= sprite_color(7 DOWNTO 4);
@@ -309,9 +344,10 @@ BEGIN
             green_sig <= x"8";
             blue_sig <= x"8";
         ELSE
-            red_sig <= (OTHERS => '0');
-            green_sig <= (OTHERS => '0');
-            blue_sig <= (OTHERS => '0');
+            -- Map background to strand effect
+            red_sig <= strand_r;
+            green_sig <= strand_g;
+            blue_sig <= strand_b;
         END IF;
     END PROCESS;
 
