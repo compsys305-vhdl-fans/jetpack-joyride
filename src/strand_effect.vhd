@@ -59,14 +59,14 @@ ARCHITECTURE rtl OF strand_effect IS
     
     SIGNAL curve1, curve2, curve3, curve4, curve5 : SIGNED(11 DOWNTO 0);
 
-    SIGNAL r_acc, g_acc, b_acc : UNSIGNED(7 DOWNTO 0);
-    
 BEGIN
 
     PROCESS (clock)
         VARIABLE x_scaled1, x_scaled2, x_scaled3, x_scaled4, x_scaled5 : UNSIGNED(15 DOWNTO 0);
         VARIABLE t_scaled1, t_scaled2, t_scaled3, t_scaled4, t_scaled5 : UNSIGNED(15 DOWNTO 0);
         VARIABLE y_pos : SIGNED(11 DOWNTO 0);
+        VARIABLE v1, v2, v3, v4, v5 : INTEGER RANGE 0 TO 63;
+        VARIABLE v_r, v_g, v_b : INTEGER RANGE -64 TO 511;
     BEGIN
         IF RISING_EDGE(clock) THEN
             -- First stage: Calculate phase of each sine wave
@@ -108,20 +108,21 @@ BEGIN
             curve5 <= ABS(y_pos - (TO_SIGNED(240, 12) + RESIZE(sin5 * 3, 12)));
             
             -- Fourth stage: Map distance to glow/intensity (simple clamping/inversion)
-            r_acc <= (OTHERS => '0');
-            g_acc <= (OTHERS => '0');
-            b_acc <= (OTHERS => '0');
+            v1 := 0; IF curve1 < 32 THEN v1 := 15 - (TO_INTEGER(curve1) / 2); IF curve1 < 2 THEN v1 := v1 + 10; END IF; END IF;
+            v2 := 0; IF curve2 < 32 THEN v2 := 15 - (TO_INTEGER(curve2) / 2); IF curve2 < 2 THEN v2 := v2 + 10; END IF; END IF;
+            v3 := 0; IF curve3 < 32 THEN v3 := 15 - (TO_INTEGER(curve3) / 2); IF curve3 < 2 THEN v3 := v3 + 10; END IF; END IF;
+            v4 := 0; IF curve4 < 32 THEN v4 := 15 - (TO_INTEGER(curve4) / 2); IF curve4 < 2 THEN v4 := v4 + 10; END IF; END IF;
+            v5 := 0; IF curve5 < 32 THEN v5 := 15 - (TO_INTEGER(curve5) / 2); IF curve5 < 2 THEN v5 := v5 + 10; END IF; END IF;
             
-            IF curve1 < 8 THEN r_acc <= r_acc + 8; g_acc <= g_acc + 8; END IF;
-            IF curve2 < 8 THEN r_acc <= r_acc + 9; g_acc <= g_acc + 7; END IF;
-            IF curve3 < 8 THEN r_acc <= r_acc + 7; g_acc <= g_acc + 9; b_acc <= b_acc + 8; END IF;
-            IF curve4 < 8 THEN r_acc <= r_acc + 6; g_acc <= g_acc + 10; END IF;
-            IF curve5 < 8 THEN r_acc <= r_acc + 10; g_acc <= g_acc + 6; b_acc <= b_acc + 8; END IF;
+            -- Combine strands with their color mix
+            v_r := v1 + v2 + (v2 / 4) + v3 - (v3 / 4) + v4 - (v4 / 4) + v5 + (v5 / 4);
+            v_g := v1 + v2 - (v2 / 4) + v3 + (v3 / 4) + v4 + (v4 / 4) + v5 - (v5 / 4);
+            v_b := v3 + v5;
             
             -- Final output bounds checking mapping
-            IF r_acc > 15 THEN r_out <= x"F"; ELSE r_out <= STD_LOGIC_VECTOR(r_acc(3 DOWNTO 0)); END IF;
-            IF g_acc > 15 THEN g_out <= x"F"; ELSE g_out <= STD_LOGIC_VECTOR(g_acc(3 DOWNTO 0)); END IF;
-            IF b_acc > 15 THEN b_out <= x"F"; ELSE b_out <= STD_LOGIC_VECTOR(b_acc(3 DOWNTO 0)); END IF;
+            IF v_r > 15 THEN r_out <= x"F"; ELSIF v_r < 0 THEN r_out <= x"0"; ELSE r_out <= STD_LOGIC_VECTOR(TO_UNSIGNED(v_r, 4)); END IF;
+            IF v_g > 15 THEN g_out <= x"F"; ELSIF v_g < 0 THEN g_out <= x"0"; ELSE g_out <= STD_LOGIC_VECTOR(TO_UNSIGNED(v_g, 4)); END IF;
+            IF v_b > 15 THEN b_out <= x"F"; ELSIF v_b < 0 THEN b_out <= x"0"; ELSE b_out <= STD_LOGIC_VECTOR(TO_UNSIGNED(v_b, 4)); END IF;
         END IF;
     END PROCESS;
 
