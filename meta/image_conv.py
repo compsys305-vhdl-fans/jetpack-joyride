@@ -68,6 +68,22 @@ def build_palette(image_paths: list[Path]) -> Palette:
     return Palette.from_pixels(all_pixels)
 
 
+def validate_palette_coverage(image_paths: list[Path], palette: Palette) -> None:
+    palette_set = set(palette.colors)
+    for image_path in image_paths:
+        pixels, _, _ = load_pixels(image_path)
+        missing: set[tuple[int, int, int]] = set()
+        for r8, g8, b8, a8 in pixels:
+            color = rgba_to_4bit_rgb(r8, g8, b8, a8)
+            if color not in palette_set:
+                missing.add(color)
+
+        if missing:
+            raise ValueError(
+                f"Palette missing colors for {image_path}: {sorted(missing)}"
+            )
+
+
 def convert_image_to_palette_indexes(
     image_path: Path,
     palette: Palette,
@@ -220,6 +236,7 @@ if __name__ == "__main__":
             raise FileNotFoundError(f"Palette image not found: {palette_path}")
 
     palette = build_palette(palette_sources)
+    validate_palette_coverage(image_paths, palette)
 
     if not args.palette_only:
         for image_path in image_paths:

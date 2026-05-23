@@ -1,16 +1,17 @@
 #!/bin/zsh
 set -ex
+setopt null_glob
 
-for dir in ../res/*; do
+script_dir="$(cd -- "$(dirname -- "$0")" && pwd)"
+res_dir="$script_dir/../res"
+
+for dir in "$res_dir"/*; do
 	if [[ -d "$dir" ]]; then
 		pngs=($dir/*.png)
 		if [[ -e "${pngs[1]}" ]]; then
-			uv run image_conv.py --palette-only --vhdl-output "$dir/palette.vhd" "${pngs[@]}"
-			for img in "${pngs[@]}"; do
-				uv run image_conv.py --no-vhdl "$img" --palette-images "${pngs[@]}"
-			done
+			uv run image_conv.py --vhdl-output "$dir/palette.vhd" "${pngs[@]}"
 		fi
 	fi
 done
 
-find ../res -type f -name "*.vhd" ! -name "palette.vhd" -delete
+find "$res_dir" -type f -name "*.vhd" ! -name "palette.vhd" -delete
