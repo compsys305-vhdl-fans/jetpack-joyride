@@ -491,7 +491,6 @@ set_global_assignment -name VHDL_FILE ../res/coin/palette.vhd -library palettes
 set_global_assignment -name VHDL_FILE ../res/bird/palette.vhd -library palettes
 set_global_assignment -name VHDL_FILE ../res/barry/palette.vhd -library palettes
 set_global_assignment -name VHDL_FILE ../res/background/palette.vhd -library palettes
-set_global_assignment -name VHDL_FILE ../src/strand_effect.vhd
 set_global_assignment -name VHDL_FILE ../src/sprites/sprite_palettes_pkg.vhd
 set_global_assignment -name VHDL_FILE ../src/sprites/sprite_renderer.vhd
 set_global_assignment -name VHDL_FILE ../src/sprites/image_loader.vhd
