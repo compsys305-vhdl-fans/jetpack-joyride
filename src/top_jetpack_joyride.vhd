@@ -388,28 +388,42 @@ BEGIN
         END IF;
     END PROCESS;
 
-    PROCESS (player_drawn, sprite_color, teleporter_preview_on, pixel_row, strand_r, strand_g, strand_b, laser_is_transparent, laser_color) BEGIN
+    PROCESS (player_drawn, sprite_color, teleporter_preview_on, pixel_row, strand_r, strand_g, strand_b, laser_is_transparent, laser_color)
+        VARIABLE base_r, base_g, base_b : INTEGER RANGE 0 TO 15;
+        VARIABLE add_r, add_g, add_b : INTEGER;
+    BEGIN
         IF player_drawn = '1' THEN
             red_sig <= sprite_color(11 DOWNTO 8);
             green_sig <= sprite_color(7 DOWNTO 4);
             blue_sig <= sprite_color(3 DOWNTO 0);
-        ELSIF laser_is_transparent = '0' THEN
-            red_sig <= laser_color(11 DOWNTO 8);
-            green_sig <= laser_color(7 DOWNTO 4);
-            blue_sig <= laser_color(3 DOWNTO 0);
-        ELSIF teleporter_preview_on = '1' THEN
-            red_sig <= x"F";
-            green_sig <= x"6";
-            blue_sig <= x"0";
-        ELSIF (TO_INTEGER(UNSIGNED(pixel_row)) >= 470) THEN
-            red_sig <= x"8";
-            green_sig <= x"8";
-            blue_sig <= x"8";
         ELSE
-            -- Map background to strand effect
-            red_sig <= strand_r;
-            green_sig <= strand_g;
-            blue_sig <= strand_b;
+            IF teleporter_preview_on = '1' THEN
+                base_r := 15;
+                base_g := 6;
+                base_b := 0;
+            ELSIF (TO_INTEGER(UNSIGNED(pixel_row)) >= 470) THEN
+                base_r := 8;
+                base_g := 8;
+                base_b := 8;
+            ELSE
+                base_r := TO_INTEGER(UNSIGNED(strand_r));
+                base_g := TO_INTEGER(UNSIGNED(strand_g));
+                base_b := TO_INTEGER(UNSIGNED(strand_b));
+            END IF;
+
+            IF laser_is_transparent = '0' THEN
+                add_r := base_r + TO_INTEGER(UNSIGNED(laser_color(11 DOWNTO 8)));
+                add_g := base_g + TO_INTEGER(UNSIGNED(laser_color(7 DOWNTO 4)));
+                add_b := base_b + TO_INTEGER(UNSIGNED(laser_color(3 DOWNTO 0)));
+
+                IF add_r > 15 THEN red_sig <= x"F"; ELSE red_sig <= STD_LOGIC_VECTOR(TO_UNSIGNED(add_r, 4)); END IF;
+                IF add_g > 15 THEN green_sig <= x"F"; ELSE green_sig <= STD_LOGIC_VECTOR(TO_UNSIGNED(add_g, 4)); END IF;
+                IF add_b > 15 THEN blue_sig <= x"F"; ELSE blue_sig <= STD_LOGIC_VECTOR(TO_UNSIGNED(add_b, 4)); END IF;
+            ELSE
+                red_sig <= STD_LOGIC_VECTOR(TO_UNSIGNED(base_r, 4));
+                green_sig <= STD_LOGIC_VECTOR(TO_UNSIGNED(base_g, 4));
+                blue_sig <= STD_LOGIC_VECTOR(TO_UNSIGNED(base_b, 4));
+            END IF;
         END IF;
     END PROCESS;
 END ARCHITECTURE rtl;

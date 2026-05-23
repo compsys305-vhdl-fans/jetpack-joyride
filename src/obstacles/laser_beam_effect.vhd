@@ -23,6 +23,13 @@ END ENTITY laser_beam_effect;
 ARCHITECTURE rtl OF laser_beam_effect IS
 
     CONSTANT BEAM_X_SHIFT : INTEGER := 2;
+    CONSTANT AMP1_DIV : INTEGER := 16;
+    CONSTANT AMP2_DIV : INTEGER := 32;
+    CONSTANT AMP3_DIV : INTEGER := 32;
+    CONSTANT AMP4_DIV : INTEGER := 16;
+    CONSTANT AMP5_DIV : INTEGER := 64;
+    CONSTANT CURVE_LIMIT : INTEGER := 3;
+    CONSTANT CURVE_BOOST_LIMIT : INTEGER := 2;
 
     FUNCTION wrap8(value : INTEGER) RETURN UNSIGNED IS
         VARIABLE tmp : INTEGER;
@@ -113,17 +120,17 @@ BEGIN
 
                         y_pos := beam_v;
 
-                        curve1 := ABS(y_pos - (sin1_i / 4));
-                        curve2 := ABS(y_pos - (sin2_i / 8));
-                        curve3 := ABS(y_pos - (sin3_i / 8));
-                        curve4 := ABS(y_pos - (sin4_i / 4));
-                        curve5 := ABS(y_pos - (sin5_i / 16));
+                        curve1 := ABS(y_pos - (sin1_i / AMP1_DIV));
+                        curve2 := ABS(y_pos - (sin2_i / AMP2_DIV));
+                        curve3 := ABS(y_pos - (sin3_i / AMP3_DIV));
+                        curve4 := ABS(y_pos - (sin4_i / AMP4_DIV));
+                        curve5 := ABS(y_pos - (sin5_i / AMP5_DIV));
 
-                        v1 := 0; IF curve1 < 4 THEN v1 := 15 - (curve1 * 4); IF curve1 < 2 THEN v1 := v1 + 10; END IF; END IF;
-                        v2 := 0; IF curve2 < 4 THEN v2 := 15 - (curve2 * 4); IF curve2 < 2 THEN v2 := v2 + 10; END IF; END IF;
-                        v3 := 0; IF curve3 < 4 THEN v3 := 15 - (curve3 * 4); IF curve3 < 2 THEN v3 := v3 + 10; END IF; END IF;
-                        v4 := 0; IF curve4 < 4 THEN v4 := 15 - (curve4 * 4); IF curve4 < 2 THEN v4 := v4 + 10; END IF; END IF;
-                        v5 := 0; IF curve5 < 4 THEN v5 := 15 - (curve5 * 4); IF curve5 < 2 THEN v5 := v5 + 10; END IF; END IF;
+                        v1 := 0; IF curve1 < CURVE_LIMIT THEN v1 := 15 - (curve1 * 4); IF curve1 < CURVE_BOOST_LIMIT THEN v1 := v1 + 10; END IF; END IF;
+                        v2 := 0; IF curve2 < CURVE_LIMIT THEN v2 := 15 - (curve2 * 4); IF curve2 < CURVE_BOOST_LIMIT THEN v2 := v2 + 10; END IF; END IF;
+                        v3 := 0; IF curve3 < CURVE_LIMIT THEN v3 := 15 - (curve3 * 4); IF curve3 < CURVE_BOOST_LIMIT THEN v3 := v3 + 10; END IF; END IF;
+                        v4 := 0; IF curve4 < CURVE_LIMIT THEN v4 := 15 - (curve4 * 4); IF curve4 < CURVE_BOOST_LIMIT THEN v4 := v4 + 10; END IF; END IF;
+                        v5 := 0; IF curve5 < CURVE_LIMIT THEN v5 := 15 - (curve5 * 4); IF curve5 < CURVE_BOOST_LIMIT THEN v5 := v5 + 10; END IF; END IF;
 
                         v_r := v1 + v2 + (v2 / 4) + v3 - (v3 / 4) + v4 - (v4 / 4) + v5 + (v5 / 4);
                         v_g := v1 + v2 - (v2 / 4) + v3 + (v3 / 4) + v4 + (v4 / 4) + v5 - (v5 / 4);
