@@ -271,6 +271,14 @@ BEGIN
     ledr(1 DOWNTO 0) <= player_vehicle;
     ledr(9 DOWNTO 2) <= sw(9 DOWNTO 2);
 
+    -- unused currently, but we should map this to score eventually when it exists
+    hex0 <= "0000000";
+    hex1 <= "0000000";
+    hex2 <= "0000000";
+    hex3 <= "0000000";
+    hex4 <= "0000000";
+    hex5 <= "0000000";
+
     PROCESS (pixel_row, teleporter_preview_y)
     BEGIN
         IF UNSIGNED(pixel_row) = UNSIGNED(teleporter_preview_y) THEN

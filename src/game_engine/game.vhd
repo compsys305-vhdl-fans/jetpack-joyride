@@ -29,7 +29,7 @@ ARCHITECTURE behaviour OF game IS
             PLAYER_HEIGHT : POSITIVE
         );
         PORT (
-            clock_50MHz, vert_sync : IN STD_LOGIC;
+            vert_sync : IN STD_LOGIC;
             mouse_left : IN STD_LOGIC;
             playing : IN STD_LOGIC;
             player_vehicle : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
@@ -57,7 +57,6 @@ BEGIN
             PLAYER_HEIGHT => PLAYER_HEIGHT
         )
         PORT MAP (
-        clock_50MHz => clock_50MHz,
         vert_sync => vert_sync,
         mouse_left => mouse_left,
         playing => is_playing,

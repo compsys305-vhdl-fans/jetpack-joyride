@@ -8,7 +8,7 @@ ENTITY physics IS
         PLAYER_HEIGHT : POSITIVE
     );
     PORT (
-        clock_50MHz, vert_sync : IN STD_LOGIC;
+        vert_sync : IN STD_LOGIC;
         mouse_left : IN STD_LOGIC;
         playing : IN STD_LOGIC;  -- whether the game is currently being played or not. if not, the physics should not update, and the player should be reset to the starting position.
         -- player specific signals
