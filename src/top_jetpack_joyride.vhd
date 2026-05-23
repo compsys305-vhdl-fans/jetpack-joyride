@@ -144,13 +144,12 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL sprite_valid : STD_LOGIC;
 
     -- lfsr signals
-    CONSTANT MAX_PLAYER_HEIGHT : POSITIVE := 64;
+    CONSTANT MAX_PLAYER_HEIGHT : POSITIVE := 128;
     SIGNAL lfsr_reset : STD_LOGIC := '0';
     SIGNAL random_num : STD_LOGIC_VECTOR(19 DOWNTO 0);
 
     CONSTANT PLAYER_X : UNSIGNED(9 DOWNTO 0) := TO_UNSIGNED(120, 10);
-    -- Default sprite is 16x16, scaled by 2 = 32x32
-    -- Lil Stomper is 64x64, not scaled
+    -- Base sprite sizes are doubled for display (no mixels)
     SIGNAL player_sprite_width : POSITIVE := 16;
     SIGNAL player_sprite_height : POSITIVE := 16;
     SIGNAL player_scale_shift : NATURAL := 1;
@@ -159,6 +158,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL teleporter_preview_on : STD_LOGIC;
     SIGNAL player_palette_id : UNSIGNED(7 DOWNTO 0);
 
+    SIGNAL player_x_render : UNSIGNED(9 DOWNTO 0);
     SIGNAL player_rel_x : UNSIGNED(15 DOWNTO 0);
     SIGNAL player_rel_y : UNSIGNED(15 DOWNTO 0);
     SIGNAL in_player_sprite : STD_LOGIC;
@@ -248,7 +248,7 @@ BEGIN
         teleporter_preview_y => teleporter_preview_y
     );
 
-    PROCESS (pixel_column, pixel_row, player_y_render)
+    PROCESS (pixel_column, pixel_row, player_x_render, player_y_render, player_display_width, player_display_height)
         VARIABLE s_x : UNSIGNED(15 DOWNTO 0);
         VARIABLE s_y : UNSIGNED(15 DOWNTO 0);
         VARIABLE p_x : UNSIGNED(15 DOWNTO 0);
@@ -256,7 +256,7 @@ BEGIN
     BEGIN
         s_x := RESIZE(UNSIGNED(pixel_column), 16);
         s_y := RESIZE(UNSIGNED(pixel_row), 16);
-        p_x := RESIZE(PLAYER_X, 16);
+        p_x := RESIZE(player_x_render, 16);
         p_y := RESIZE(player_y_render, 16);
         
         IF (s_x >= p_x) AND (s_x < p_x + TO_UNSIGNED(player_display_width, 16)) AND
@@ -308,8 +308,8 @@ BEGIN
             -- Jetpack gamemode: active sprite only when holding down
             player_palette_id <= x"00"; -- Barry
             player_scale_shift <= 1;
-            player_display_width <= 32;
-            player_display_height <= 32;
+            player_sprite_width <= 16;
+            player_sprite_height <= 16;
             IF left_button = '1' THEN
                 player_sprite_id <= x"02";
             ELSE
@@ -317,9 +317,9 @@ BEGIN
             END IF;
         ELSIF player_vehicle = "01" THEN
             player_palette_id <= x"01"; -- Lil Stomper
-            player_scale_shift <= 0;
-            player_display_width <= 64;
-            player_display_height <= 64;
+            player_scale_shift <= 1;
+            player_sprite_width <= 64;
+            player_sprite_height <= 64;
             -- Lil Stomper gamemode: flying sprite when player holding down and in the air, and if not holding, falling sprite, but if on ground, show running sprite
             IF player_grounded = '1' THEN
                 player_sprite_id <= x"10";
@@ -330,9 +330,9 @@ BEGIN
             END IF;
         ELSIF player_vehicle = "10" THEN -- Bird
             player_palette_id <= x"02"; -- Bird
-            player_scale_shift <= 0;
-            player_display_width <= 32;
-            player_display_height <= 32;
+            player_scale_shift <= 1;
+            player_sprite_width <= 32;
+            player_sprite_height <= 32;
             IF player_vy(9) = '1' THEN
                 player_sprite_id <= x"20";
             ELSE
@@ -340,11 +340,28 @@ BEGIN
             END IF;
         ELSIF player_vehicle = "11" THEN -- Teleporter
             player_palette_id <= x"03"; -- Teleporter
-            player_scale_shift <= 0;
-            player_display_width <= 32;
-            player_display_height <= 32;
+            player_scale_shift <= 1;
+            player_sprite_width <= 32;
+            player_sprite_height <= 32;
             player_sprite_id <= x"30";
         END IF;
+    END PROCESS;
+
+    player_display_width <= player_sprite_width * 2;
+    player_display_height <= player_sprite_height * 2;
+
+    PROCESS (PLAYER_X, player_display_width)
+        VARIABLE center_x : INTEGER;
+        VARIABLE left_x : INTEGER;
+    BEGIN
+        center_x := TO_INTEGER(PLAYER_X);
+        left_x := center_x - (player_display_width / 2);
+
+        IF left_x < 0 THEN
+            left_x := 0;
+        END IF;
+
+        player_x_render <= TO_UNSIGNED(left_x, 10);
     END PROCESS;
 
     -- The game component calculates physics based on the largest possible player sprite (64x64).
