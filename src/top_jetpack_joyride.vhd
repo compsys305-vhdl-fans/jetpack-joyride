@@ -103,18 +103,6 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
         );
     END COMPONENT sprite_renderer;
 
-    COMPONENT strand_effect IS
-        PORT (
-            clock       : IN STD_LOGIC;
-            pixel_x     : IN UNSIGNED(9 DOWNTO 0);
-            pixel_y     : IN UNSIGNED(9 DOWNTO 0);
-            frame_count : IN UNSIGNED(7 DOWNTO 0);
-            r_out       : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-            g_out       : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-            b_out       : OUT STD_LOGIC_VECTOR(3 DOWNTO 0)
-        );
-    END COMPONENT strand_effect;
-
     SIGNAL clock_25 : STD_LOGIC := '0';
 
     -- player signals
@@ -169,13 +157,10 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
 
     SIGNAL player_sprite_id : UNSIGNED(7 DOWNTO 0);
 
-    -- strand effect signals
-    SIGNAL frame_counter : UNSIGNED(7 DOWNTO 0) := (OTHERS => '0');
-    SIGNAL strand_r, strand_g, strand_b : STD_LOGIC_VECTOR(3 DOWNTO 0);
-
     -- laser signals
     SIGNAL laser_color : STD_LOGIC_VECTOR(11 DOWNTO 0);
     SIGNAL laser_is_transparent : STD_LOGIC;
+    SIGNAL frame_counter : UNSIGNED(7 DOWNTO 0) := (OTHERS => '0');
 
 
 BEGIN
@@ -350,7 +335,7 @@ BEGIN
     player_display_width <= player_sprite_width * 2;
     player_display_height <= player_sprite_height * 2;
 
-    PROCESS (player_display_width)
+    PROCESS (player_display_width, player_x_anchor)
         VARIABLE center_x : INTEGER;
         VARIABLE left_x : INTEGER;
     BEGIN
@@ -371,17 +356,6 @@ BEGIN
     player_y_render <= UNSIGNED(player_y) + TO_UNSIGNED(MAX_PLAYER_HEIGHT - player_display_height, 10);
 
     player_drawn <= in_player_sprite_d AND sprite_valid AND (NOT player_is_transparent);
-
-    strand_inst: strand_effect
-        PORT MAP(
-            clock => clock_25,
-            pixel_x => UNSIGNED(pixel_column),
-            pixel_y => UNSIGNED(pixel_row),
-            frame_count => frame_counter,
-            r_out => strand_r,
-            g_out => strand_g,
-            b_out => strand_b
-        );
 
     laser_inst: ENTITY work.laser
         PORT MAP(
@@ -405,7 +379,7 @@ BEGIN
         END IF;
     END PROCESS;
 
-    PROCESS (player_drawn, sprite_color, teleporter_preview_on, pixel_row, strand_r, strand_g, strand_b, laser_is_transparent, laser_color)
+    PROCESS (player_drawn, sprite_color, teleporter_preview_on, pixel_row, laser_is_transparent, laser_color)
         VARIABLE base_r, base_g, base_b : INTEGER RANGE 0 TO 15;
         VARIABLE add_r, add_g, add_b : INTEGER;
     BEGIN
@@ -423,9 +397,8 @@ BEGIN
                 base_g := 8;
                 base_b := 8;
             ELSE
-                base_r := TO_INTEGER(UNSIGNED(strand_r));
-                base_g := TO_INTEGER(UNSIGNED(strand_g));
-                base_b := TO_INTEGER(UNSIGNED(strand_b));
+                -- we do the background here (background sprite)
+
             END IF;
 
             IF laser_is_transparent = '0' THEN
