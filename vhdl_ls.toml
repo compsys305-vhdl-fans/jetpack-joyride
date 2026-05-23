@@ -7,6 +7,11 @@ preferred_case = "lower"
 files = ["src/**/*.vhd"]
 is_third_party = false
 
+### palette packages
+[libraries.palettes]
+files = ["res/**/*.vhd"]
+is_third_party = false
+
 ### Quartus megafunctions
 [libraries.altera_mf]
 files = [

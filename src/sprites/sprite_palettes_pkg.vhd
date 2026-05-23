@@ -1,6 +1,11 @@
 LIBRARY IEEE;
+LIBRARY palettes;
 USE IEEE.STD_LOGIC_1164.ALL;
 USE IEEE.NUMERIC_STD.ALL;
+USE palettes.barry_palette_pkg;
+USE palettes.lil_stomper_palette_pkg;
+USE palettes.bird_palette_pkg;
+USE palettes.teleporter_palette_pkg;
 
 PACKAGE sprite_palettes_pkg IS
     -- Palette IDs
@@ -39,52 +44,6 @@ PACKAGE sprite_palettes_pkg IS
 END PACKAGE sprite_palettes_pkg;
 
 PACKAGE BODY sprite_palettes_pkg IS
-    -- We define arrays for our palettes
-    TYPE palette_array_t IS ARRAY (NATURAL RANGE <>) OF STD_LOGIC_VECTOR(11 DOWNTO 0);
-    
-    CONSTANT BARRY_PALETTE : palette_array_t(0 TO 7) := (
-        x"0F0", -- index 0 was x"100", changed to our standard transparent color
-        x"633",
-        x"FE3",
-        x"EB9",
-        x"666",
-        x"FFF",
-        x"000",
-        x"447"
-    );
-
-    CONSTANT LIL_STOMPER_PALETTE : palette_array_t(0 TO 6) := (
-        x"0F0", -- Transparent (was x"100")
-        x"A54",
-        x"E54",
-        x"FFF",
-        x"633",
-        x"BBA",
-        x"EB9"
-    );
-
-    CONSTANT BIRD_PALETTE : palette_array_t(0 TO 7) := (
-        x"0F0", -- Transparent (was x"100")
-        x"633",
-        x"EB9",
-        x"FFF",
-        x"AAF",
-        x"C74",
-        x"A33",
-        x"A53"
-    );
-
-    CONSTANT TELEPORTER_PALETTE : palette_array_t(0 TO 7) := (
-        x"0F0", -- Transparent (was x"100")
-        x"635",
-        x"978",
-        x"EBD",
-        x"859",
-        x"EB7",
-        x"957",
-        x"DAA"
-    );
-
     FUNCTION get_sprite_color (
         palette_id : UNSIGNED(7 DOWNTO 0);
         pixel_index : UNSIGNED(7 DOWNTO 0)
@@ -95,29 +54,13 @@ PACKAGE BODY sprite_palettes_pkg IS
         
         CASE palette_id IS
             WHEN PALETTE_BARRY =>
-                IF idx >= 0 AND idx <= 7 THEN
-                    RETURN BARRY_PALETTE(idx);
-                ELSE
-                    RETURN TRANSPARENT_COLOR;
-                END IF;
+                RETURN barry_palette_pkg.IMAGE_PALETTE(idx);
             WHEN PALETTE_LIL_STOMPER =>
-                IF idx >= 0 AND idx <= 6 THEN
-                    RETURN LIL_STOMPER_PALETTE(idx);
-                ELSE
-                    RETURN TRANSPARENT_COLOR;
-                END IF;
+                RETURN lil_stomper_palette_pkg.IMAGE_PALETTE(idx);
             WHEN PALETTE_BIRD =>
-                IF idx >= 0 AND idx <= 7 THEN
-                    RETURN BIRD_PALETTE(idx);
-                ELSE
-                    RETURN TRANSPARENT_COLOR;
-                END IF;
+                RETURN bird_palette_pkg.IMAGE_PALETTE(idx);
             WHEN PALETTE_TELEPORTER =>
-                IF idx >= 0 AND idx <= 7 THEN
-                    RETURN TELEPORTER_PALETTE(idx);
-                ELSE
-                    RETURN TRANSPARENT_COLOR;
-                END IF;
+                RETURN teleporter_palette_pkg.IMAGE_PALETTE(idx);
             WHEN OTHERS =>
                 RETURN TRANSPARENT_COLOR;
         END CASE;
