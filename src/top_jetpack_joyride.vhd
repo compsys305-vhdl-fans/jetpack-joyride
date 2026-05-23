@@ -148,7 +148,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL lfsr_reset : STD_LOGIC := '0';
     SIGNAL random_num : STD_LOGIC_VECTOR(19 DOWNTO 0);
 
-    CONSTANT PLAYER_X : UNSIGNED(9 DOWNTO 0) := TO_UNSIGNED(120, 10);
+    SIGNAL player_x_anchor : UNSIGNED(9 DOWNTO 0) := TO_UNSIGNED(120, 10);
     -- Base sprite sizes are doubled for display (no mixels)
     SIGNAL player_sprite_width : POSITIVE := 16;
     SIGNAL player_sprite_height : POSITIVE := 16;
@@ -350,11 +350,11 @@ BEGIN
     player_display_width <= player_sprite_width * 2;
     player_display_height <= player_sprite_height * 2;
 
-    PROCESS (PLAYER_X, player_display_width)
+    PROCESS (player_display_width)
         VARIABLE center_x : INTEGER;
         VARIABLE left_x : INTEGER;
     BEGIN
-        center_x := TO_INTEGER(PLAYER_X);
+        center_x := TO_INTEGER(player_x_anchor);
         left_x := center_x - (player_display_width / 2);
 
         IF left_x < 0 THEN
