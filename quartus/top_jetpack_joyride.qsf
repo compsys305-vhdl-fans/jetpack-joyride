@@ -480,15 +480,21 @@ set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
 set_global_assignment -name POWER_PRESET_COOLING_SOLUTION "23 MM HEAT SINK WITH 200 LFPM AIRFLOW"
 set_global_assignment -name POWER_BOARD_THERMAL_MODEL "NONE (CONSERVATIVE)"
 
+set_global_assignment -name VHDL_FILE ../res/warning/palette.vhd -library palettes
+set_global_assignment -name VHDL_FILE ../res/teleporter/palette.vhd -library palettes
+set_global_assignment -name VHDL_FILE ../res/scientist/palette.vhd -library palettes
+set_global_assignment -name VHDL_FILE ../res/powerup/palette.vhd -library palettes
+set_global_assignment -name VHDL_FILE ../res/missile/palette.vhd -library palettes
+set_global_assignment -name VHDL_FILE "../res/lil-stomper/palette.vhd" -library palettes
+set_global_assignment -name VHDL_FILE ../res/laser/palette.vhd -library palettes
+set_global_assignment -name VHDL_FILE ../res/coin/palette.vhd -library palettes
+set_global_assignment -name VHDL_FILE ../res/bird/palette.vhd -library palettes
+set_global_assignment -name VHDL_FILE ../res/barry/palette.vhd -library palettes
+set_global_assignment -name VHDL_FILE ../res/background/palette.vhd -library palettes
 set_global_assignment -name VHDL_FILE ../src/strand_effect.vhd
 set_global_assignment -name VHDL_FILE ../src/sprites/sprite_palettes_pkg.vhd
 set_global_assignment -name VHDL_FILE ../src/sprites/sprite_renderer.vhd
 set_global_assignment -name VHDL_FILE ../src/sprites/image_loader.vhd
-set_global_assignment -name MIF_FILE ../res/barry/run2.mif
-set_global_assignment -name MIF_FILE ../res/barry/run1.mif
-set_global_assignment -name MIF_FILE ../res/barry/active2.mif
-set_global_assignment -name MIF_FILE ../res/barry/active1.mif
-set_global_assignment -name MIF_FILE ../background.mif
 set_global_assignment -name VHDL_FILE ../src/top_jetpack_joyride.vhd
 set_global_assignment -name VHDL_FILE ../src/game_engine/game.vhd
 set_global_assignment -name VHDL_FILE ../src/game_engine/physics.vhd
