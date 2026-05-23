@@ -1,5 +1,16 @@
 #!/bin/zsh
+set -e
 
-find ../res -type f | grep "\.png" | xargs -I{} uv run image_conv.py {}
-find ../res -type f | grep "[^2-9.]\.vhd" | grep -v "palette" | xargs -I{} zsh -c 'mv {} $(sed "s|/[^./]*\.|/palette.|" <<< "{}")'
-rm $(find ../res | grep "\.vhd" | grep -v "palette")
+for dir in ../res/*; do
+	if [[ -d "$dir" ]]; then
+		pngs=($dir/*.png)
+		if [[ -e "${pngs[1]}" ]]; then
+			uv run image_conv.py --palette-only --vhdl-output "$dir/palette.vhd" "${pngs[@]}"
+			for img in "${pngs[@]}"; do
+				uv run image_conv.py --no-vhdl "$img"
+			done
+		fi
+	fi
+done
+
+find ../res -type f -name "*.vhd" ! -name "palette.vhd" -delete

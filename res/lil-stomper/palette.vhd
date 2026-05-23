@@ -9,6 +9,7 @@ PACKAGE lil_stomper_palette_pkg IS
         x"A54",
         x"BBA",
         x"E54",
+        x"EA4",
         x"EB9",
         x"FFF"
     );

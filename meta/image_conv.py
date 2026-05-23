@@ -50,13 +50,29 @@ def rgba_to_4bit_rgb(r8: int, g8: int, b8: int, a8: int) -> tuple[int, int, int]
     )
 
 
-def convert_image_to_palette_indexes(image_path: Path) -> tuple[Palette, list[list[int]]]:
+def load_pixels(image_path: Path) -> tuple[list[tuple[int, int, int, int]], int, int]:
     with Image.open(image_path) as image:
         rgba_image = image.convert("RGBA")
         width, height = rgba_image.size
         pixels = list(rgba_image.getdata())
 
-    palette = Palette.from_pixels(pixels)
+    return pixels, width, height
+
+
+def build_palette(image_paths: list[Path]) -> Palette:
+    all_pixels: list[tuple[int, int, int, int]] = []
+    for image_path in image_paths:
+        pixels, _, _ = load_pixels(image_path)
+        all_pixels.extend(pixels)
+
+    return Palette.from_pixels(all_pixels)
+
+
+def convert_image_to_palette_indexes(
+    image_path: Path,
+    palette: Palette,
+) -> list[list[int]]:
+    pixels, width, height = load_pixels(image_path)
 
     index_rows: list[list[int]] = []
     for y in range(height):
@@ -67,7 +83,7 @@ def convert_image_to_palette_indexes(image_path: Path) -> tuple[Palette, list[li
             row.append(palette.index_of(color))
         index_rows.append(row)
 
-    return palette, index_rows
+    return index_rows
 
 
 def write_image_mif(
@@ -141,9 +157,10 @@ def parse_args() -> argparse.Namespace:
         description="Convert an image into a 12-bit MIF and a paste-ready VHDL RGB444 palette."
     )
     parser.add_argument(
-        "image",
+        "images",
+        nargs="+",
         type=Path,
-        help="Path to the input image file",
+        help="Input image file(s). The first image drives MIF output by default.",
     )
     parser.add_argument(
         "--output",
@@ -164,27 +181,66 @@ def parse_args() -> argparse.Namespace:
         "--vhdl-package",
         help="Name of the VHDL package to emit. Defaults to a file-based name.",
     )
+    parser.add_argument(
+        "--palette-images",
+        nargs="+",
+        type=Path,
+        help="Image file(s) to use when building the palette. Defaults to all input images.",
+    )
+    parser.add_argument(
+        "--no-vhdl",
+        action="store_true",
+        help="Skip writing the VHDL palette file.",
+    )
+    parser.add_argument(
+        "--palette-only",
+        action="store_true",
+        help="Only write the VHDL palette file (no MIF output).",
+    )
     return parser.parse_args()
 
 
 
 if __name__ == "__main__":
     args = parse_args()
-    image_path = args.image
-    output_path = args.output or image_path.with_suffix(".mif")
-    vhdl_output_path = args.vhdl_output or image_path.with_suffix(".vhd")
+    image_paths = [path for path in args.images]
+    if not image_paths:
+        raise ValueError("At least one image path is required")
 
-    if not image_path.is_file():
-        raise FileNotFoundError(f"Image not found: {image_path}")
+    for image_path in image_paths:
+        if not image_path.is_file():
+            raise FileNotFoundError(f"Image not found: {image_path}")
 
-    palette, indexes = convert_image_to_palette_indexes(image_path)
-    write_image_mif(output_path, palette, indexes)
-    package_name = args.vhdl_package or make_package_name(vhdl_output_path)
-    write_vhdl_palette(vhdl_output_path, palette, args.vhdl_constant, package_name)
+    if args.output and len(image_paths) > 1:
+        raise ValueError("--output can only be used with a single input image")
+
+    palette_sources = args.palette_images or image_paths
+    for palette_path in palette_sources:
+        if not palette_path.is_file():
+            raise FileNotFoundError(f"Palette image not found: {palette_path}")
+
+    palette = build_palette(palette_sources)
+
+    if not args.palette_only:
+        for image_path in image_paths:
+            output_path = args.output or image_path.with_suffix(".mif")
+            indexes = convert_image_to_palette_indexes(image_path, palette)
+            write_image_mif(output_path, palette, indexes)
+
+    if not args.no_vhdl:
+        vhdl_output_path = args.vhdl_output or image_paths[0].with_suffix(".vhd")
+        package_name = args.vhdl_package or make_package_name(vhdl_output_path)
+        write_vhdl_palette(vhdl_output_path, palette, args.vhdl_constant, package_name)
 
     print("Palette (R,G,B each in 0..15):")
     for i, color in enumerate(palette.colors):
         print(f"  {i}: {color}")
 
-    print(f"\nWrote MIF to: {output_path}")
-    print(f"Wrote VHDL palette to: {vhdl_output_path}")
+    if not args.palette_only:
+        print("\nWrote MIF(s) for:")
+        for image_path in image_paths:
+            print(f"  {image_path.with_suffix('.mif')}")
+
+    if not args.no_vhdl:
+        vhdl_output_path = args.vhdl_output or image_paths[0].with_suffix(".vhd")
+        print(f"Wrote VHDL palette to: {vhdl_output_path}")
