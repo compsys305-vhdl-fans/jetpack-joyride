@@ -83,6 +83,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             playing : OUT STD_LOGIC;
             player_vehicle : OUT STD_LOGIC_VECTOR(1 DOWNTO 0);
             player_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
+            player_vy : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
             grounded : OUT STD_LOGIC;
             teleporter_preview_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0)
         );
@@ -118,7 +119,9 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
 
     -- player signals
     SIGNAL player_y : STD_LOGIC_VECTOR(9 DOWNTO 0);
+    SIGNAL player_vy : STD_LOGIC_VECTOR(9 DOWNTO 0);
     SIGNAL player_grounded : STD_LOGIC;
+    SIGNAL player_y_render : UNSIGNED(9 DOWNTO 0);
     SIGNAL playing : STD_LOGIC;
     SIGNAL player_vehicle : STD_LOGIC_VECTOR(1 DOWNTO 0);
     SIGNAL debug_vehicle_select : STD_LOGIC_VECTOR(1 DOWNTO 0);
@@ -141,16 +144,20 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL sprite_valid : STD_LOGIC;
 
     -- lfsr signals
+    CONSTANT MAX_PLAYER_HEIGHT : POSITIVE := 64;
     SIGNAL lfsr_reset : STD_LOGIC := '0';
     SIGNAL random_num : STD_LOGIC_VECTOR(19 DOWNTO 0);
 
     CONSTANT PLAYER_X : UNSIGNED(9 DOWNTO 0) := TO_UNSIGNED(120, 10);
-    CONSTANT PLAYER_SPRITE_WIDTH : POSITIVE := 16;
-    CONSTANT PLAYER_SPRITE_HEIGHT : POSITIVE := 16;
-    CONSTANT PLAYER_SCALE_SHIFT : NATURAL := 1;
-    CONSTANT PLAYER_DISPLAY_WIDTH : POSITIVE := PLAYER_SPRITE_WIDTH * (2 ** PLAYER_SCALE_SHIFT);
-    CONSTANT PLAYER_DISPLAY_HEIGHT : POSITIVE := PLAYER_SPRITE_HEIGHT * (2 ** PLAYER_SCALE_SHIFT);
+    -- Default sprite is 16x16, scaled by 2 = 32x32
+    -- Lil Stomper is 64x64, not scaled
+    SIGNAL player_sprite_width : POSITIVE := 16;
+    SIGNAL player_sprite_height : POSITIVE := 16;
+    SIGNAL player_scale_shift : NATURAL := 1;
+    SIGNAL player_display_width : POSITIVE := 32;
+    SIGNAL player_display_height : POSITIVE := 32;
     SIGNAL teleporter_preview_on : STD_LOGIC;
+    SIGNAL player_palette_id : UNSIGNED(7 DOWNTO 0);
 
     SIGNAL player_rel_x : UNSIGNED(15 DOWNTO 0);
     SIGNAL player_rel_y : UNSIGNED(15 DOWNTO 0);
@@ -221,7 +228,7 @@ BEGIN
 
     game_inst: game
         GENERIC MAP (
-            PLAYER_HEIGHT => PLAYER_DISPLAY_HEIGHT
+            PLAYER_HEIGHT => MAX_PLAYER_HEIGHT
         )
         PORT MAP (
         clock_50MHz => clock_50,
@@ -231,11 +238,12 @@ BEGIN
         playing => playing,
         player_vehicle => player_vehicle,
         player_y => player_y,
+        player_vy => player_vy,
         grounded => player_grounded,
         teleporter_preview_y => teleporter_preview_y
     );
 
-    PROCESS (pixel_column, pixel_row, player_y)
+    PROCESS (pixel_column, pixel_row, player_y_render)
         VARIABLE s_x : UNSIGNED(15 DOWNTO 0);
         VARIABLE s_y : UNSIGNED(15 DOWNTO 0);
         VARIABLE p_x : UNSIGNED(15 DOWNTO 0);
@@ -244,17 +252,15 @@ BEGIN
         s_x := RESIZE(UNSIGNED(pixel_column), 16);
         s_y := RESIZE(UNSIGNED(pixel_row), 16);
         p_x := RESIZE(PLAYER_X, 16);
-        p_y := RESIZE(UNSIGNED(player_y), 16);
+        p_y := RESIZE(player_y_render, 16);
         
-        IF (s_x >= p_x) AND (s_x < p_x + TO_UNSIGNED(PLAYER_DISPLAY_WIDTH, 16)) AND
-           (s_y >= p_y) AND (s_y < p_y + TO_UNSIGNED(PLAYER_DISPLAY_HEIGHT, 16)) THEN
+        IF (s_x >= p_x) AND (s_x < p_x + TO_UNSIGNED(player_display_width, 16)) AND
+           (s_y >= p_y) AND (s_y < p_y + TO_UNSIGNED(player_display_height, 16)) THEN
             in_player_sprite <= '1';
             player_rel_x <= s_x - p_x;
             player_rel_y <= s_y - p_y;
         ELSE
             in_player_sprite <= '0';
-            player_rel_x <= (OTHERS => '0');
-            player_rel_y <= (OTHERS => '0');
         END IF;
     END PROCESS;
 
@@ -262,8 +268,8 @@ BEGIN
         PORT MAP (
             clock          => clock_25,
             sprite_id      => player_sprite_id,
-            palette_id     => x"00", -- Barry Palette ID
-            scale_shift    => PLAYER_SCALE_SHIFT,
+            palette_id     => player_palette_id,
+            scale_shift    => player_scale_shift,
             rel_x          => player_rel_x,
             rel_y          => player_rel_y,
             color          => sprite_color,
@@ -291,24 +297,56 @@ BEGIN
         END IF;
     END PROCESS;
 
-    PROCESS(player_vehicle, left_button, player_grounded)
+    PROCESS(player_vehicle, left_button, player_grounded, player_vy)
     BEGIN
         IF player_vehicle = "00" THEN
             -- Jetpack gamemode: active sprite only when holding down
+            player_palette_id <= x"00"; -- Barry
+            player_scale_shift <= 1;
+            player_display_width <= 32;
+            player_display_height <= 32;
             IF left_button = '1' THEN
                 player_sprite_id <= x"02";
             ELSE
                 player_sprite_id <= x"00";
             END IF;
-        ELSE
-            -- Other gamemodes: active sprite when in the air
+        ELSIF player_vehicle = "01" THEN
+            player_palette_id <= x"01"; -- Lil Stomper
+            player_scale_shift <= 0;
+            player_display_width <= 64;
+            player_display_height <= 64;
+            -- Lil Stomper gamemode: flying sprite when player holding down and in the air, and if not holding, falling sprite, but if on ground, show running sprite
             IF player_grounded = '1' THEN
-                player_sprite_id <= x"00";
+                player_sprite_id <= x"10";
+            ELSIF left_button = '1' THEN
+                player_sprite_id <= x"11";
             ELSE
-                player_sprite_id <= x"02";
+                player_sprite_id <= x"12";
             END IF;
+        ELSIF player_vehicle = "10" THEN -- Bird
+            player_palette_id <= x"02"; -- Bird
+            player_scale_shift <= 0;
+            player_display_width <= 32;
+            player_display_height <= 32;
+            IF player_vy(9) = '1' THEN
+                player_sprite_id <= x"20";
+            ELSE
+                player_sprite_id <= x"21";
+            END IF;
+        ELSIF player_vehicle = "11" THEN -- Teleporter
+            player_palette_id <= x"03"; -- Teleporter
+            player_scale_shift <= 0;
+            player_display_width <= 32;
+            player_display_height <= 32;
+            player_sprite_id <= x"30";
         END IF;
     END PROCESS;
+
+    -- The game component calculates physics based on the largest possible player sprite (64x64).
+    -- player_y from the game component represents the *top* of this collision box.
+    -- For smaller sprites, we need to add an offset to their render position so they appear grounded at the bottom of the collision box.
+    -- We calculate the top of the sprite for rendering.
+    player_y_render <= UNSIGNED(player_y) + TO_UNSIGNED(MAX_PLAYER_HEIGHT - player_display_height, 10);
 
     player_drawn <= in_player_sprite_d AND sprite_valid AND (NOT player_is_transparent);
 
