@@ -104,15 +104,26 @@ def rgb444_hex(color: tuple[int, int, int]) -> str:
     return f"{red:X}{green:X}{blue:X}"
 
 
+def make_package_name(output_path: Path) -> str:
+    stem = output_path.stem
+    normalized = "".join(
+        ch if (ch.isalnum() or ch == "_") else "_" for ch in stem
+    ).lower()
+    if not normalized or not normalized[0].isalpha():
+        normalized = f"palette_{normalized}"
+    return f"{normalized}_pkg"
+
+
 def write_vhdl_palette(
     output_path: Path,
     palette: Palette,
     constant_name: str,
+    package_name: str,
 ) -> None:
     with output_path.open("w", encoding="utf-8") as vhdl_file:
         vhdl_file.write("LIBRARY IEEE;\n")
         vhdl_file.write("USE IEEE.STD_LOGIC_1164.ALL;\n\n")
-        vhdl_file.write("PACKAGE image_palette_pkg IS\n")
+        vhdl_file.write(f"PACKAGE {package_name} IS\n")
         vhdl_file.write(
             "    TYPE rgb444_palette_t IS ARRAY (NATURAL RANGE <>) OF STD_LOGIC_VECTOR(11 DOWNTO 0);\n"
         )
@@ -123,7 +134,7 @@ def write_vhdl_palette(
             vhdl_file.write(f"        x\"{rgb444_hex(color)}\"{suffix}\n")
 
         vhdl_file.write("    );\n")
-        vhdl_file.write("END PACKAGE image_palette_pkg;\n")
+        vhdl_file.write(f"END PACKAGE {package_name};\n")
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -149,6 +160,10 @@ def parse_args() -> argparse.Namespace:
         default="IMAGE_PALETTE",
         help="Name of the VHDL palette constant to emit.",
     )
+    parser.add_argument(
+        "--vhdl-package",
+        help="Name of the VHDL package to emit. Defaults to a file-based name.",
+    )
     return parser.parse_args()
 
 
@@ -164,7 +179,8 @@ if __name__ == "__main__":
 
     palette, indexes = convert_image_to_palette_indexes(image_path)
     write_image_mif(output_path, palette, indexes)
-    write_vhdl_palette(vhdl_output_path, palette, args.vhdl_constant)
+    package_name = args.vhdl_package or make_package_name(vhdl_output_path)
+    write_vhdl_palette(vhdl_output_path, palette, args.vhdl_constant, package_name)
 
     print("Palette (R,G,B each in 0..15):")
     for i, color in enumerate(palette.colors):

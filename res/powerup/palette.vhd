@@ -1,7 +1,7 @@
 LIBRARY IEEE;
 USE IEEE.STD_LOGIC_1164.ALL;
 
-PACKAGE image_palette_pkg IS
+PACKAGE powerup_pkg IS
     TYPE rgb444_palette_t IS ARRAY (NATURAL RANGE <>) OF STD_LOGIC_VECTOR(11 DOWNTO 0);
     CONSTANT IMAGE_PALETTE : rgb444_palette_t := (
         x"000",
@@ -13,4 +13,4 @@ PACKAGE image_palette_pkg IS
         x"D6D",
         x"F7E"
     );
-END PACKAGE image_palette_pkg;
+END PACKAGE powerup_pkg;
