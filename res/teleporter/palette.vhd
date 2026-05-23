@@ -6,11 +6,11 @@ PACKAGE image_palette_pkg IS
     CONSTANT IMAGE_PALETTE : rgb444_palette_t := (
         x"100",
         x"635",
-        x"978",
-        x"EBD",
         x"859",
-        x"EB7",
         x"957",
-        x"DAA"
+        x"978",
+        x"DAA",
+        x"EB7",
+        x"EBD"
     );
 END PACKAGE image_palette_pkg;

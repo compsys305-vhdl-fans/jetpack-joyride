@@ -16,18 +16,18 @@ class Palette:
 
     @classmethod
     def from_pixels(cls, pixels_rgba: list[tuple[int, int, int, int]]) -> "Palette":
-        unique_colors: list[tuple[int, int, int]] = []
+        unique_colors: set[tuple[int, int, int]] = set()
 
         for r8, g8, b8, a8 in pixels_rgba:
             color = rgba_to_4bit_rgb(r8, g8, b8, a8)
-            if color not in unique_colors:
-                unique_colors.append(color)
-                if len(unique_colors) > MAX_PALETTE_COLORS:
-                    raise ValueError(
-                        "Image has more than 8 unique 4-bit colors after conversion"
-                    )
+            unique_colors.add(color)
 
-        return cls(colors=tuple(unique_colors))
+        if len(unique_colors) > MAX_PALETTE_COLORS:
+            raise ValueError(
+                "Image has more than 8 unique 4-bit colors after conversion"
+            )
+
+        return cls(colors=tuple(sorted(unique_colors)))
 
     def index_of(self, color: tuple[int, int, int]) -> int:
         try:
