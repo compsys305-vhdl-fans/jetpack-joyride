@@ -1,5 +1,5 @@
 #!/bin/zsh
-set -e
+set -ex
 
 for dir in ../res/*; do
 	if [[ -d "$dir" ]]; then
@@ -7,7 +7,7 @@ for dir in ../res/*; do
 		if [[ -e "${pngs[1]}" ]]; then
 			uv run image_conv.py --palette-only --vhdl-output "$dir/palette.vhd" "${pngs[@]}"
 			for img in "${pngs[@]}"; do
-				uv run image_conv.py --no-vhdl "$img"
+				uv run image_conv.py --no-vhdl "$img" --palette-images "${pngs[@]}"
 			done
 		fi
 	fi
