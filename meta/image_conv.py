@@ -105,13 +105,13 @@ def rgb444_hex(color: tuple[int, int, int]) -> str:
 
 
 def make_package_name(output_path: Path) -> str:
-    stem = output_path.stem
+    parent_name = output_path.parent.name
     normalized = "".join(
-        ch if (ch.isalnum() or ch == "_") else "_" for ch in stem
+        ch if (ch.isalnum() or ch == "_") else "_" for ch in parent_name
     ).lower()
     if not normalized or not normalized[0].isalpha():
         normalized = f"palette_{normalized}"
-    return f"{normalized}_pkg"
+    return f"{normalized}_palette_pkg"
 
 
 def write_vhdl_palette(
