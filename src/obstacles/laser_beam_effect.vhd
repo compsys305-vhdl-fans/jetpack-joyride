@@ -22,7 +22,6 @@ END ENTITY laser_beam_effect;
 
 ARCHITECTURE rtl OF laser_beam_effect IS
 
-    CONSTANT BEAM_THICKNESS : INTEGER := 2;
     CONSTANT BEAM_X_SHIFT : INTEGER := 2;
 
     FUNCTION wrap8(value : INTEGER) RETURN UNSIGNED IS
@@ -46,7 +45,6 @@ BEGIN
         VARIABLE approx_len : INTEGER;
         VARIABLE dot : INTEGER;
         VARIABLE cross : INTEGER;
-        VARIABLE cross_abs : INTEGER;
         VARIABLE beam_u : INTEGER;
         VARIABLE beam_v : INTEGER;
         VARIABLE phase1, phase2, phase3, phase4, phase5 : UNSIGNED(7 DOWNTO 0);
@@ -83,9 +81,7 @@ BEGIN
                 IF (len2 > 0) AND (approx_len > 0) THEN
                     dot := (apx * abx) + (apy * aby);
                     cross := (apx * aby) - (apy * abx);
-                    cross_abs := ABS(cross);
-
-                    IF (dot >= 0) AND (dot <= len2) AND (cross_abs <= BEAM_THICKNESS * approx_len) THEN
+                    IF (dot >= 0) AND (dot <= len2) THEN
                         beam_u := dot / approx_len;
                         beam_v := cross / approx_len;
 
