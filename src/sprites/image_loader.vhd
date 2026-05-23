@@ -62,10 +62,17 @@ begin
 
     process(x, y)
         variable pixel_addr : natural;
+        variable x_coord : unsigned(15 downto 0);
     begin
+        if FLIP_X then
+            x_coord := to_unsigned(IMAGE_WIDTH - 1, 16) - x;
+        else
+            x_coord := x;
+        end if;
+
         if (x < IMAGE_WIDTH and y < IMAGE_HEIGHT) then
             in_range <= '1';
-            pixel_addr := to_integer(y) * IMAGE_WIDTH + to_integer(x);
+            pixel_addr := to_integer(y) * IMAGE_WIDTH + to_integer(x_coord);
             rom_addr <= to_unsigned(pixel_addr, ADDR_WIDTH);
         else
             in_range <= '0';

@@ -6,6 +6,7 @@ USE palettes.barry_palette_pkg;
 USE palettes.lil_stomper_palette_pkg;
 USE palettes.bird_palette_pkg;
 USE palettes.teleporter_palette_pkg;
+USE palettes.laser_palette_pkg;
 
 PACKAGE sprite_palettes_pkg IS
     -- Palette IDs
@@ -13,6 +14,7 @@ PACKAGE sprite_palettes_pkg IS
     CONSTANT PALETTE_LIL_STOMPER  : UNSIGNED(7 DOWNTO 0) := x"01";
     CONSTANT PALETTE_BIRD         : UNSIGNED(7 DOWNTO 0) := x"02";
     CONSTANT PALETTE_TELEPORTER   : UNSIGNED(7 DOWNTO 0) := x"03";
+    CONSTANT PALETTE_LASER        : UNSIGNED(7 DOWNTO 0) := x"04";
 
     -- Sprite IDs
     CONSTANT SPRITE_BARRY_RUN     : UNSIGNED(7 DOWNTO 0) := x"00";
@@ -26,6 +28,9 @@ PACKAGE sprite_palettes_pkg IS
     CONSTANT SPRITE_BIRD_NOHOLD   : UNSIGNED(7 DOWNTO 0) := x"21";
 
     CONSTANT SPRITE_TELEPORTER    : UNSIGNED(7 DOWNTO 0) := x"30";
+
+    CONSTANT SPRITE_LASER_NODE  : UNSIGNED(7 DOWNTO 0) := x"40";
+    CONSTANT SPRITE_LASER_NODE_FLIPPED  : UNSIGNED(7 DOWNTO 0) := x"41";
 
     -- We define a function to retrieve colour to allow dynamic palette arrays seamlessly
     FUNCTION get_sprite_color (
@@ -61,6 +66,8 @@ PACKAGE BODY sprite_palettes_pkg IS
                 RETURN bird_palette_pkg.IMAGE_PALETTE(idx);
             WHEN PALETTE_TELEPORTER =>
                 RETURN teleporter_palette_pkg.IMAGE_PALETTE(idx);
+            WHEN PALETTE_LASER =>
+                RETURN laser_palette_pkg.IMAGE_PALETTE(idx);
             WHEN OTHERS =>
                 RETURN TRANSPARENT_COLOR;
         END CASE;

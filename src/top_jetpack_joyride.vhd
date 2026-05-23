@@ -173,6 +173,11 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL frame_counter : UNSIGNED(7 DOWNTO 0) := (OTHERS => '0');
     SIGNAL strand_r, strand_g, strand_b : STD_LOGIC_VECTOR(3 DOWNTO 0);
 
+    -- laser signals
+    SIGNAL laser_color : STD_LOGIC_VECTOR(11 DOWNTO 0);
+    SIGNAL laser_is_transparent : STD_LOGIC;
+
+
 BEGIN
     -- placeholder; we should have port maps and stuff, but ideally no logic here (apart from logic inversion for active-low buttons and stuff)
     -- clock divider to generate 25MHz from 50MHz
@@ -361,6 +366,21 @@ BEGIN
             b_out => strand_b
         );
 
+    laser_inst: ENTITY work.laser
+        PORT MAP(
+            clock => clock_25,
+            pixel_x => UNSIGNED(pixel_column),
+            pixel_y => UNSIGNED(pixel_row),
+            frame_count => frame_counter,
+            x0 => TO_UNSIGNED(100, 10),
+            y0 => TO_UNSIGNED(100, 10),
+            x1 => TO_UNSIGNED(200, 10),
+            y1 => TO_UNSIGNED(100, 10),
+            is_active => '1',
+            color_out => laser_color,
+            is_transparent => laser_is_transparent
+        );
+
     PROCESS(vga_vsync_sig)
     BEGIN
         IF RISING_EDGE(vga_vsync_sig) THEN
@@ -368,11 +388,15 @@ BEGIN
         END IF;
     END PROCESS;
 
-    PROCESS (player_drawn, sprite_color, teleporter_preview_on, pixel_row, strand_r, strand_g, strand_b) BEGIN
+    PROCESS (player_drawn, sprite_color, teleporter_preview_on, pixel_row, strand_r, strand_g, strand_b, laser_is_transparent, laser_color) BEGIN
         IF player_drawn = '1' THEN
             red_sig <= sprite_color(11 DOWNTO 8);
             green_sig <= sprite_color(7 DOWNTO 4);
             blue_sig <= sprite_color(3 DOWNTO 0);
+        ELSIF laser_is_transparent = '0' THEN
+            red_sig <= laser_color(11 DOWNTO 8);
+            green_sig <= laser_color(7 DOWNTO 4);
+            blue_sig <= laser_color(3 DOWNTO 0);
         ELSIF teleporter_preview_on = '1' THEN
             red_sig <= x"F";
             green_sig <= x"6";
@@ -388,5 +412,4 @@ BEGIN
             blue_sig <= strand_b;
         END IF;
     END PROCESS;
-
 END ARCHITECTURE rtl;

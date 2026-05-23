@@ -27,7 +27,8 @@ ARCHITECTURE rtl OF sprite_renderer IS
         GENERIC (
             IMAGE_WIDTH : POSITIVE;
             IMAGE_HEIGHT : POSITIVE;
-            MIF_FILE : STRING
+            MIF_FILE : STRING;
+            FLIP_X : boolean := false
         );
         PORT (
             clock : IN STD_LOGIC;
@@ -68,6 +69,12 @@ ARCHITECTURE rtl OF sprite_renderer IS
     -- Teleporter Sprite Signals
     SIGNAL teleporter1_pixel_index, teleporter2_pixel_index : UNSIGNED(7 DOWNTO 0);
     SIGNAL teleporter1_valid, teleporter2_valid             : STD_LOGIC;
+
+    -- Laser Sprite Signals
+    SIGNAL laser1_pixel_index, laser2_pixel_index : UNSIGNED(7 DOWNTO 0);
+    SIGNAL laser1_valid, laser2_valid             : STD_LOGIC;
+    SIGNAL laser1_flipped_pixel_index, laser2_flipped_pixel_index : UNSIGNED(7 DOWNTO 0);
+    SIGNAL laser1_flipped_valid, laser2_flipped_valid             : STD_LOGIC;
 
     -- Routing signals
     SIGNAL active_pixel_index : UNSIGNED(7 DOWNTO 0);
@@ -155,6 +162,22 @@ BEGIN
         GENERIC MAP (IMAGE_WIDTH => 32, IMAGE_HEIGHT => 32, MIF_FILE => "../res/teleporter/teleporter2.mif")
         PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => teleporter2_pixel_index, valid => teleporter2_valid);
 
+    laser1_rom: image_loader
+        GENERIC MAP (IMAGE_WIDTH => 16, IMAGE_HEIGHT => 16, MIF_FILE => "../res/laser/laser1.mif")
+        PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => laser1_pixel_index, valid => laser1_valid);
+
+    laser2_rom: image_loader
+        GENERIC MAP (IMAGE_WIDTH => 16, IMAGE_HEIGHT => 16, MIF_FILE => "../res/laser/laser2.mif")
+        PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => laser2_pixel_index, valid => laser2_valid);
+
+    laser1_flipped_rom: image_loader
+        GENERIC MAP (IMAGE_WIDTH => 16, IMAGE_HEIGHT => 16, MIF_FILE => "../res/laser/laser1.mif", FLIP_X => true)
+        PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => laser1_flipped_pixel_index, valid => laser1_flipped_valid);
+
+    laser2_flipped_rom: image_loader
+        GENERIC MAP (IMAGE_WIDTH => 16, IMAGE_HEIGHT => 16, MIF_FILE => "../res/laser/laser2.mif", FLIP_X => true)
+        PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => laser2_flipped_pixel_index, valid => laser2_flipped_valid);
+
     -- 3. Multiplex outputs based on sprite_id
     PROCESS(sprite_id, anim_tick,
             player_run1_pixel_index, player_run1_valid, player_run2_pixel_index, player_run2_valid,
@@ -163,7 +186,9 @@ BEGIN
             stomper_fly1_pixel_index, stomper_fly1_valid, stomper_fly2_pixel_index, stomper_fly2_valid,
             stomper_fall1_pixel_index, stomper_fall1_valid, stomper_fall2_pixel_index, stomper_fall2_valid,
             bird1_pixel_index, bird1_valid, bird2_pixel_index, bird2_valid,
-            teleporter1_pixel_index, teleporter1_valid, teleporter2_pixel_index, teleporter2_valid)
+            teleporter1_pixel_index, teleporter1_valid, teleporter2_pixel_index, teleporter2_valid,
+            laser1_pixel_index, laser1_valid, laser2_pixel_index, laser2_valid,
+            laser1_flipped_pixel_index, laser1_flipped_valid, laser2_flipped_pixel_index, laser2_flipped_valid)
     BEGIN
         CASE sprite_id IS
             WHEN SPRITE_BARRY_RUN => -- Running (Animated)
@@ -226,6 +251,24 @@ BEGIN
                 ELSE
                     active_pixel_index <= teleporter2_pixel_index;
                     active_valid       <= teleporter2_valid;
+                END IF;
+            
+            WHEN SPRITE_LASER_NODE =>
+                IF get_anim_frame(sprite_id, anim_tick) = 0 THEN
+                    active_pixel_index <= laser1_pixel_index;
+                    active_valid       <= laser1_valid;
+                ELSE
+                    active_pixel_index <= laser2_pixel_index;
+                    active_valid       <= laser2_valid;
+                END IF;
+
+            WHEN SPRITE_LASER_NODE_FLIPPED =>
+                IF get_anim_frame(sprite_id, anim_tick) = 0 THEN
+                    active_pixel_index <= laser1_flipped_pixel_index;
+                    active_valid       <= laser1_flipped_valid;
+                ELSE
+                    active_pixel_index <= laser2_flipped_pixel_index;
+                    active_valid       <= laser2_flipped_valid;
                 END IF;
 
             -- Add more sprites here later
