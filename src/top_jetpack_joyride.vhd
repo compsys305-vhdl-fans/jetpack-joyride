@@ -406,7 +406,9 @@ BEGIN
                 base_b := 8;
             ELSE
                 -- we do the background here (background sprite)
-
+                base_r := 0;
+                base_g := 0;
+                base_b := 0;
             END IF;
 
             IF laser_is_transparent = '0' THEN
