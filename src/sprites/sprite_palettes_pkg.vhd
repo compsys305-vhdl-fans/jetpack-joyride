@@ -103,6 +103,14 @@ PACKAGE BODY sprite_palettes_pkg IS
                     RETURN 1;
                 END IF;
 
+            WHEN SPRITE_LASER_NODE | SPRITE_LASER_NODE_FLIPPED =>
+                -- 1-2-1-2 cycle
+                IF (anim_tick MOD 4) < 2 THEN
+                    RETURN 0;
+                ELSE
+                    RETURN 1;
+                END IF;
+
             WHEN OTHERS =>
                 -- Non-animated sprites (e.g., Bird)
                 RETURN 0;

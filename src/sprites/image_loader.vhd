@@ -9,7 +9,8 @@ entity image_loader is
     generic (
         IMAGE_WIDTH : positive;
         IMAGE_HEIGHT : positive;
-        MIF_FILE : string
+        MIF_FILE : string;
+        FLIP_X : boolean := false
     );
     port (
         clock : in std_logic;
