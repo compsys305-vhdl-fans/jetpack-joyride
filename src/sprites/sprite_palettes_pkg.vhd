@@ -39,7 +39,7 @@ PACKAGE sprite_palettes_pkg IS
         anim_tick : INTEGER RANGE 0 TO 9
     ) RETURN INTEGER;
 
-    CONSTANT TRANSPARENT_COLOR : STD_LOGIC_VECTOR(11 DOWNTO 0) := x"0F0"; -- Ugly green
+    CONSTANT TRANSPARENT_COLOR : STD_LOGIC_VECTOR(11 DOWNTO 0) := x"100"; -- Matches TRANSPARENT_COLOR_4BIT in image_conv.py
     
 END PACKAGE sprite_palettes_pkg;
 
