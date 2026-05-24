@@ -234,31 +234,9 @@ BEGIN
             );
     END GENERATE;
     
-    -- Combine laser colors using additive blending
-    PROCESS(laser_colors_reg, laser_transparencies_reg)
-        VARIABLE r, g, b : INTEGER := 0;
-        VARIABLE is_transparent : BOOLEAN := true;
-    BEGIN
-        FOR i IN 0 TO MAX_LASERS - 1 LOOP
-            IF laser_transparencies_reg(i) = '0' THEN
-                r := r + TO_INTEGER(UNSIGNED(laser_colors_reg(i)(11 DOWNTO 8)));
-                g := g + TO_INTEGER(UNSIGNED(laser_colors_reg(i)(7 DOWNTO 4)));
-                b := b + TO_INTEGER(UNSIGNED(laser_colors_reg(i)(3 DOWNTO 0)));
-                is_transparent := false;
-            END IF;
-        END LOOP;
-
-        IF is_transparent THEN
-            combined_laser_is_transparent <= '1';
-            combined_laser_color <= (OTHERS => '0');
-        ELSE
-            combined_laser_is_transparent <= '0';
-            IF r > 15 THEN r := 15; END IF;
-            IF g > 15 THEN g := 15; END IF;
-            IF b > 15 THEN b := 15; END IF;
-            combined_laser_color <= STD_LOGIC_VECTOR(TO_UNSIGNED(r, 4) & TO_UNSIGNED(g, 4) & TO_UNSIGNED(b, 4));
-        END IF;
-    END PROCESS;
+    -- Diagnostic: Show only the first laser to ensure fast compile times
+    combined_laser_color <= laser_colors_reg(0);
+    combined_laser_is_transparent <= laser_transparencies_reg(0);
 
     PROCESS (pixel_y_lookahead, teleporter_preview_y)
         VARIABLE r,g,b : INTEGER RANGE 0 TO 15;
