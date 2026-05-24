@@ -4,9 +4,6 @@ USE IEEE.STD_LOGIC_ARITH.ALL;
 USE IEEE.STD_LOGIC_SIGNED.ALL;
 
 ENTITY physics IS
-    GENERIC (
-        PLAYER_HEIGHT : POSITIVE
-    );
     PORT (
         vert_sync : IN STD_LOGIC;
         mouse_left : IN STD_LOGIC;
@@ -46,11 +43,13 @@ ARCHITECTURE behaviour OF physics IS
     CONSTANT TOP_MARGIN : INTEGER := 10;
     CONSTANT BOTTOM_MARGIN : INTEGER := 10;
     CONSTANT PLAYER_MIN_Y_INT : INTEGER := TOP_MARGIN;
-    CONSTANT PLAYER_MAX_Y_INT : INTEGER := SCREEN_HEIGHT - PLAYER_HEIGHT - BOTTOM_MARGIN;
     CONSTANT PLAYER_MIN_Y : STD_LOGIC_VECTOR(9 DOWNTO 0)
         := CONV_STD_LOGIC_VECTOR(PLAYER_MIN_Y_INT, 10);
-    CONSTANT PLAYER_MAX_Y : STD_LOGIC_VECTOR(9 DOWNTO 0)
-        := CONV_STD_LOGIC_VECTOR(PLAYER_MAX_Y_INT, 10);
+
+    SIGNAL current_player_height : INTEGER := 32;
+    SIGNAL player_max_y_int : INTEGER;
+    SIGNAL player_max_y : STD_LOGIC_VECTOR(9 DOWNTO 0);
+
     CONSTANT PLAYER_Y_ACCELERATION : STD_LOGIC_VECTOR(9 DOWNTO 0) := "0000000001";
     CONSTANT PLAYER_MIN_Y_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := "1111110000"; -- -16 pixels/frame
     CONSTANT PLAYER_MAX_Y_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := "0000010000"; -- +16 pixels/frame
@@ -66,16 +65,36 @@ ARCHITECTURE behaviour OF physics IS
     CONSTANT TELEPORTER_PREVIEW_ACCELERATION : STD_LOGIC_VECTOR(9 DOWNTO 0) := "0000000001";
     CONSTANT TELEPORTER_PREVIEW_MIN_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := PLAYER_MIN_Y_SPEED;
     CONSTANT TELEPORTER_PREVIEW_MAX_SPEED : STD_LOGIC_VECTOR(9 DOWNTO 0) := PLAYER_MAX_Y_SPEED;
-    CONSTANT TELEPORTER_PREVIEW_MID_Y : STD_LOGIC_VECTOR(9 DOWNTO 0)
-        := CONV_STD_LOGIC_VECTOR((PLAYER_MIN_Y_INT + PLAYER_MAX_Y_INT) / 2, 10);
+    SIGNAL teleporter_preview_mid_y : STD_LOGIC_VECTOR(9 DOWNTO 0);
 
-    SIGNAL player_y_pos : STD_LOGIC_VECTOR(9 DOWNTO 0) := PLAYER_MAX_Y;
+    SIGNAL player_y_pos : STD_LOGIC_VECTOR(9 DOWNTO 0) := CONV_STD_LOGIC_VECTOR(SCREEN_HEIGHT - 32 - BOTTOM_MARGIN, 10);
     SIGNAL player_y_speed : STD_LOGIC_VECTOR(9 DOWNTO 0) := (OTHERS => '0');
-    SIGNAL teleporter_preview_pos : STD_LOGIC_VECTOR(9 DOWNTO 0) := PLAYER_MAX_Y;
+    SIGNAL teleporter_preview_pos : STD_LOGIC_VECTOR(9 DOWNTO 0);
     SIGNAL teleporter_preview_speed : STD_LOGIC_VECTOR(9 DOWNTO 0) := (OTHERS => '0');
     SIGNAL ls_thruster_tick : STD_LOGIC := '0';
     SIGNAL mouse_left_prev : STD_LOGIC := '0';
 BEGIN
+    player_height_calc: PROCESS(player_vehicle)
+    BEGIN
+        CASE player_vehicle IS
+            WHEN "00" => -- Jetpack
+                current_player_height <= 32;
+            WHEN "01" => -- Lil Stomper
+                current_player_height <= 128;
+            WHEN "10" => -- Bird
+                current_player_height <= 64;
+            WHEN "11" => -- Teleporter
+                current_player_height <= 64;
+            WHEN OTHERS =>
+                current_player_height <= 32;
+        END CASE;
+    END PROCESS player_height_calc;
+
+    player_max_y_int <= SCREEN_HEIGHT - 128 - BOTTOM_MARGIN; -- we want all floors to be the same, and lil stomper 'just works'
+    player_max_y <= CONV_STD_LOGIC_VECTOR(player_max_y_int, 10);
+    teleporter_preview_mid_y <= CONV_STD_LOGIC_VECTOR((PLAYER_MIN_Y_INT + player_max_y_int) / 2, 10);
+    
+    -- teleporter_preview_pos <= player_max_y;
     -- some stuff goes here
     PROCESS (vert_sync)
         VARIABLE next_y_pos : STD_LOGIC_VECTOR(9 DOWNTO 0);

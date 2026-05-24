@@ -37,14 +37,13 @@ architecture rtl of image_loader is
     constant ADDR_WIDTH : natural := clog2(IMAGE_DEPTH);
 
     signal rom_addr : unsigned(ADDR_WIDTH - 1 downto 0) := (others => '0');
-    signal rom_q : std_logic_vector(11 downto 0) := (others => '0');
-    signal rom_q_u : unsigned(11 downto 0) := (others => '0');
+    signal rom_q : std_logic_vector(7 downto 0) := (others => '0');
     signal in_range : std_logic := '0';
 begin
     rom_inst : altsyncram
         generic map (
             operation_mode => "ROM",
-            width_a => 12,
+            width_a => 8,
             numwords_a => IMAGE_DEPTH,
             widthad_a => ADDR_WIDTH,
             outdata_reg_a => "UNREGISTERED",
@@ -58,8 +57,6 @@ begin
             wren_a => '0',
             rden_a => '1'
         );
-
-    rom_q_u <= unsigned(rom_q);
 
     process(x, y)
         variable pixel_addr : natural;
@@ -81,10 +78,10 @@ begin
         end if;
     end process;
 
-    process(rom_q_u, in_range)
+    process(rom_q, in_range)
     begin
         if in_range = '1' then
-            pixel_index <= resize(rom_q_u, pixel_index'length);
+            pixel_index <= unsigned(rom_q);
             valid <= '1';
         else
             pixel_index <= (others => '0');

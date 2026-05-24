@@ -4,11 +4,11 @@ USE IEEE.NUMERIC_STD.ALL;
 
 LIBRARY hardware;
 USE hardware.vga_types.ALL;
+USE work.obstacle_types.ALL;
 
 ENTITY top_jetpack_joyride IS
     PORT (
         clock_50 : IN STD_LOGIC;
-
         key : IN STD_LOGIC_VECTOR(3 DOWNTO 0);
         sw : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
 
@@ -73,9 +73,6 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     END COMPONENT lfsr;
 
     COMPONENT game IS
-        GENERIC (
-            PLAYER_HEIGHT : POSITIVE
-        );
         PORT (
             clock_50MHz, vert_sync : IN STD_LOGIC;
             mouse_left : IN STD_LOGIC;
@@ -100,15 +97,22 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             left_button          : IN STD_LOGIC;
             player_grounded      : IN STD_LOGIC;
             player_vy            : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
-            laser_x0             : IN UNSIGNED(9 DOWNTO 0);
-            laser_y0             : IN UNSIGNED(9 DOWNTO 0);
-            laser_x1             : IN UNSIGNED(9 DOWNTO 0);
-            laser_y1             : IN UNSIGNED(9 DOWNTO 0);
-            laser_is_active      : IN STD_LOGIC;
+            laser_pool           : IN laser_pool_t;
             frame_count          : IN UNSIGNED(7 DOWNTO 0);
             death                : OUT STD_LOGIC
         );
     END COMPONENT collision_detector;
+    
+    COMPONENT obstacle_manager IS
+        PORT (
+            clock_50MHz      : IN STD_LOGIC;
+            vert_sync        : IN STD_LOGIC;
+            reset            : IN STD_LOGIC;
+            playing          : IN STD_LOGIC;
+            random_in        : IN STD_LOGIC_VECTOR(19 DOWNTO 0);
+            lasers_out       : OUT laser_pool_t
+        );
+    END COMPONENT obstacle_manager;
     
     COMPONENT renderer IS
         PORT (
@@ -123,11 +127,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             player_vy            : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
             teleporter_preview_y : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
     
-            laser_x0             : IN UNSIGNED(9 DOWNTO 0);
-            laser_y0             : IN UNSIGNED(9 DOWNTO 0);
-            laser_x1             : IN UNSIGNED(9 DOWNTO 0);
-            laser_y1             : IN UNSIGNED(9 DOWNTO 0);
-            laser_is_active      : IN STD_LOGIC;
+            laser_pool           : IN laser_pool_t;
             frame_count          : IN UNSIGNED(7 DOWNTO 0);
             
             red_out              : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
@@ -160,13 +160,14 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL vga_red, vga_green, vga_blue : STD_LOGIC_VECTOR(3 DOWNTO 0);
     SIGNAL vga_vsync_sig : STD_LOGIC;
 
-    -- lfsr signals
-    CONSTANT MAX_PLAYER_HEIGHT : POSITIVE := 128;
     SIGNAL lfsr_reset : STD_LOGIC := '0';
     SIGNAL random_num : STD_LOGIC_VECTOR(19 DOWNTO 0);
 
     -- laser signals
     SIGNAL frame_counter : UNSIGNED(7 DOWNTO 0) := (OTHERS => '0');
+
+    -- laser pool
+    SIGNAL laser_pool : laser_pool_t;
 
     -- death signal
     SIGNAL death_signal : STD_LOGIC;
@@ -178,6 +179,16 @@ BEGIN
             clock_25 <= NOT clock_25;
         END IF;
     END PROCESS clk_div;
+
+    obstacle_manager_inst: ENTITY work.obstacle_manager
+        PORT MAP (
+            clock_50MHz => clock_50,
+            vert_sync => vga_vsync_sig,
+            reset => mouse_reset,
+            playing => playing,
+            random_in => random_num,
+            lasers_out => laser_pool
+        );
 
     mouse_inst: mouse port map(
         clock_25Mhz => clock_25,
@@ -224,9 +235,6 @@ BEGIN
     );
 
     game_inst: game
-        GENERIC MAP (
-            PLAYER_HEIGHT => MAX_PLAYER_HEIGHT
-        )
         PORT MAP (
         clock_50MHz => clock_50,
         vert_sync => vga_vsync_sig,
@@ -251,11 +259,7 @@ BEGIN
         left_button => left_button,
         player_grounded => player_grounded,
         player_vy => player_vy,
-        laser_x0 => TO_UNSIGNED(100, 10),
-        laser_y0 => TO_UNSIGNED(100, 10),
-        laser_x1 => TO_UNSIGNED(200, 10),
-        laser_y1 => TO_UNSIGNED(100, 10),
-        laser_is_active => '1',
+        laser_pool => laser_pool,
         frame_count => frame_counter,
         death => death_signal
     );
@@ -271,11 +275,7 @@ BEGIN
         player_grounded => player_grounded,
         player_vy => player_vy,
         teleporter_preview_y => teleporter_preview_y,
-        laser_x0 => TO_UNSIGNED(100, 10),
-        laser_y0 => TO_UNSIGNED(100, 10),
-        laser_x1 => TO_UNSIGNED(200, 10),
-        laser_y1 => TO_UNSIGNED(100, 10),
-        laser_is_active => '1',
+        laser_pool => laser_pool,
         frame_count => frame_counter,
         red_out => red_sig,
         green_out => green_sig,

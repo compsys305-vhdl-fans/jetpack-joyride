@@ -41,7 +41,7 @@ PACKAGE sprite_palettes_pkg IS
     -- Helper function to map a 10Hz animation tick (0-9) to a specific frame (e.g. 0 or 1)
     FUNCTION get_anim_frame (
         sprite_id : UNSIGNED(7 DOWNTO 0);
-        anim_tick : INTEGER RANGE 0 TO 9
+        anim_tick : INTEGER RANGE 0 TO 11
     ) RETURN INTEGER;
 
     CONSTANT TRANSPARENT_COLOR : STD_LOGIC_VECTOR(11 DOWNTO 0) := x"100"; -- Matches TRANSPARENT_COLOR_4BIT in image_conv.py
@@ -75,7 +75,7 @@ PACKAGE BODY sprite_palettes_pkg IS
 
     FUNCTION get_anim_frame (
         sprite_id : UNSIGNED(7 DOWNTO 0);
-        anim_tick : INTEGER RANGE 0 TO 9
+        anim_tick : INTEGER RANGE 0 TO 11
     ) RETURN INTEGER IS
     BEGIN
         CASE sprite_id IS
