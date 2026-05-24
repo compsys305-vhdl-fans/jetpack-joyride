@@ -20,6 +20,7 @@ ARCHITECTURE rtl OF obstacle_manager IS
     CONSTANT LASER_LENGTH : INTEGER := 100;
     CONSTANT SPAWN_INTERVAL_MIN : INTEGER := 60; -- frames (1 second)
     CONSTANT SPAWN_INTERVAL_VARIATION : INTEGER := 60; -- frames (1 second)
+    CONSTANT Y_MARGIN : INTEGER := 40; -- Top/bottom margin for laser spawns
 
     SIGNAL pool : laser_pool_t := INACTIVE_LASER_POOL;
     SIGNAL spawn_counter : INTEGER RANGE 0 TO SPAWN_INTERVAL_MIN + SPAWN_INTERVAL_VARIATION := SPAWN_INTERVAL_MIN;
@@ -50,7 +51,7 @@ BEGIN
                 -- Update existing lasers
                 FOR i IN 0 TO MAX_LASERS - 1 LOOP
                     IF temp_pool(i).is_active = '1' THEN
-                        IF TO_INTEGER(temp_pool(i).x1) < LASER_SPEED_X THEN
+                        IF TO_INTEGER(temp_pool(i).x1) < 0 THEN
                             -- Deactivate if off-screen
                             temp_pool(i) := INACTIVE_LASER;
                         ELSE
@@ -76,19 +77,64 @@ BEGIN
                         IF temp_pool(i).is_active = '0' THEN
                             temp_pool(i).is_active := '1';
 
-                            -- For now, only horizontal lasers
-                            rand_y := RESIZE(UNSIGNED(random_in(13 DOWNTO 6)), 10);
+                            -- Use 2 bits to determine laser type
+                            CASE random_in(15 DOWNTO 14) IS
+                                -- Horizontal laser
+                                WHEN "00" =>
+                                    rand_y := RESIZE(UNSIGNED(random_in(9 DOWNTO 0)), 10);
+                                    IF rand_y > SCREEN_HEIGHT - Y_MARGIN THEN
+                                        rand_y := TO_UNSIGNED(SCREEN_HEIGHT - Y_MARGIN, 10);
+                                    ELSIF rand_y < Y_MARGIN THEN
+                                        rand_y := TO_UNSIGNED(Y_MARGIN, 10);
+                                    END IF;
+                                    temp_pool(i).y0 := RESIZE(SIGNED('0' & rand_y), 12);
+                                    temp_pool(i).y1 := temp_pool(i).y0;
 
-                            IF rand_y > SCREEN_HEIGHT - 10 THEN
-                                rand_y := TO_UNSIGNED(SCREEN_HEIGHT - 10, 10);
-                            ELSIF rand_y < 10 THEN
-                                rand_y := TO_UNSIGNED(10, 10);
-                            END IF;
-                            temp_pool(i).y0 := rand_y;
-                            temp_pool(i).y1 := rand_y;
+                                    temp_pool(i).x0 := TO_SIGNED(SCREEN_WIDTH - 1, 12);
+                                    temp_pool(i).x1 := TO_SIGNED(SCREEN_WIDTH - 1 + LASER_LENGTH, 12);
+                                
+                                -- Vertical laser
+                                WHEN "01" =>
+                                    rand_y := RESIZE(UNSIGNED(random_in(9 DOWNTO 0)), 10);
+                                    IF rand_y > SCREEN_HEIGHT - LASER_LENGTH - Y_MARGIN THEN
+                                        rand_y := TO_UNSIGNED(SCREEN_HEIGHT - LASER_LENGTH - Y_MARGIN, 10);
+                                    ELSIF rand_y < Y_MARGIN THEN
+                                        rand_y := TO_UNSIGNED(Y_MARGIN, 10);
+                                    END IF;
+                                    temp_pool(i).y0 := RESIZE(SIGNED('0' & rand_y), 12);
+                                    temp_pool(i).y1 := temp_pool(i).y0 + LASER_LENGTH;
 
-                            temp_pool(i).x0 := TO_UNSIGNED(SCREEN_WIDTH - 1, 10);
-                            temp_pool(i).x1 := TO_UNSIGNED(SCREEN_WIDTH - 1 + LASER_LENGTH, 10);
+                                    temp_pool(i).x0 := TO_SIGNED(SCREEN_WIDTH - 1, 12);
+                                    temp_pool(i).x1 := TO_SIGNED(SCREEN_WIDTH - 1, 12);
+
+                                -- Diagonal (down-right)
+                                WHEN "10" =>
+                                    rand_y := RESIZE(UNSIGNED(random_in(9 DOWNTO 0)), 10);
+                                    IF rand_y > SCREEN_HEIGHT - LASER_LENGTH - Y_MARGIN THEN
+                                        rand_y := TO_UNSIGNED(SCREEN_HEIGHT - LASER_LENGTH - Y_MARGIN, 10);
+                                    ELSIF rand_y < Y_MARGIN THEN
+                                        rand_y := TO_UNSIGNED(Y_MARGIN, 10);
+                                    END IF;
+                                    temp_pool(i).y0 := RESIZE(SIGNED('0' & rand_y), 12);
+                                    temp_pool(i).y1 := temp_pool(i).y0 + LASER_LENGTH;
+
+                                    temp_pool(i).x0 := TO_SIGNED(SCREEN_WIDTH - 1, 12);
+                                    temp_pool(i).x1 := TO_SIGNED(SCREEN_WIDTH - 1 + LASER_LENGTH, 12);
+
+                                -- Diagonal (up-right)
+                                WHEN OTHERS =>
+                                    rand_y := RESIZE(UNSIGNED(random_in(9 DOWNTO 0)), 10);
+                                    IF rand_y < LASER_LENGTH + Y_MARGIN THEN
+                                        rand_y := TO_UNSIGNED(LASER_LENGTH + Y_MARGIN, 10);
+                                    ELSIF rand_y > SCREEN_HEIGHT - Y_MARGIN THEN
+                                        rand_y := TO_UNSIGNED(SCREEN_HEIGHT - Y_MARGIN, 10);
+                                    END IF;
+                                    temp_pool(i).y0 := RESIZE(SIGNED('0' & rand_y), 12);
+                                    temp_pool(i).y1 := temp_pool(i).y0 - LASER_LENGTH;
+                                    
+                                    temp_pool(i).x0 := TO_SIGNED(SCREEN_WIDTH - 1, 12);
+                                    temp_pool(i).x1 := TO_SIGNED(SCREEN_WIDTH - 1 + LASER_LENGTH, 12);
+                            END CASE;
 
                             EXIT; -- exit loop after spawning one
                         END IF;

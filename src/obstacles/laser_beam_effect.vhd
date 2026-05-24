@@ -9,10 +9,10 @@ ENTITY laser_beam_effect IS
         pixel_x     : IN UNSIGNED(9 DOWNTO 0);
         pixel_y     : IN UNSIGNED(9 DOWNTO 0);
         frame_count : IN UNSIGNED(7 DOWNTO 0);
-        x0          : IN UNSIGNED(9 DOWNTO 0);
-        y0          : IN UNSIGNED(9 DOWNTO 0);
-        x1          : IN UNSIGNED(9 DOWNTO 0);
-        y1          : IN UNSIGNED(9 DOWNTO 0);
+        x0          : IN SIGNED(11 DOWNTO 0);
+        y0          : IN SIGNED(11 DOWNTO 0);
+        x1          : IN SIGNED(11 DOWNTO 0);
+        y1          : IN SIGNED(11 DOWNTO 0);
         is_active   : IN STD_LOGIC;
         
         color_out   : OUT STD_LOGIC_VECTOR(11 DOWNTO 0);
@@ -64,6 +64,9 @@ BEGIN
         VARIABLE v_r, v_g, v_b : INTEGER RANGE -64 TO 511;
         VARIABLE r_out, g_out, b_out : INTEGER;
         VARIABLE phase_base : INTEGER;
+        -- Variables for approx_len calculation
+        VARIABLE a, b : NATURAL;
+        VARIABLE maximum, minimum : NATURAL;
     BEGIN
         IF RISING_EDGE(clock) THEN
             color_out <= (OTHERS => '0');
@@ -83,7 +86,19 @@ BEGIN
                 apy := py - ay;
 
                 len2 := (abx * abx) + (aby * aby);
-                approx_len := ABS(abx) + ABS(aby);
+                
+                -- More accurate and hardware-friendly approximation for vector length
+                -- approx_len = max(abs(abx), abs(aby)) + min(abs(abx), abs(aby)) / 2
+                a := ABS(abx);
+                b := ABS(aby);
+                IF a > b THEN
+                    maximum := a;
+                    minimum := b;
+                ELSE
+                    maximum := b;
+                    minimum := a;
+                END IF;
+                approx_len := maximum + (minimum / 2);
 
                 IF (len2 > 0) AND (approx_len > 0) THEN
                     dot := (apx * abx) + (apy * aby);

@@ -77,7 +77,16 @@ ARCHITECTURE rtl OF renderer IS
     
     SIGNAL teleporter_preview_on : STD_LOGIC;
 
+    -- Pipelining registers
+    SIGNAL pixel_y_lookahead       : UNSIGNED(9 DOWNTO 0);
+    SIGNAL base_color              : STD_LOGIC_VECTOR(11 DOWNTO 0);
+    SIGNAL base_color_d            : STD_LOGIC_VECTOR(11 DOWNTO 0);
+    SIGNAL laser_colors_reg        : laser_color_array;
+    SIGNAL laser_transparencies_reg: laser_transparency_array;
+
 BEGIN
+    pixel_y_lookahead <= pixel_y + 1;
+
     PROCESS(player_vehicle, left_button, player_grounded, player_vy)
     BEGIN
         IF player_vehicle = "00" THEN
@@ -120,6 +129,13 @@ BEGIN
             player_sprite_width <= 32;
             player_sprite_height <= 32;
             player_sprite_id <= SPRITE_TELEPORTER;
+        ELSE
+            -- Default case to prevent latches
+            player_palette_id <= PALETTE_BARRY;
+            player_scale_shift <= 1;
+            player_sprite_width <= 16;
+            player_sprite_height <= 16;
+            player_sprite_id <= SPRITE_BARRY_RUN;
         END IF;
     END PROCESS;
 
@@ -140,16 +156,27 @@ BEGIN
         player_x_render <= TO_UNSIGNED(left_x, 10);
     END PROCESS;
 
-    player_y_render <= UNSIGNED(player_y);
+    PROCESS (player_y, player_display_height, player_vehicle)
+        CONSTANT MAX_PLAYER_DISPLAY_HEIGHT : NATURAL := 128;
+        VARIABLE offset : NATURAL;
+    BEGIN
+        -- Offset the rendered Y position to bottom-align all sprites, except the teleporter
+        IF player_vehicle = "11" THEN -- is teleporter
+            offset := 0;
+        ELSE
+            offset := MAX_PLAYER_DISPLAY_HEIGHT - player_display_height;
+        END IF;
+        player_y_render <= UNSIGNED(player_y) + TO_UNSIGNED(offset, 10);
+    END PROCESS;
 
-    PROCESS (pixel_x, pixel_y, player_x_render, player_y_render, player_display_width, player_display_height)
+    PROCESS (pixel_x, pixel_y_lookahead, player_x_render, player_y_render, player_display_width, player_display_height)
         VARIABLE s_x : UNSIGNED(15 DOWNTO 0);
         VARIABLE s_y : UNSIGNED(15 DOWNTO 0);
         VARIABLE p_x : UNSIGNED(15 DOWNTO 0);
         VARIABLE p_y : UNSIGNED(15 DOWNTO 0);
     BEGIN
         s_x := RESIZE(pixel_x, 16);
-        s_y := RESIZE(pixel_y, 16);
+        s_y := RESIZE(pixel_y_lookahead, 16);
         p_x := RESIZE(player_x_render, 16);
         p_y := RESIZE(player_y_render, 16);
         
@@ -160,6 +187,8 @@ BEGIN
             player_rel_y <= s_y - p_y;
         ELSE
             in_player_sprite <= '0';
+            player_rel_x <= (OTHERS => '0');
+            player_rel_y <= (OTHERS => '0');
         END IF;
     END PROCESS;
 
@@ -180,6 +209,9 @@ BEGIN
     BEGIN
         IF RISING_EDGE(clock_25MHz) THEN
             in_player_sprite_d <= in_player_sprite;
+            laser_colors_reg <= laser_colors;
+            laser_transparencies_reg <= laser_transparencies;
+            base_color_d <= base_color;
         END IF;
     END PROCESS;
 
@@ -190,7 +222,7 @@ BEGIN
             PORT MAP(
                 clock => clock_25MHz,
                 pixel_x => pixel_x,
-                pixel_y => pixel_y,
+                pixel_y => pixel_y_lookahead,
                 frame_count => frame_count,
                 x0 => laser_pool(i).x0,
                 y0 => laser_pool(i).y0,
@@ -202,77 +234,79 @@ BEGIN
             );
     END GENERATE;
     
-    PROCESS(laser_transparencies, laser_colors)
-        VARIABLE combined_color_r : NATURAL := 0;
-        VARIABLE combined_color_g : NATURAL := 0;
-        VARIABLE combined_color_b : NATURAL := 0;
+    -- Combine laser colors using additive blending
+    PROCESS(laser_colors_reg, laser_transparencies_reg)
+        VARIABLE r, g, b : INTEGER := 0;
+        VARIABLE is_transparent : BOOLEAN := true;
     BEGIN
-        combined_laser_is_transparent <= '1';
-        FOR i IN 0 to MAX_LASERS - 1 LOOP
-            IF laser_transparencies(i) = '0' THEN
-                combined_laser_is_transparent <= '0';
-                combined_color_r := combined_color_r + TO_INTEGER(UNSIGNED(laser_colors(i)(11 DOWNTO 8)));
-                combined_color_g := combined_color_g + TO_INTEGER(UNSIGNED(laser_colors(i)(7 DOWNTO 4)));
-                combined_color_b := combined_color_b + TO_INTEGER(UNSIGNED(laser_colors(i)(3 DOWNTO 0)));
+        FOR i IN 0 TO MAX_LASERS - 1 LOOP
+            IF laser_transparencies_reg(i) = '0' THEN
+                r := r + TO_INTEGER(UNSIGNED(laser_colors_reg(i)(11 DOWNTO 8)));
+                g := g + TO_INTEGER(UNSIGNED(laser_colors_reg(i)(7 DOWNTO 4)));
+                b := b + TO_INTEGER(UNSIGNED(laser_colors_reg(i)(3 DOWNTO 0)));
+                is_transparent := false;
             END IF;
         END LOOP;
 
-        IF combined_color_r > 15 THEN combined_color_r := 15; END IF;
-        IF combined_color_g > 15 THEN combined_color_g := 15; END IF;
-        IF combined_color_b > 15 THEN combined_color_b := 15; END IF;
-
-        combined_laser_color <= STD_LOGIC_VECTOR(TO_UNSIGNED(combined_color_r, 4)) &
-                                STD_LOGIC_VECTOR(TO_UNSIGNED(combined_color_g, 4)) &
-                                STD_LOGIC_VECTOR(TO_UNSIGNED(combined_color_b, 4));
-    END PROCESS;
-
-    PROCESS (pixel_y, teleporter_preview_y)
-    BEGIN
-        IF UNSIGNED(pixel_y) = UNSIGNED(teleporter_preview_y) THEN
-            teleporter_preview_on <= '1';
+        IF is_transparent THEN
+            combined_laser_is_transparent <= '1';
+            combined_laser_color <= (OTHERS => '0');
         ELSE
-            teleporter_preview_on <= '0';
+            combined_laser_is_transparent <= '0';
+            IF r > 15 THEN r := 15; END IF;
+            IF g > 15 THEN g := 15; END IF;
+            IF b > 15 THEN b := 15; END IF;
+            combined_laser_color <= STD_LOGIC_VECTOR(TO_UNSIGNED(r, 4) & TO_UNSIGNED(g, 4) & TO_UNSIGNED(b, 4));
         END IF;
     END PROCESS;
 
-    PROCESS (player_drawn, sprite_color, teleporter_preview_on, pixel_y, combined_laser_is_transparent, combined_laser_color)
+    PROCESS (pixel_y_lookahead, teleporter_preview_y)
+        VARIABLE r,g,b : INTEGER RANGE 0 TO 15;
+    BEGIN
+        IF UNSIGNED(pixel_y_lookahead) = UNSIGNED(teleporter_preview_y) THEN
+             r := 15; g := 6; b := 0; -- Orange
+        ELSIF (TO_INTEGER(pixel_y_lookahead) >= 470) THEN
+             r := 8;  g := 8; b := 8; -- Grey
+        ELSE
+             r := 0;  g := 0; b := 0; -- Black
+        END IF;
+        base_color <= STD_LOGIC_VECTOR(TO_UNSIGNED(r,4) & TO_UNSIGNED(g,4) & TO_UNSIGNED(b,4));
+    END PROCESS;
+
+    PROCESS (player_drawn, sprite_color, base_color_d, combined_laser_is_transparent, combined_laser_color)
         VARIABLE base_r, base_g, base_b : INTEGER RANGE 0 TO 15;
         VARIABLE add_r, add_g, add_b : INTEGER;
+        VARIABLE final_r, final_g, final_b : INTEGER RANGE 0 TO 15;
     BEGIN
         IF player_drawn = '1' THEN
-            red_out <= sprite_color(11 DOWNTO 8);
-            green_out <= sprite_color(7 DOWNTO 4);
-            blue_out <= sprite_color(3 DOWNTO 0);
+            final_r := TO_INTEGER(UNSIGNED(sprite_color(11 DOWNTO 8)));
+            final_g := TO_INTEGER(UNSIGNED(sprite_color(7 DOWNTO 4)));
+            final_b := TO_INTEGER(UNSIGNED(sprite_color(3 DOWNTO 0)));
         ELSE
-            IF teleporter_preview_on = '1' THEN
-                base_r := 15;
-                base_g := 6;
-                base_b := 0;
-            ELSIF (TO_INTEGER(UNSIGNED(pixel_y)) >= 470) THEN
-                base_r := 8;
-                base_g := 8;
-                base_b := 8;
-            ELSE
-                -- we do the background here (background sprite)
-                base_r := 0;
-                base_g := 0;
-                base_b := 0;
-            END IF;
+            -- Determine base color
+            base_r := TO_INTEGER(UNSIGNED(base_color_d(11 DOWNTO 8)));
+            base_g := TO_INTEGER(UNSIGNED(base_color_d(7 DOWNTO 4)));
+            base_b := TO_INTEGER(UNSIGNED(base_color_d(3 DOWNTO 0)));
 
-            IF combined_laser_is_transparent = '0' THEN
+            -- Add laser color
+            IF combined_laser_is_transparent = '1' THEN
+                final_r := base_r;
+                final_g := base_g;
+                final_b := base_b;
+            ELSE
                 add_r := base_r + TO_INTEGER(UNSIGNED(combined_laser_color(11 DOWNTO 8)));
                 add_g := base_g + TO_INTEGER(UNSIGNED(combined_laser_color(7 DOWNTO 4)));
                 add_b := base_b + TO_INTEGER(UNSIGNED(combined_laser_color(3 DOWNTO 0)));
 
-                IF add_r > 15 THEN red_out <= x"F"; ELSE red_out <= STD_LOGIC_VECTOR(TO_UNSIGNED(add_r, 4)); END IF;
-                IF add_g > 15 THEN green_out <= x"F"; ELSE green_out <= STD_LOGIC_VECTOR(TO_UNSIGNED(add_g, 4)); END IF;
-                IF add_b > 15 THEN blue_out <= x"F"; ELSE blue_out <= STD_LOGIC_VECTOR(TO_UNSIGNED(add_b, 4)); END IF;
-            ELSE
-                red_out <= STD_LOGIC_VECTOR(TO_UNSIGNED(base_r, 4));
-                green_out <= STD_LOGIC_VECTOR(TO_UNSIGNED(base_g, 4));
-                blue_out <= STD_LOGIC_VECTOR(TO_UNSIGNED(base_b, 4));
+                IF add_r > 15 THEN final_r := 15; ELSE final_r := add_r; END IF;
+                IF add_g > 15 THEN final_g := 15; ELSE final_g := add_g; END IF;
+                IF add_b > 15 THEN final_b := 15; ELSE final_b := add_b; END IF;
             END IF;
         END IF;
+
+        red_out <= STD_LOGIC_VECTOR(TO_UNSIGNED(final_r, 4));
+        green_out <= STD_LOGIC_VECTOR(TO_UNSIGNED(final_g, 4));
+        blue_out <= STD_LOGIC_VECTOR(TO_UNSIGNED(final_b, 4));
     END PROCESS;
 
 END ARCHITECTURE rtl;

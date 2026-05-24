@@ -87,11 +87,16 @@ BEGIN
     -- Laser Collision Detection (line check)
     PROCESS(laser_pool, pixel_x, pixel_y)
         VARIABLE on_laser : BOOLEAN := false;
+        VARIABLE px_s : SIGNED(11 DOWNTO 0);
+        VARIABLE py_s : SIGNED(11 DOWNTO 0);
     BEGIN
+        px_s := RESIZE(SIGNED('0' & pixel_x), 12);
+        py_s := RESIZE(SIGNED('0' & pixel_y), 12);
+
         FOR i IN 0 TO MAX_LASERS - 1 LOOP
             IF laser_pool(i).is_active = '1' AND
-               pixel_y >= laser_pool(i).y0 AND pixel_y <= laser_pool(i).y1 AND
-               pixel_x >= laser_pool(i).x0 AND pixel_x <= laser_pool(i).x1 THEN
+               py_s >= laser_pool(i).y0 AND py_s <= laser_pool(i).y1 AND
+               px_s >= laser_pool(i).x0 AND px_s <= laser_pool(i).x1 THEN
                 on_laser := true;
             END IF;
         END LOOP;

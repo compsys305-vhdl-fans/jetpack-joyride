@@ -10,10 +10,10 @@ ENTITY laser IS
         pixel_y     : IN UNSIGNED(9 DOWNTO 0);
         frame_count : IN UNSIGNED(7 DOWNTO 0);
         
-        x0          : IN UNSIGNED(9 DOWNTO 0);
-        y0          : IN UNSIGNED(9 DOWNTO 0);
-        x1          : IN UNSIGNED(9 DOWNTO 0);
-        y1          : IN UNSIGNED(9 DOWNTO 0);
+        x0          : IN SIGNED(11 DOWNTO 0);
+        y0          : IN SIGNED(11 DOWNTO 0);
+        x1          : IN SIGNED(11 DOWNTO 0);
+        y1          : IN SIGNED(11 DOWNTO 0);
         is_active   : IN STD_LOGIC;
         
         color_out      : OUT STD_LOGIC_VECTOR(11 DOWNTO 0);
@@ -22,11 +22,16 @@ ENTITY laser IS
 END ENTITY laser;
 
 ARCHITECTURE rtl OF laser IS
+    -- Intermediate signed signals for correct arithmetic
+    SIGNAL px_s : SIGNED(11 DOWNTO 0);
+    SIGNAL py_s : SIGNED(11 DOWNTO 0);
 
     -- Signals for node 1
     SIGNAL node1_color          : STD_LOGIC_VECTOR(11 DOWNTO 0);
     SIGNAL node1_is_transparent : STD_LOGIC;
     SIGNAL node1_valid          : STD_LOGIC;
+    SIGNAL node1_rel_x_s        : SIGNED(15 DOWNTO 0);
+    SIGNAL node1_rel_y_s        : SIGNED(15 DOWNTO 0);
     SIGNAL node1_rel_x          : UNSIGNED(15 DOWNTO 0);
     SIGNAL node1_rel_y          : UNSIGNED(15 DOWNTO 0);
     
@@ -34,6 +39,8 @@ ARCHITECTURE rtl OF laser IS
     SIGNAL node2_color          : STD_LOGIC_VECTOR(11 DOWNTO 0);
     SIGNAL node2_is_transparent : STD_LOGIC;
     SIGNAL node2_valid          : STD_LOGIC;
+    SIGNAL node2_rel_x_s        : SIGNED(15 DOWNTO 0);
+    SIGNAL node2_rel_y_s        : SIGNED(15 DOWNTO 0);
     SIGNAL node2_rel_x          : UNSIGNED(15 DOWNTO 0);
     SIGNAL node2_rel_y          : UNSIGNED(15 DOWNTO 0);
 
@@ -41,15 +48,37 @@ ARCHITECTURE rtl OF laser IS
     SIGNAL beam_color           : STD_LOGIC_VECTOR(11 DOWNTO 0);
     SIGNAL beam_is_transparent  : STD_LOGIC;
 
-BEGIN
+    -- Signals for orientation check
+    SIGNAL abx, aby : INTEGER;
 
-    -- Calculate relative coordinates for each node
-    -- Assuming (x0,y0) and (x1,y1) are the centers of the 16x16 sprites
-    node1_rel_x <= RESIZE(pixel_x - (x0 - 8), 16);
-    node1_rel_y <= RESIZE(pixel_y - (y0 - 8), 16);
-    
-    node2_rel_x <= RESIZE(pixel_x - (x1 - 8), 16);
-    node2_rel_y <= RESIZE(pixel_y - (y1 - 8), 16);
+BEGIN
+    -- Convert pixel coordinates to signed for calculations
+    px_s <= RESIZE(SIGNED('0' & pixel_x), 12);
+    py_s <= RESIZE(SIGNED('0' & pixel_y), 12);
+    abx <= TO_INTEGER(x1) - TO_INTEGER(x0);
+    aby <= TO_INTEGER(y1) - TO_INTEGER(y0);
+
+    -- Calculate relative coordinates for each node using signed arithmetic
+    node1_rel_x_s <= RESIZE(px_s - (x0 - 8), 16);
+    node1_rel_y_s <= RESIZE(py_s - (y0 - 8), 16);
+    node2_rel_x_s <= RESIZE(px_s - (x1 - 8), 16);
+    node2_rel_y_s <= RESIZE(py_s - (y1 - 8), 16);
+
+    -- Conditionally swap X and Y relative coordinates for vertical lasers to rotate sprites
+    rotate_proc: PROCESS(abx, aby, node1_rel_x_s, node1_rel_y_s, node2_rel_x_s, node2_rel_y_s)
+    BEGIN
+        IF ABS(abx) < ABS(aby) THEN -- Primarily vertical
+            node1_rel_x <= UNSIGNED(node1_rel_y_s); -- Swap X and Y
+            node1_rel_y <= UNSIGNED(node1_rel_x_s);
+            node2_rel_x <= UNSIGNED(node2_rel_y_s);
+            node2_rel_y <= UNSIGNED(node2_rel_x_s);
+        ELSE -- Primarily horizontal
+            node1_rel_x <= UNSIGNED(node1_rel_x_s);
+            node1_rel_y <= UNSIGNED(node1_rel_y_s);
+            node2_rel_x <= UNSIGNED(node2_rel_x_s);
+            node2_rel_y <= UNSIGNED(node2_rel_y_s);
+        END IF;
+    END PROCESS rotate_proc;
 
     -- Instantiate the sprite renderer for node 1
     node1_renderer : ENTITY work.sprite_renderer

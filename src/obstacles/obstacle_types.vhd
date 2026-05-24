@@ -9,10 +9,10 @@ PACKAGE obstacle_types IS
 
     TYPE laser_t IS RECORD
         is_active : STD_LOGIC;
-        x0 : UNSIGNED(9 DOWNTO 0);
-        y0 : UNSIGNED(9 DOWNTO 0);
-        x1 : UNSIGNED(9 DOWNTO 0);
-        y1 : UNSIGNED(9 DOWNTO 0);
+        x0 : SIGNED(11 DOWNTO 0);
+        y0 : SIGNED(11 DOWNTO 0);
+        x1 : SIGNED(11 DOWNTO 0);
+        y1 : SIGNED(11 DOWNTO 0);
     END RECORD laser_t;
 
     TYPE laser_pool_t IS ARRAY (0 TO MAX_LASERS - 1) OF laser_t;
