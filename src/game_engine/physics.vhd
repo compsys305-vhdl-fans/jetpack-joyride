@@ -42,9 +42,6 @@ ARCHITECTURE behaviour OF physics IS
     CONSTANT SCREEN_HEIGHT : INTEGER := 480;
     CONSTANT TOP_MARGIN : INTEGER := 10;
     CONSTANT BOTTOM_MARGIN : INTEGER := 10;
-    CONSTANT PLAYER_MIN_Y_INT : INTEGER := TOP_MARGIN;
-    CONSTANT PLAYER_MIN_Y : STD_LOGIC_VECTOR(9 DOWNTO 0)
-        := CONV_STD_LOGIC_VECTOR(PLAYER_MIN_Y_INT, 10);
 
     SIGNAL current_player_height : INTEGER := 32;
     SIGNAL player_max_y_int : INTEGER;
@@ -73,6 +70,10 @@ ARCHITECTURE behaviour OF physics IS
     SIGNAL teleporter_preview_speed : STD_LOGIC_VECTOR(9 DOWNTO 0) := (OTHERS => '0');
     SIGNAL ls_thruster_tick : STD_LOGIC := '0';
     SIGNAL mouse_left_prev : STD_LOGIC := '0';
+
+    signal player_min_y_int : INTEGER;
+    signal player_min_y : STD_LOGIC_VECTOR(9 DOWNTO 0);
+
 BEGIN
     player_height_calc: PROCESS(player_vehicle)
     BEGIN
@@ -92,7 +93,9 @@ BEGIN
 
     player_max_y_int <= SCREEN_HEIGHT - 128 - BOTTOM_MARGIN; -- we want all floors to be the same, and lil stomper 'just works'
     player_max_y <= CONV_STD_LOGIC_VECTOR(player_max_y_int, 10);
-    teleporter_preview_mid_y <= CONV_STD_LOGIC_VECTOR((PLAYER_MIN_Y_INT + player_max_y_int) / 2, 10);
+    player_min_y_int <= TOP_MARGIN + current_player_height;
+    player_min_y <= CONV_STD_LOGIC_VECTOR(player_min_y_int, 10);
+    teleporter_preview_mid_y <= CONV_STD_LOGIC_VECTOR((player_min_y_int + player_max_y_int) / 2, 10);
     
     -- teleporter_preview_pos <= player_max_y;
     -- some stuff goes here
@@ -173,8 +176,8 @@ BEGIN
                 next_y_pos := next_y_pos + next_y_speed;
 
                 -- make sure the player is not clipped to the ground or ceiling
-                IF (next_y_pos < PLAYER_MIN_Y) THEN
-                    next_y_pos := PLAYER_MIN_Y;
+                IF (next_y_pos < player_min_y) THEN
+                    next_y_pos := player_min_y;
                     next_y_speed := (OTHERS => '0');
                 ELSIF (next_y_pos > PLAYER_MAX_Y) THEN
                     next_y_pos := PLAYER_MAX_Y;
@@ -193,8 +196,8 @@ BEGIN
 
                     next_preview_pos := next_preview_pos + next_preview_speed;
 
-                    IF next_preview_pos < PLAYER_MIN_Y THEN
-                        next_preview_pos := PLAYER_MIN_Y;
+                    IF next_preview_pos < player_min_y THEN
+                        next_preview_pos := player_min_y;
                         next_preview_speed := (OTHERS => '0');
                     ELSIF next_preview_pos > PLAYER_MAX_Y THEN
                         next_preview_pos := PLAYER_MAX_Y;
