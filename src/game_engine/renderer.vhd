@@ -22,6 +22,7 @@ ENTITY renderer IS
 
         laser_pool           : IN laser_pool_t;
         frame_count          : IN UNSIGNED(7 DOWNTO 0);
+        random_in            : IN STD_LOGIC_VECTOR(19 DOWNTO 0);
         
         -- Output pixel color
         red_out              : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
@@ -74,6 +75,18 @@ ARCHITECTURE rtl OF renderer IS
     SIGNAL laser_transparencies: laser_transparency_array;
     SIGNAL combined_laser_color : STD_LOGIC_VECTOR(11 DOWNTO 0);
     SIGNAL combined_laser_is_transparent : STD_LOGIC;
+
+    -- Background sprite signals
+    SIGNAL bg_sprite_id : UNSIGNED(7 DOWNTO 0);
+    SIGNAL bg_rel_x : UNSIGNED(15 DOWNTO 0);
+    SIGNAL bg_rel_y : UNSIGNED(15 DOWNTO 0);
+    SIGNAL bg_color : STD_LOGIC_VECTOR(11 DOWNTO 0);
+    SIGNAL bg_is_transparent : STD_LOGIC;
+    SIGNAL bg_valid : STD_LOGIC;
+    SIGNAL bg_drawn : STD_LOGIC;
+    SIGNAL bg_seed : UNSIGNED(1 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL frame_count_d : UNSIGNED(7 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL bg_scroll_x : UNSIGNED(6 DOWNTO 0);
     
     SIGNAL teleporter_preview_on : STD_LOGIC;
 
@@ -88,6 +101,7 @@ ARCHITECTURE rtl OF renderer IS
 
 BEGIN
     pixel_y_lookahead <= pixel_y + 1;
+    bg_scroll_x <= frame_count(7 DOWNTO 1);
 
     PROCESS(player_vehicle, left_button, player_grounded, player_vy)
     BEGIN
@@ -207,9 +221,26 @@ BEGIN
             valid          => sprite_valid
         );
 
+    background_sprite_renderer: sprite_renderer
+        PORT MAP (
+            clock          => clock_25MHz,
+            sprite_id      => bg_sprite_id,
+            palette_id     => PALETTE_BACKGROUND2,
+            scale_shift    => 1,
+            rel_x          => bg_rel_x,
+            rel_y          => bg_rel_y,
+            color          => bg_color,
+            is_transparent => bg_is_transparent,
+            valid          => bg_valid
+        );
+
     PROCESS(clock_25MHz)
     BEGIN
         IF RISING_EDGE(clock_25MHz) THEN
+            IF frame_count = 0 AND frame_count_d /= 0 THEN
+                bg_seed <= UNSIGNED(random_in(1 DOWNTO 0));
+            END IF;
+            frame_count_d <= frame_count;
             in_player_sprite_d <= in_player_sprite;
             laser_colors_reg <= laser_colors;
             laser_transparencies_reg <= laser_transparencies;
@@ -218,6 +249,29 @@ BEGIN
     END PROCESS;
 
     player_drawn <= in_player_sprite_d AND sprite_valid AND (NOT player_is_transparent);
+    bg_drawn <= bg_valid AND (NOT bg_is_transparent);
+
+    PROCESS(pixel_x, pixel_y_lookahead, bg_seed, bg_scroll_x)
+        VARIABLE tile_x : INTEGER;
+        VARIABLE sel : INTEGER;
+        VARIABLE scrolled_x : UNSIGNED(10 DOWNTO 0);
+    BEGIN
+        scrolled_x := RESIZE(pixel_x, 11) + RESIZE(bg_scroll_x, 11);
+        bg_rel_x <= RESIZE(scrolled_x(6 DOWNTO 0), 16);
+        bg_rel_y <= RESIZE(pixel_y_lookahead, 16);
+
+        tile_x := TO_INTEGER(scrolled_x(9 DOWNTO 7));
+        sel := (tile_x + TO_INTEGER(bg_seed)) MOD 3;
+
+        CASE sel IS
+            WHEN 0 =>
+                bg_sprite_id <= SPRITE_BG2_LIGHT;
+            WHEN 1 =>
+                bg_sprite_id <= SPRITE_BG2_PILLAR;
+            WHEN OTHERS =>
+                bg_sprite_id <= SPRITE_BG2_PLAIN;
+        END CASE;
+    END PROCESS;
 
     laser_gen: FOR i IN 0 TO MAX_LASERS - 1 GENERATE
         laser_inst: ENTITY work.laser
@@ -254,15 +308,21 @@ BEGIN
         END LOOP;
     END PROCESS;
 
-    PROCESS (pixel_y_lookahead, teleporter_preview_y)
+    PROCESS (pixel_y_lookahead, teleporter_preview_y, bg_drawn, bg_color)
         VARIABLE r,g,b : INTEGER RANGE 0 TO 15;
     BEGIN
+        IF bg_drawn = '1' THEN
+            r := TO_INTEGER(UNSIGNED(bg_color(11 DOWNTO 8)));
+            g := TO_INTEGER(UNSIGNED(bg_color(7 DOWNTO 4)));
+            b := TO_INTEGER(UNSIGNED(bg_color(3 DOWNTO 0)));
+        ELSE
+            r := 0;  g := 0; b := 0; -- Black
+        END IF;
+
         IF UNSIGNED(pixel_y_lookahead) = UNSIGNED(teleporter_preview_y) THEN
              r := 15; g := 6; b := 0; -- Orange
         ELSIF (TO_INTEGER(pixel_y_lookahead) >= 470) THEN
              r := 8;  g := 8; b := 8; -- Grey
-        ELSE
-             r := 0;  g := 0; b := 0; -- Black
         END IF;
         base_color <= STD_LOGIC_VECTOR(TO_UNSIGNED(r,4) & TO_UNSIGNED(g,4) & TO_UNSIGNED(b,4));
     END PROCESS;
