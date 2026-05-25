@@ -83,7 +83,8 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             player_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
             player_vy : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
             grounded : OUT STD_LOGIC;
-            teleporter_preview_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0)
+            teleporter_preview_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
+            world_speed : OUT UNSIGNED(5 DOWNTO 0)
         );
     END COMPONENT game;
 
@@ -115,6 +116,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             reset            : IN STD_LOGIC;
             playing          : IN STD_LOGIC;
             random_in        : IN STD_LOGIC_VECTOR(19 DOWNTO 0);
+            world_speed      : IN UNSIGNED(5 DOWNTO 0);
             lasers_out       : OUT laser_pool_t
         );
     END COMPONENT obstacle_manager;
@@ -135,6 +137,8 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     
             laser_pool           : IN laser_pool_t;
             frame_count          : IN UNSIGNED(7 DOWNTO 0);
+            random_in            : IN STD_LOGIC_VECTOR(19 DOWNTO 0);
+            world_speed          : IN UNSIGNED(5 DOWNTO 0);
             
             red_out              : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
             green_out            : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
@@ -162,6 +166,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL player_vehicle : STD_LOGIC_VECTOR(1 DOWNTO 0);
     SIGNAL debug_vehicle_select : STD_LOGIC_VECTOR(1 DOWNTO 0);
     SIGNAL teleporter_preview_y : STD_LOGIC_VECTOR(9 DOWNTO 0);
+    SIGNAL world_speed : UNSIGNED(5 DOWNTO 0);
 
     -- mouse signals
     SIGNAL left_button, right_button : STD_LOGIC;
@@ -206,6 +211,7 @@ BEGIN
             reset => mouse_reset,
             playing => playing,
             random_in => random_num,
+            world_speed => world_speed,
             lasers_out => laser_pool
         );
 
@@ -264,7 +270,8 @@ BEGIN
         player_y => player_y,
         player_vy => player_vy,
         grounded => player_grounded,
-        teleporter_preview_y => teleporter_preview_y
+        teleporter_preview_y => teleporter_preview_y,
+        world_speed => world_speed
     );
 
     collision_detector_inst: ENTITY work.collision_detector
@@ -301,6 +308,7 @@ BEGIN
         laser_pool => laser_pool,
         frame_count => frame_counter,
         random_in => random_num,
+        world_speed => world_speed,
         red_out => render_red,
         green_out => render_green,
         blue_out => render_blue
