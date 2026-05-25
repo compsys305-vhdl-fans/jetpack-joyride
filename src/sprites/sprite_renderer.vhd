@@ -76,6 +76,10 @@ ARCHITECTURE rtl OF sprite_renderer IS
     SIGNAL laser1_flipped_pixel_index, laser2_flipped_pixel_index : UNSIGNED(7 DOWNTO 0);
     SIGNAL laser1_flipped_valid, laser2_flipped_valid             : STD_LOGIC;
 
+    -- Background Sprite Signals
+    SIGNAL bg_light_pixel_index, bg_pillar_pixel_index, bg_plain_pixel_index : UNSIGNED(7 DOWNTO 0);
+    SIGNAL bg_light_valid, bg_pillar_valid, bg_plain_valid : STD_LOGIC;
+
     -- Routing signals
     SIGNAL active_pixel_index : UNSIGNED(7 DOWNTO 0);
     SIGNAL active_valid       : STD_LOGIC;
@@ -178,6 +182,18 @@ BEGIN
         GENERIC MAP (IMAGE_WIDTH => 16, IMAGE_HEIGHT => 16, MIF_FILE => "../res/laser/laser2.mif", FLIP_X => true)
         PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => laser2_flipped_pixel_index, valid => laser2_flipped_valid);
 
+    bg_light_rom: image_loader
+        GENERIC MAP (IMAGE_WIDTH => 64, IMAGE_HEIGHT => 240, MIF_FILE => "../res/background2/background-light.mif")
+        PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => bg_light_pixel_index, valid => bg_light_valid);
+
+    bg_pillar_rom: image_loader
+        GENERIC MAP (IMAGE_WIDTH => 64, IMAGE_HEIGHT => 240, MIF_FILE => "../res/background2/background-pillar.mif")
+        PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => bg_pillar_pixel_index, valid => bg_pillar_valid);
+
+    bg_plain_rom: image_loader
+        GENERIC MAP (IMAGE_WIDTH => 64, IMAGE_HEIGHT => 240, MIF_FILE => "../res/background2/background-plain.mif")
+        PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => bg_plain_pixel_index, valid => bg_plain_valid);
+
     -- 3. Multiplex outputs based on sprite_id
     PROCESS(sprite_id, anim_tick,
             player_run1_pixel_index, player_run1_valid, player_run2_pixel_index, player_run2_valid,
@@ -188,7 +204,8 @@ BEGIN
             bird1_pixel_index, bird1_valid, bird2_pixel_index, bird2_valid,
             teleporter1_pixel_index, teleporter1_valid, teleporter2_pixel_index, teleporter2_valid,
             laser1_pixel_index, laser1_valid, laser2_pixel_index, laser2_valid,
-            laser1_flipped_pixel_index, laser1_flipped_valid, laser2_flipped_pixel_index, laser2_flipped_valid)
+            laser1_flipped_pixel_index, laser1_flipped_valid, laser2_flipped_pixel_index, laser2_flipped_valid,
+            bg_light_pixel_index, bg_light_valid, bg_pillar_pixel_index, bg_pillar_valid, bg_plain_pixel_index, bg_plain_valid)
     BEGIN
         CASE sprite_id IS
             WHEN SPRITE_BARRY_RUN => -- Running (Animated)
@@ -270,6 +287,18 @@ BEGIN
                     active_pixel_index <= laser2_flipped_pixel_index;
                     active_valid       <= laser2_flipped_valid;
                 END IF;
+
+            WHEN SPRITE_BG2_LIGHT =>
+                active_pixel_index <= bg_light_pixel_index;
+                active_valid       <= bg_light_valid;
+
+            WHEN SPRITE_BG2_PILLAR =>
+                active_pixel_index <= bg_pillar_pixel_index;
+                active_valid       <= bg_pillar_valid;
+
+            WHEN SPRITE_BG2_PLAIN =>
+                active_pixel_index <= bg_plain_pixel_index;
+                active_valid       <= bg_plain_valid;
 
             -- Add more sprites here later
             WHEN OTHERS =>

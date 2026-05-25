@@ -100,6 +100,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             player_vy            : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
             laser_pool           : IN laser_pool_t;
             frame_count          : IN UNSIGNED(7 DOWNTO 0);
+            random_in            : IN STD_LOGIC_VECTOR(19 DOWNTO 0);
             death                : OUT STD_LOGIC;
             collision_red        : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
             collision_green      : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
@@ -297,6 +298,7 @@ BEGIN
         teleporter_preview_y => teleporter_preview_y,
         laser_pool => laser_pool,
         frame_count => frame_counter,
+        random_in => random_num,
         red_out => render_red,
         green_out => render_green,
         blue_out => render_blue
