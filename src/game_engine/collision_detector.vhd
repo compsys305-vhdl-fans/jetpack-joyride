@@ -17,7 +17,10 @@ ENTITY collision_detector IS
         player_vy            : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
         laser_pool           : IN laser_pool_t;
         frame_count          : IN UNSIGNED(7 DOWNTO 0);
-        death                : OUT STD_LOGIC
+        death                : OUT STD_LOGIC;
+        collision_red        : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
+        collision_green      : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
+        collision_blue       : OUT STD_LOGIC_VECTOR(3 DOWNTO 0)
     );
 END ENTITY collision_detector;
 
@@ -51,10 +54,14 @@ ARCHITECTURE rtl OF collision_detector IS
 
     -- Laser signals
     SIGNAL is_on_any_laser_line : STD_LOGIC;
+    SIGNAL player_pixel_on : STD_LOGIC;
+    SIGNAL collision_pixel_on : STD_LOGIC;
 
     SIGNAL death_reg : STD_LOGIC := '0';
 
     CONSTANT PLAYER_X_POS : UNSIGNED(9 DOWNTO 0) := TO_UNSIGNED(100, 10);
+    CONSTANT BEAM_HALF_WIDTH : INTEGER := 7;
+    CONSTANT NODE_HALF_SIZE : INTEGER := 8;
 
 BEGIN
     -- Player Sprite Selection
@@ -83,24 +90,71 @@ BEGIN
             is_transparent => player_sprite_is_transparent,
             valid => player_sprite_valid
         );
+
+    player_pixel_on <= player_sprite_valid AND (NOT player_sprite_is_transparent);
+    collision_pixel_on <= player_pixel_on AND is_on_any_laser_line;
     
-    -- Laser Collision Detection (line check)
+    -- Laser Collision Detection (beam rectangle only; excludes endpoints)
     PROCESS(laser_pool, pixel_x, pixel_y)
         VARIABLE on_laser : BOOLEAN := false;
-        VARIABLE px_s : SIGNED(11 DOWNTO 0);
-        VARIABLE py_s : SIGNED(11 DOWNTO 0);
+        VARIABLE px, py : INTEGER;
+        VARIABLE ax, ay, bx, by : INTEGER;
+        VARIABLE abx, aby : INTEGER;
+        VARIABLE apx, apy : INTEGER;
+        VARIABLE len2 : INTEGER;
+        VARIABLE approx_len : INTEGER;
+        VARIABLE dot : INTEGER;
+        VARIABLE cross : INTEGER;
+        VARIABLE beam_v : INTEGER;
+        VARIABLE a, b : NATURAL;
+        VARIABLE maximum, minimum : NATURAL;
     BEGIN
-        px_s := RESIZE(SIGNED('0' & pixel_x), 12);
-        py_s := RESIZE(SIGNED('0' & pixel_y), 12);
+        px := TO_INTEGER(pixel_x);
+        py := TO_INTEGER(pixel_y);
 
         FOR i IN 0 TO MAX_LASERS - 1 LOOP
-            IF laser_pool(i).is_active = '1' AND
-               py_s >= laser_pool(i).y0 AND py_s <= laser_pool(i).y1 AND
-               px_s >= laser_pool(i).x0 AND px_s <= laser_pool(i).x1 THEN
-                on_laser := true;
+            IF laser_pool(i).is_active = '1' THEN
+                ax := TO_INTEGER(laser_pool(i).x0);
+                ay := TO_INTEGER(laser_pool(i).y0);
+                bx := TO_INTEGER(laser_pool(i).x1);
+                by := TO_INTEGER(laser_pool(i).y1);
+
+                IF (ABS(px - ax) < NODE_HALF_SIZE AND ABS(py - ay) < NODE_HALF_SIZE) OR
+                   (ABS(px - bx) < NODE_HALF_SIZE AND ABS(py - by) < NODE_HALF_SIZE) THEN
+                    NULL;
+                ELSE
+                    abx := bx - ax;
+                    aby := by - ay;
+                    apx := px - ax;
+                    apy := py - ay;
+                    len2 := (abx * abx) + (aby * aby);
+
+                    a := ABS(abx);
+                    b := ABS(aby);
+                    IF a > b THEN
+                        maximum := a;
+                        minimum := b;
+                    ELSE
+                        maximum := b;
+                        minimum := a;
+                    END IF;
+                    approx_len := maximum + (minimum / 2);
+
+                    IF (len2 > 0) AND (approx_len > 0) THEN
+                        dot := (apx * abx) + (apy * aby);
+                        cross := (apx * aby) - (apy * abx);
+                        IF (dot >= 0) AND (dot <= len2) THEN
+                            beam_v := cross / approx_len;
+                            IF ABS(beam_v) < BEAM_HALF_WIDTH THEN
+                                on_laser := true;
+                                EXIT;
+                            END IF;
+                        END IF;
+                    END IF;
+                END IF;
             END IF;
         END LOOP;
-        
+
         IF on_laser THEN
             is_on_any_laser_line <= '1';
         ELSE
@@ -116,6 +170,27 @@ BEGIN
             IF player_sprite_valid = '1' AND player_sprite_is_transparent = '0' AND is_on_any_laser_line = '1' THEN
                 death_reg <= '1';
             END IF;
+        END IF;
+    END PROCESS;
+
+    PROCESS(player_pixel_on, is_on_any_laser_line, collision_pixel_on)
+    BEGIN
+        IF collision_pixel_on = '1' THEN
+            collision_red <= "1111";
+            collision_green <= "1111";
+            collision_blue <= "1111";
+        ELSIF player_pixel_on = '1' THEN
+            collision_red <= "0000";
+            collision_green <= "0000";
+            collision_blue <= "1111";
+        ELSIF is_on_any_laser_line = '1' THEN
+            collision_red <= "1111";
+            collision_green <= "0000";
+            collision_blue <= "0000";
+        ELSE
+            collision_red <= "0000";
+            collision_green <= "0000";
+            collision_blue <= "0000";
         END IF;
     END PROCESS;
 

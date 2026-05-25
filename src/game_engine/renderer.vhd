@@ -77,6 +77,8 @@ ARCHITECTURE rtl OF renderer IS
     
     SIGNAL teleporter_preview_on : STD_LOGIC;
 
+    SIGNAL laser_beam_rect_mode : STD_LOGIC := '0';
+
     -- Pipelining registers
     SIGNAL pixel_y_lookahead       : UNSIGNED(9 DOWNTO 0);
     SIGNAL base_color              : STD_LOGIC_VECTOR(11 DOWNTO 0);
@@ -224,6 +226,7 @@ BEGIN
                 pixel_x => pixel_x,
                 pixel_y => pixel_y_lookahead,
                 frame_count => frame_count,
+                beam_rect_mode => laser_beam_rect_mode,
                 x0 => laser_pool(i).x0,
                 y0 => laser_pool(i).y0,
                 x1 => laser_pool(i).x1,

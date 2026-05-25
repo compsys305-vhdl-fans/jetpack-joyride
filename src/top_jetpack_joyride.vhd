@@ -100,7 +100,10 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             player_vy            : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
             laser_pool           : IN laser_pool_t;
             frame_count          : IN UNSIGNED(7 DOWNTO 0);
-            death                : OUT STD_LOGIC
+            death                : OUT STD_LOGIC;
+            collision_red        : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
+            collision_green      : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
+            collision_blue       : OUT STD_LOGIC_VECTOR(3 DOWNTO 0)
         );
     END COMPONENT collision_detector;
     
@@ -168,6 +171,8 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL pixel_row, pixel_column : STD_LOGIC_VECTOR(9 DOWNTO 0);
 
     SIGNAL red_sig, green_sig, blue_sig : STD_LOGIC_VECTOR(3 DOWNTO 0);
+    SIGNAL render_red, render_green, render_blue : STD_LOGIC_VECTOR(3 DOWNTO 0);
+    SIGNAL collision_red, collision_green, collision_blue : STD_LOGIC_VECTOR(3 DOWNTO 0);
     SIGNAL vga_red, vga_green, vga_blue : STD_LOGIC_VECTOR(3 DOWNTO 0);
     SIGNAL vga_vsync_sig : STD_LOGIC;
 
@@ -273,7 +278,10 @@ BEGIN
         player_vy => player_vy,
         laser_pool => laser_pool,
         frame_count => frame_counter,
-        death => death_signal
+        death => death_signal,
+        collision_red => collision_red,
+        collision_green => collision_green,
+        collision_blue => collision_blue
     );
     
     renderer_inst: ENTITY work.renderer
@@ -289,10 +297,23 @@ BEGIN
         teleporter_preview_y => teleporter_preview_y,
         laser_pool => laser_pool,
         frame_count => frame_counter,
-        red_out => red_sig,
-        green_out => green_sig,
-        blue_out => blue_sig
+        red_out => render_red,
+        green_out => render_green,
+        blue_out => render_blue
     );
+
+    PROCESS(sw, render_red, render_green, render_blue, collision_red, collision_green, collision_blue)
+    BEGIN
+        IF sw(9) = '1' THEN
+            red_sig <= collision_red;
+            green_sig <= collision_green;
+            blue_sig <= collision_blue;
+        ELSE
+            red_sig <= render_red;
+            green_sig <= render_green;
+            blue_sig <= render_blue;
+        END IF;
+    END PROCESS;
 
     mouse_reset <= NOT KEY(0);  -- active low reset
     ledr(1 DOWNTO 0) <= player_vehicle;

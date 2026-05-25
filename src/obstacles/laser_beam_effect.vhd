@@ -9,6 +9,7 @@ ENTITY laser_beam_effect IS
         pixel_x     : IN UNSIGNED(9 DOWNTO 0);
         pixel_y     : IN UNSIGNED(9 DOWNTO 0);
         frame_count : IN UNSIGNED(7 DOWNTO 0);
+        beam_rect_mode : IN STD_LOGIC;
         x0          : IN SIGNED(11 DOWNTO 0);
         y0          : IN SIGNED(11 DOWNTO 0);
         x1          : IN SIGNED(11 DOWNTO 0);
@@ -107,10 +108,17 @@ BEGIN
                         beam_u := dot / approx_len;
                         beam_v := cross / approx_len;
 
-                        if -7 < beam_v and 7 > beam_v then
-                            color_out <= x"FF0";
-                            is_transparent <= '0';
-                        end if;
+                        IF beam_rect_mode = '1' THEN
+                            IF -7 < beam_v AND 7 > beam_v THEN
+                                color_out <= x"FF0";
+                                is_transparent <= '0';
+                            END IF;
+                        ELSE
+                            IF -7 < beam_v AND 7 > beam_v THEN
+                                color_out <= x"FF0";
+                                is_transparent <= '0';
+                            END IF;
+                        END IF;
                     END IF;
                 END IF;
             END IF;
