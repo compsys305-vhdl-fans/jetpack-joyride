@@ -270,26 +270,26 @@ BEGIN
         IF show_djt = '1' THEN
             bg_sprite_id <= SPRITE_DJT;
             bg_palette_id <= PALETTE_DJT;
-            bg_rel_x <= RESIZE(pixel_x, 16);
-            bg_rel_y <= RESIZE(pixel_y_lookahead, 16);
+            bg_rel_x <= RESIZE(pixel_x, 16) SLL 1;
+            bg_rel_y <= RESIZE(pixel_y_lookahead, 16) SLL 1;
         ELSE
             bg_palette_id <= PALETTE_BACKGROUND2;
             scrolled_x := RESIZE(pixel_x, 12) + bg_scroll_accum;
             bg_rel_x <= RESIZE(scrolled_x(6 DOWNTO 0), 16);
             bg_rel_y <= RESIZE(pixel_y_lookahead, 16);
+
+            tile_x := TO_INTEGER(scrolled_x(9 DOWNTO 7));
+            sel := (tile_x + TO_INTEGER(bg_seed)) MOD 3;
+
+            CASE sel IS
+                WHEN 0 =>
+                    bg_sprite_id <= SPRITE_BG2_LIGHT;
+                WHEN 1 =>
+                    bg_sprite_id <= SPRITE_BG2_PILLAR;
+                WHEN OTHERS =>
+                    bg_sprite_id <= SPRITE_BG2_PLAIN;
+            END CASE;
         END IF;
-
-        tile_x := TO_INTEGER(scrolled_x(9 DOWNTO 7));
-        sel := (tile_x + TO_INTEGER(bg_seed)) MOD 3;
-
-        CASE sel IS
-            WHEN 0 =>
-                bg_sprite_id <= SPRITE_BG2_LIGHT;
-            WHEN 1 =>
-                bg_sprite_id <= SPRITE_BG2_PILLAR;
-            WHEN OTHERS =>
-                bg_sprite_id <= SPRITE_BG2_PLAIN;
-        END CASE;
     END PROCESS;
 
     laser_gen: FOR i IN 0 TO MAX_LASERS - 1 GENERATE

@@ -82,6 +82,13 @@ ARCHITECTURE rtl OF sprite_renderer IS
     SIGNAL bg_light_valid, bg_pillar_valid, bg_plain_valid : STD_LOGIC;
     SIGNAL djt_pixel_index : UNSIGNED(7 DOWNTO 0);
     SIGNAL djt_valid : STD_LOGIC;
+    SIGNAL djt_source_x : UNSIGNED(15 DOWNTO 0);
+    SIGNAL djt_source_y : UNSIGNED(15 DOWNTO 0);
+
+    CONSTANT DJT_SOURCE_WIDTH : NATURAL := 640;
+    CONSTANT DJT_SOURCE_HEIGHT : NATURAL := 375;
+    CONSTANT DJT_ROTATED_WIDTH : NATURAL := DJT_SOURCE_HEIGHT;
+    CONSTANT DJT_ROTATED_HEIGHT : NATURAL := DJT_SOURCE_WIDTH;
 
     -- Routing signals
     SIGNAL active_pixel_index : UNSIGNED(7 DOWNTO 0);
@@ -197,9 +204,20 @@ BEGIN
         GENERIC MAP (IMAGE_WIDTH => 64, IMAGE_HEIGHT => 240, MIF_FILE => "../res/background2/background-plain.mif")
         PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => bg_plain_pixel_index, valid => bg_plain_valid);
 
+    PROCESS(local_x, local_y)
+    BEGIN
+        IF (TO_INTEGER(local_x) < DJT_ROTATED_WIDTH) AND (TO_INTEGER(local_y) < DJT_ROTATED_HEIGHT) THEN
+            djt_source_x <= TO_UNSIGNED(DJT_SOURCE_WIDTH - 1, 16) - local_y;
+            djt_source_y <= local_x;
+        ELSE
+            djt_source_x <= (OTHERS => '0');
+            djt_source_y <= (OTHERS => '0');
+        END IF;
+    END PROCESS;
+
     djt_rom: image_loader
         GENERIC MAP (IMAGE_WIDTH => 640, IMAGE_HEIGHT => 375, MIF_FILE => "../res/djt/djtbl.mif")
-        PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => djt_pixel_index, valid => djt_valid);
+        PORT MAP (clock => clock, x => djt_source_x, y => djt_source_y, pixel_index => djt_pixel_index, valid => djt_valid);
 
     -- 3. Multiplex outputs based on sprite_id
     PROCESS(sprite_id, anim_tick,
