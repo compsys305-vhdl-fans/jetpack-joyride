@@ -1,6 +1,7 @@
 LIBRARY IEEE;
 USE IEEE.STD_LOGIC_1164.ALL;
 USE IEEE.NUMERIC_STD.ALL;
+USE IEEE.NUMERIC_STD.ALL;
 
 ENTITY game IS
     PORT (
@@ -12,7 +13,8 @@ ENTITY game IS
         player_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
         player_vy : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
         grounded : OUT STD_LOGIC;
-        teleporter_preview_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0)
+        teleporter_preview_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
+        world_speed : OUT UNSIGNED(5 DOWNTO 0)
     );
 END game;
 
@@ -40,6 +42,12 @@ ARCHITECTURE behaviour OF game IS
     SIGNAL is_player_grounded : STD_LOGIC := '0';
     SIGNAL active_vehicle : STD_LOGIC_VECTOR(1 DOWNTO 0) := (OTHERS => '0');
     SIGNAL is_playing : STD_LOGIC := '0';
+
+    CONSTANT BASE_WORLD_SPEED : UNSIGNED(5 DOWNTO 0) := TO_UNSIGNED(4, 6);
+    CONSTANT MAX_WORLD_SPEED : UNSIGNED(5 DOWNTO 0) := TO_UNSIGNED(12, 6);
+    CONSTANT SPEED_UP_INTERVAL : INTEGER := 180; -- frames
+    SIGNAL world_speed_reg : UNSIGNED(5 DOWNTO 0) := BASE_WORLD_SPEED;
+    SIGNAL speed_counter : INTEGER RANGE 0 TO SPEED_UP_INTERVAL := SPEED_UP_INTERVAL;
 BEGIN
     -- Vehicle choice is centralized here. Replace this with powerup/game-state logic later.
     active_vehicle <= debug_vehicle_select;
@@ -67,6 +75,25 @@ BEGIN
         END IF;
     END PROCESS start;
 
+    speed_ramp: PROCESS (vert_sync)
+    BEGIN
+        IF RISING_EDGE(vert_sync) THEN
+            IF is_playing = '1' THEN
+                IF speed_counter = 0 THEN
+                    IF world_speed_reg < MAX_WORLD_SPEED THEN
+                        world_speed_reg <= world_speed_reg + 1;
+                    END IF;
+                    speed_counter <= SPEED_UP_INTERVAL;
+                ELSE
+                    speed_counter <= speed_counter - 1;
+                END IF;
+            ELSE
+                world_speed_reg <= BASE_WORLD_SPEED;
+                speed_counter <= SPEED_UP_INTERVAL;
+            END IF;
+        END IF;
+    END PROCESS speed_ramp;
+
     -- some stuff goes here, such as handling the global game state, and connecting the physics and rendering engines together.
     
     playing <= is_playing;
@@ -75,4 +102,5 @@ BEGIN
     player_vy <= player_vy_pos;
     grounded <= is_player_grounded;
     teleporter_preview_y <= teleporter_preview_pos;
+    world_speed <= world_speed_reg;
 END ARCHITECTURE behaviour;

@@ -11,12 +11,13 @@ ENTITY obstacle_manager IS
         reset            : IN STD_LOGIC;
         playing          : IN STD_LOGIC;
         random_in        : IN STD_LOGIC_VECTOR(19 DOWNTO 0); -- Using the existing 20-bit LFSR
+        world_speed      : IN UNSIGNED(5 DOWNTO 0);
         lasers_out       : OUT laser_pool_t
     );
 END ENTITY obstacle_manager;
 
 ARCHITECTURE rtl OF obstacle_manager IS
-    CONSTANT LASER_SPEED_X : INTEGER := 4; -- pixels per frame
+    CONSTANT BASE_LASER_SPEED_X : INTEGER := 4; -- pixels per frame
     CONSTANT LASER_LENGTH : INTEGER := 100;
     CONSTANT SPAWN_INTERVAL_MIN : INTEGER := 60; -- frames (1 second)
     CONSTANT SPAWN_INTERVAL_VARIATION : INTEGER := 60; -- frames (1 second)
@@ -33,6 +34,7 @@ BEGIN
         VARIABLE temp_pool : laser_pool_t;
         VARIABLE new_spawn : BOOLEAN := FALSE;
         VARIABLE rand_y : UNSIGNED(9 DOWNTO 0);
+        VARIABLE speed_x : INTEGER;
         VARIABLE current_spawn_counter: INTEGER RANGE 0 TO SPAWN_INTERVAL_MIN + SPAWN_INTERVAL_VARIATION;
         VARIABLE current_next_spawn_interval: INTEGER RANGE 0 TO SPAWN_INTERVAL_MIN + SPAWN_INTERVAL_VARIATION;
 
@@ -46,6 +48,10 @@ BEGIN
                 temp_pool := INACTIVE_LASER_POOL;
                 current_spawn_counter := SPAWN_INTERVAL_MIN;
             ELSIF playing = '1' THEN
+                speed_x := TO_INTEGER(world_speed);
+                IF speed_x < 1 THEN
+                    speed_x := BASE_LASER_SPEED_X;
+                END IF;
                 new_spawn := FALSE;
 
                 -- Update existing lasers
@@ -56,8 +62,8 @@ BEGIN
                             temp_pool(i) := INACTIVE_LASER;
                         ELSE
                             -- Move left
-                            temp_pool(i).x0 := temp_pool(i).x0 - LASER_SPEED_X;
-                            temp_pool(i).x1 := temp_pool(i).x1 - LASER_SPEED_X;
+                            temp_pool(i).x0 := temp_pool(i).x0 - speed_x;
+                            temp_pool(i).x1 := temp_pool(i).x1 - speed_x;
                         END IF;
                     END IF;
                 END LOOP;
