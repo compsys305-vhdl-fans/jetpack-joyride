@@ -2,6 +2,7 @@ LIBRARY IEEE;
 USE IEEE.STD_LOGIC_1164.ALL;
 USE IEEE.NUMERIC_STD.ALL;
 
+LIBRARY lib_vga_pll;
 LIBRARY hardware;
 USE hardware.vga_types.ALL;
 USE work.obstacle_types.ALL;
@@ -183,7 +184,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL death_signal : STD_LOGIC;
 	 
 BEGIN
-    vga_pll_inst: ENTITY work.vga_pll
+    vga_pll_inst: ENTITY lib_vga_pll.vga_pll
         PORT MAP (
             refclk => clock_50,
             rst => NOT key(0),
