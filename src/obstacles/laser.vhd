@@ -49,16 +49,11 @@ ARCHITECTURE rtl OF laser IS
     SIGNAL beam_color           : STD_LOGIC_VECTOR(11 DOWNTO 0);
     SIGNAL beam_is_transparent  : STD_LOGIC;
 
-    -- Signals for orientation check
-    SIGNAL abx, aby : INTEGER;
 
 BEGIN
     -- Convert pixel coordinates to signed for calculations
     px_s <= RESIZE(SIGNED('0' & pixel_x), 12);
     py_s <= RESIZE(SIGNED('0' & pixel_y), 12);
-    abx <= TO_INTEGER(x1) - TO_INTEGER(x0);
-    aby <= TO_INTEGER(y1) - TO_INTEGER(y0);
-
     -- Calculate relative coordinates for each node using signed arithmetic
     node1_rel_x_s <= RESIZE(px_s - (x0 - 8), 16);
     node1_rel_y_s <= RESIZE(py_s - (y0 - 8), 16);
@@ -66,14 +61,14 @@ BEGIN
     node2_rel_y_s <= RESIZE(py_s - (y1 - 8), 16);
 
     -- Conditionally swap X and Y relative coordinates for vertical lasers to rotate sprites
-    rotate_proc: PROCESS(abx, aby, node1_rel_x_s, node1_rel_y_s, node2_rel_x_s, node2_rel_y_s)
+    rotate_proc: PROCESS(x0, x1, node1_rel_x_s, node1_rel_y_s, node2_rel_x_s, node2_rel_y_s)
     BEGIN
-        IF ABS(abx) < ABS(aby) THEN -- Primarily vertical
+        IF x0 = x1 THEN
             node1_rel_x <= UNSIGNED(node1_rel_y_s); -- Swap X and Y
             node1_rel_y <= UNSIGNED(node1_rel_x_s);
             node2_rel_x <= UNSIGNED(node2_rel_y_s);
             node2_rel_y <= UNSIGNED(node2_rel_x_s);
-        ELSE -- Primarily horizontal
+        ELSE
             node1_rel_x <= UNSIGNED(node1_rel_x_s);
             node1_rel_y <= UNSIGNED(node1_rel_y_s);
             node2_rel_x <= UNSIGNED(node2_rel_x_s);
