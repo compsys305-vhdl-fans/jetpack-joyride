@@ -14,7 +14,7 @@ ENTITY game IS
         player_vy : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
         grounded : OUT STD_LOGIC;
         teleporter_preview_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
-        world_speed : OUT UNSIGNED(5 DOWNTO 0)
+        world_speed : OUT UNSIGNED(9 DOWNTO 0)
     );
 END game;
 
@@ -43,10 +43,9 @@ ARCHITECTURE behaviour OF game IS
     SIGNAL active_vehicle : STD_LOGIC_VECTOR(1 DOWNTO 0) := (OTHERS => '0');
     SIGNAL is_playing : STD_LOGIC := '0';
 
-    CONSTANT BASE_WORLD_SPEED : UNSIGNED(5 DOWNTO 0) := TO_UNSIGNED(4, 6);
-    CONSTANT MAX_WORLD_SPEED : UNSIGNED(5 DOWNTO 0) := TO_UNSIGNED(12, 6);
-    CONSTANT SPEED_UP_INTERVAL : INTEGER := 180; -- frames
-    SIGNAL world_speed_reg : UNSIGNED(5 DOWNTO 0) := BASE_WORLD_SPEED;
+    CONSTANT BASE_WORLD_SPEED : UNSIGNED(9 DOWNTO 0) := TO_UNSIGNED(4, 10);
+    CONSTANT SPEED_UP_INTERVAL : INTEGER := 900; -- frames (~15s at 60Hz)
+    SIGNAL world_speed_reg : UNSIGNED(9 DOWNTO 0) := BASE_WORLD_SPEED;
     SIGNAL speed_counter : INTEGER RANGE 0 TO SPEED_UP_INTERVAL := SPEED_UP_INTERVAL;
 BEGIN
     -- Vehicle choice is centralized here. Replace this with powerup/game-state logic later.
@@ -80,9 +79,7 @@ BEGIN
         IF RISING_EDGE(vert_sync) THEN
             IF is_playing = '1' THEN
                 IF speed_counter = 0 THEN
-                    IF world_speed_reg < MAX_WORLD_SPEED THEN
-                        world_speed_reg <= world_speed_reg + 1;
-                    END IF;
+                    world_speed_reg <= world_speed_reg + 1;
                     speed_counter <= SPEED_UP_INTERVAL;
                 ELSE
                     speed_counter <= speed_counter - 1;

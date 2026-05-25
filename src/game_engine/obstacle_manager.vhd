@@ -11,7 +11,7 @@ ENTITY obstacle_manager IS
         reset            : IN STD_LOGIC;
         playing          : IN STD_LOGIC;
         random_in        : IN STD_LOGIC_VECTOR(19 DOWNTO 0); -- Using the existing 20-bit LFSR
-        world_speed      : IN UNSIGNED(5 DOWNTO 0);
+        world_speed      : IN UNSIGNED(9 DOWNTO 0);
         lasers_out       : OUT laser_pool_t
     );
 END ENTITY obstacle_manager;

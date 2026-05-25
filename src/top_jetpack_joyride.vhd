@@ -84,7 +84,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             player_vy : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
             grounded : OUT STD_LOGIC;
             teleporter_preview_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
-            world_speed : OUT UNSIGNED(5 DOWNTO 0)
+            world_speed : OUT UNSIGNED(9 DOWNTO 0)
         );
     END COMPONENT game;
 
@@ -116,7 +116,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             reset            : IN STD_LOGIC;
             playing          : IN STD_LOGIC;
             random_in        : IN STD_LOGIC_VECTOR(19 DOWNTO 0);
-            world_speed      : IN UNSIGNED(5 DOWNTO 0);
+            world_speed      : IN UNSIGNED(9 DOWNTO 0);
             lasers_out       : OUT laser_pool_t
         );
     END COMPONENT obstacle_manager;
@@ -138,7 +138,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             laser_pool           : IN laser_pool_t;
             frame_count          : IN UNSIGNED(7 DOWNTO 0);
             random_in            : IN STD_LOGIC_VECTOR(19 DOWNTO 0);
-            world_speed          : IN UNSIGNED(5 DOWNTO 0);
+            world_speed          : IN UNSIGNED(9 DOWNTO 0);
             
             red_out              : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
             green_out            : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
@@ -166,7 +166,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL player_vehicle : STD_LOGIC_VECTOR(1 DOWNTO 0);
     SIGNAL debug_vehicle_select : STD_LOGIC_VECTOR(1 DOWNTO 0);
     SIGNAL teleporter_preview_y : STD_LOGIC_VECTOR(9 DOWNTO 0);
-    SIGNAL world_speed : UNSIGNED(5 DOWNTO 0);
+    SIGNAL world_speed : UNSIGNED(9 DOWNTO 0);
 
     -- mouse signals
     SIGNAL left_button, right_button : STD_LOGIC;
