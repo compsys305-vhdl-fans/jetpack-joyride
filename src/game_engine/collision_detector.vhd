@@ -201,20 +201,14 @@ BEGIN
     player_pixel_on <= in_player_sprite_d AND player_sprite_valid AND (NOT player_sprite_is_transparent);
     collision_pixel_on <= player_pixel_on AND is_on_any_laser_line;
     
-    -- Laser Collision Detection (beam rectangle only; excludes endpoints)
+    -- Laser Collision Detection (axis-aligned beam rectangle only; excludes endpoints)
     PROCESS(laser_pool, pixel_x, pixel_y)
         VARIABLE on_laser : BOOLEAN := false;
         VARIABLE px, py : INTEGER;
         VARIABLE ax, ay, bx, by : INTEGER;
-        VARIABLE abx, aby : INTEGER;
-        VARIABLE apx, apy : INTEGER;
-        VARIABLE len2 : INTEGER;
-        VARIABLE approx_len : INTEGER;
-        VARIABLE dot : INTEGER;
-        VARIABLE cross : INTEGER;
-        VARIABLE beam_v : INTEGER;
-        VARIABLE a, b : NATURAL;
-        VARIABLE maximum, minimum : NATURAL;
+        VARIABLE min_x, max_x : INTEGER;
+        VARIABLE min_y, max_y : INTEGER;
+        VARIABLE inner_min, inner_max : INTEGER;
     BEGIN
         on_laser := false;
         px := TO_INTEGER(pixel_x);
@@ -227,38 +221,40 @@ BEGIN
                 bx := TO_INTEGER(laser_pool(i).x1);
                 by := TO_INTEGER(laser_pool(i).y1);
 
-                IF (ABS(px - ax) < NODE_HALF_SIZE AND ABS(py - ay) < NODE_HALF_SIZE) OR
-                   (ABS(px - bx) < NODE_HALF_SIZE AND ABS(py - by) < NODE_HALF_SIZE) THEN
-                    NULL;
-                ELSE
-                    abx := bx - ax;
-                    aby := by - ay;
-                    apx := px - ax;
-                    apy := py - ay;
-                    len2 := (abx * abx) + (aby * aby);
-
-                    a := ABS(abx);
-                    b := ABS(aby);
-                    IF a > b THEN
-                        maximum := a;
-                        minimum := b;
+                IF ax = bx THEN
+                    IF ay < by THEN
+                        min_y := ay;
+                        max_y := by;
                     ELSE
-                        maximum := b;
-                        minimum := a;
+                        min_y := by;
+                        max_y := ay;
                     END IF;
-                    approx_len := maximum + (minimum / 2);
+                    inner_min := min_y + NODE_HALF_SIZE;
+                    inner_max := max_y - NODE_HALF_SIZE;
 
-                    IF (len2 > 0) AND (approx_len > 0) THEN
-                        dot := (apx * abx) + (apy * aby);
-                        cross := (apx * aby) - (apy * abx);
-                        IF (dot >= 0) AND (dot <= len2) THEN
-                            beam_v := cross / approx_len;
-                            IF ABS(beam_v) < BEAM_HALF_WIDTH THEN
-                                on_laser := true;
-                                EXIT;
-                            END IF;
-                        END IF;
+                    IF (inner_min < inner_max) AND (ABS(px - ax) < BEAM_HALF_WIDTH) AND
+                       (py > inner_min) AND (py < inner_max) THEN
+                        on_laser := true;
+                        EXIT;
                     END IF;
+                ELSIF ay = by THEN
+                    IF ax < bx THEN
+                        min_x := ax;
+                        max_x := bx;
+                    ELSE
+                        min_x := bx;
+                        max_x := ax;
+                    END IF;
+                    inner_min := min_x + NODE_HALF_SIZE;
+                    inner_max := max_x - NODE_HALF_SIZE;
+
+                    IF (inner_min < inner_max) AND (ABS(py - ay) < BEAM_HALF_WIDTH) AND
+                       (px > inner_min) AND (px < inner_max) THEN
+                        on_laser := true;
+                        EXIT;
+                    END IF;
+                ELSE
+                    NULL;
                 END IF;
             END IF;
         END LOOP;
