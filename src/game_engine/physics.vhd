@@ -40,7 +40,7 @@ ARCHITECTURE behaviour OF physics IS
     -- i need to add more stuff here --
     -----------------------------------
     CONSTANT SCREEN_HEIGHT : INTEGER := 480;
-    CONSTANT TOP_MARGIN : INTEGER := -20;
+    CONSTANT TOP_MARGIN : INTEGER := -22;
     CONSTANT BOTTOM_MARGIN : INTEGER := 10;
 
     SIGNAL current_player_height : INTEGER := 32;
