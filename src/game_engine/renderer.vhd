@@ -85,8 +85,10 @@ ARCHITECTURE rtl OF renderer IS
     SIGNAL bg_valid : STD_LOGIC;
     SIGNAL bg_drawn : STD_LOGIC;
     SIGNAL bg_seed : UNSIGNED(1 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL bg_seed_valid : STD_LOGIC := '0';
     SIGNAL frame_count_d : UNSIGNED(7 DOWNTO 0) := (OTHERS => '0');
-    SIGNAL bg_scroll_x : UNSIGNED(6 DOWNTO 0);
+    SIGNAL bg_scroll_accum : UNSIGNED(11 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL bg_scroll_div : STD_LOGIC := '0';
     
     SIGNAL teleporter_preview_on : STD_LOGIC;
 
@@ -101,7 +103,6 @@ ARCHITECTURE rtl OF renderer IS
 
 BEGIN
     pixel_y_lookahead <= pixel_y + 1;
-    bg_scroll_x <= frame_count(7 DOWNTO 1);
 
     PROCESS(player_vehicle, left_button, player_grounded, player_vy)
     BEGIN
@@ -237,8 +238,16 @@ BEGIN
     PROCESS(clock_25MHz)
     BEGIN
         IF RISING_EDGE(clock_25MHz) THEN
-            IF frame_count = 0 AND frame_count_d /= 0 THEN
-                bg_seed <= UNSIGNED(random_in(1 DOWNTO 0));
+            IF frame_count /= frame_count_d THEN
+                IF bg_seed_valid = '0' THEN
+                    bg_seed <= UNSIGNED(random_in(1 DOWNTO 0));
+                    bg_seed_valid <= '1';
+                END IF;
+
+                bg_scroll_div <= NOT bg_scroll_div;
+                IF bg_scroll_div = '1' THEN
+                    bg_scroll_accum <= bg_scroll_accum + 1;
+                END IF;
             END IF;
             frame_count_d <= frame_count;
             in_player_sprite_d <= in_player_sprite;
@@ -251,12 +260,12 @@ BEGIN
     player_drawn <= in_player_sprite_d AND sprite_valid AND (NOT player_is_transparent);
     bg_drawn <= bg_valid AND (NOT bg_is_transparent);
 
-    PROCESS(pixel_x, pixel_y_lookahead, bg_seed, bg_scroll_x)
+    PROCESS(pixel_x, pixel_y_lookahead, bg_seed, bg_scroll_accum)
         VARIABLE tile_x : INTEGER;
         VARIABLE sel : INTEGER;
-        VARIABLE scrolled_x : UNSIGNED(10 DOWNTO 0);
+        VARIABLE scrolled_x : UNSIGNED(11 DOWNTO 0);
     BEGIN
-        scrolled_x := RESIZE(pixel_x, 11) + RESIZE(bg_scroll_x, 11);
+        scrolled_x := RESIZE(pixel_x, 12) + bg_scroll_accum;
         bg_rel_x <= RESIZE(scrolled_x(6 DOWNTO 0), 16);
         bg_rel_y <= RESIZE(pixel_y_lookahead, 16);
 
