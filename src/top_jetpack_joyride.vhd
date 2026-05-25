@@ -136,7 +136,17 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
         );
     END COMPONENT renderer;
 
+    COMPONENT vga_pll IS
+        PORT (
+            refclk   : IN STD_LOGIC;
+            rst      : IN STD_LOGIC;
+            outclk_0 : OUT STD_LOGIC;
+            locked   : OUT STD_LOGIC
+        );
+    END COMPONENT vga_pll;
+
     SIGNAL clock_25 : STD_LOGIC := '0';
+    SIGNAL vga_pll_locked : STD_LOGIC := '0';
 
     -- player signals
     SIGNAL player_y : STD_LOGIC_VECTOR(9 DOWNTO 0);
@@ -173,12 +183,13 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL death_signal : STD_LOGIC;
 	 
 BEGIN
-    -- clock divider to generate 25MHz from 50MHz
-    clk_div: PROCESS (clock_50) BEGIN
-        IF RISING_EDGE(clock_50) THEN
-            clock_25 <= NOT clock_25;
-        END IF;
-    END PROCESS clk_div;
+    vga_pll_inst: ENTITY work.vga_pll
+        PORT MAP (
+            refclk => clock_50,
+            rst => NOT key(0),
+            outclk_0 => clock_25,
+            locked => vga_pll_locked
+        );
 
     obstacle_manager_inst: ENTITY work.obstacle_manager
         PORT MAP (
