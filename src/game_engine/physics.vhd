@@ -148,7 +148,7 @@ BEGIN
                         END IF;
                     WHEN "10" =>  -- profit bird
                         IF mouse_left = '1' AND mouse_left_prev = '0' THEN
-                            next_y_speed := PB_FLAP_BOOST;
+                            next_y_speed := "0000000000" - PB_FLAP_BOOST;
                         ELSE
                             next_y_speed := next_y_speed + PLAYER_Y_ACCELERATION;
                         END IF;

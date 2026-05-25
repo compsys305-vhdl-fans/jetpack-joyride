@@ -85,8 +85,8 @@ ARCHITECTURE rtl OF sprite_renderer IS
     SIGNAL djt_source_x : UNSIGNED(15 DOWNTO 0);
     SIGNAL djt_source_y : UNSIGNED(15 DOWNTO 0);
 
-    CONSTANT DJT_SOURCE_WIDTH : NATURAL := 640;
-    CONSTANT DJT_SOURCE_HEIGHT : NATURAL := 375;
+    CONSTANT DJT_SOURCE_WIDTH : NATURAL := 400;
+    CONSTANT DJT_SOURCE_HEIGHT : NATURAL := 600;
     CONSTANT DJT_ROTATED_WIDTH : NATURAL := DJT_SOURCE_HEIGHT;
     CONSTANT DJT_ROTATED_HEIGHT : NATURAL := DJT_SOURCE_WIDTH;
 
@@ -207,8 +207,8 @@ BEGIN
     PROCESS(local_x, local_y)
     BEGIN
         IF (TO_INTEGER(local_x) < DJT_ROTATED_WIDTH) AND (TO_INTEGER(local_y) < DJT_ROTATED_HEIGHT) THEN
-            djt_source_x <= TO_UNSIGNED(DJT_SOURCE_WIDTH - 1, 16) - local_y;
-            djt_source_y <= local_x;
+            djt_source_x <= RESIZE(local_y, 16);
+            djt_source_y <= TO_UNSIGNED(DJT_SOURCE_HEIGHT - 1, 16) - local_x;
         ELSE
             djt_source_x <= (OTHERS => '0');
             djt_source_y <= (OTHERS => '0');
@@ -216,7 +216,7 @@ BEGIN
     END PROCESS;
 
     djt_rom: image_loader
-        GENERIC MAP (IMAGE_WIDTH => 640, IMAGE_HEIGHT => 375, MIF_FILE => "../res/djt/djtbl.mif")
+        GENERIC MAP (IMAGE_WIDTH => 400, IMAGE_HEIGHT => 600, MIF_FILE => "../res/djt/djtbl.mif")
         PORT MAP (clock => clock, x => djt_source_x, y => djt_source_y, pixel_index => djt_pixel_index, valid => djt_valid);
 
     -- 3. Multiplex outputs based on sprite_id
