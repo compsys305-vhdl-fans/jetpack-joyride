@@ -296,6 +296,7 @@ BEGIN
         laser_inst: ENTITY work.laser
             PORT MAP(
                 clock => clock_25MHz,
+                show_djt => show_djt,
                 pixel_x => pixel_x,
                 pixel_y => pixel_y_lookahead,
                 frame_count => frame_count,

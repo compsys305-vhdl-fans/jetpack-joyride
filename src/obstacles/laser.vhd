@@ -6,6 +6,7 @@ USE WORK.sprite_palettes_pkg.ALL;
 ENTITY laser IS
     PORT (
         clock       : IN STD_LOGIC;
+        show_djt    : IN STD_LOGIC;
         pixel_x     : IN UNSIGNED(9 DOWNTO 0);
         pixel_y     : IN UNSIGNED(9 DOWNTO 0);
         frame_count : IN UNSIGNED(7 DOWNTO 0);
@@ -80,6 +81,7 @@ BEGIN
     node1_renderer : ENTITY work.sprite_renderer
         PORT MAP (
             clock          => clock,
+            show_djt       => show_djt,
             sprite_id      => SPRITE_LASER_NODE_FLIPPED,
             palette_id     => PALETTE_LASER,
             scale_shift    => 0,
@@ -94,6 +96,7 @@ BEGIN
     node2_renderer : ENTITY work.sprite_renderer
         PORT MAP (
             clock          => clock,
+            show_djt       => show_djt,
             sprite_id      => SPRITE_LASER_NODE,
             palette_id     => PALETTE_LASER,
             scale_shift    => 0,
