@@ -224,7 +224,7 @@ BEGIN
             clock          => clock_25MHz,
             sprite_id      => bg_sprite_id,
             palette_id     => PALETTE_BACKGROUND2,
-            scale_shift    => 0,
+            scale_shift    => 1,
             rel_x          => bg_rel_x,
             rel_y          => bg_rel_y,
             color          => bg_color,
@@ -235,7 +235,7 @@ BEGIN
     PROCESS(clock_25MHz)
     BEGIN
         IF RISING_EDGE(clock_25MHz) THEN
-            IF frame_count /= frame_count_d THEN
+            IF frame_count = 0 AND frame_count_d /= 0 THEN
                 bg_seed <= UNSIGNED(random_in(1 DOWNTO 0));
             END IF;
             frame_count_d <= frame_count;
@@ -251,21 +251,13 @@ BEGIN
 
     PROCESS(pixel_x, pixel_y_lookahead, bg_seed)
         VARIABLE tile_x : INTEGER;
-        VARIABLE tile_y : INTEGER;
         VARIABLE sel : INTEGER;
     BEGIN
-        bg_rel_x <= RESIZE(pixel_x(5 DOWNTO 0), 16);
+        bg_rel_x <= RESIZE(pixel_x(6 DOWNTO 0), 16);
+        bg_rel_y <= RESIZE(pixel_y_lookahead, 16);
 
-        IF pixel_y_lookahead < TO_UNSIGNED(240, 10) THEN
-            tile_y := 0;
-            bg_rel_y <= RESIZE(pixel_y_lookahead, 16);
-        ELSE
-            tile_y := 1;
-            bg_rel_y <= RESIZE(pixel_y_lookahead - TO_UNSIGNED(240, 10), 16);
-        END IF;
-
-        tile_x := TO_INTEGER(pixel_x(9 DOWNTO 6));
-        sel := (tile_x + (tile_y * 5) + TO_INTEGER(bg_seed)) MOD 3;
+        tile_x := TO_INTEGER(pixel_x(9 DOWNTO 7));
+        sel := (tile_x + TO_INTEGER(bg_seed)) MOD 3;
 
         CASE sel IS
             WHEN 0 =>
