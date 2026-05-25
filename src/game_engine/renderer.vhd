@@ -86,6 +86,7 @@ ARCHITECTURE rtl OF renderer IS
     SIGNAL bg_drawn : STD_LOGIC;
     SIGNAL bg_seed : UNSIGNED(1 DOWNTO 0) := (OTHERS => '0');
     SIGNAL frame_count_d : UNSIGNED(7 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL bg_scroll_x : UNSIGNED(6 DOWNTO 0);
     
     SIGNAL teleporter_preview_on : STD_LOGIC;
 
@@ -100,6 +101,7 @@ ARCHITECTURE rtl OF renderer IS
 
 BEGIN
     pixel_y_lookahead <= pixel_y + 1;
+    bg_scroll_x <= frame_count(7 DOWNTO 1);
 
     PROCESS(player_vehicle, left_button, player_grounded, player_vy)
     BEGIN
@@ -249,14 +251,16 @@ BEGIN
     player_drawn <= in_player_sprite_d AND sprite_valid AND (NOT player_is_transparent);
     bg_drawn <= bg_valid AND (NOT bg_is_transparent);
 
-    PROCESS(pixel_x, pixel_y_lookahead, bg_seed)
+    PROCESS(pixel_x, pixel_y_lookahead, bg_seed, bg_scroll_x)
         VARIABLE tile_x : INTEGER;
         VARIABLE sel : INTEGER;
+        VARIABLE scrolled_x : UNSIGNED(10 DOWNTO 0);
     BEGIN
-        bg_rel_x <= RESIZE(pixel_x(6 DOWNTO 0), 16);
+        scrolled_x := RESIZE(pixel_x, 11) + RESIZE(bg_scroll_x, 11);
+        bg_rel_x <= RESIZE(scrolled_x(6 DOWNTO 0), 16);
         bg_rel_y <= RESIZE(pixel_y_lookahead, 16);
 
-        tile_x := TO_INTEGER(pixel_x(9 DOWNTO 7));
+        tile_x := TO_INTEGER(scrolled_x(9 DOWNTO 7));
         sel := (tile_x + TO_INTEGER(bg_seed)) MOD 3;
 
         CASE sel IS
