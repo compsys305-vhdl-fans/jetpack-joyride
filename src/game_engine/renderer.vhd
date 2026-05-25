@@ -24,7 +24,7 @@ ENTITY renderer IS
         laser_pool           : IN laser_pool_t;
         frame_count          : IN UNSIGNED(7 DOWNTO 0);
         random_in            : IN STD_LOGIC_VECTOR(19 DOWNTO 0);
-        world_speed          : IN UNSIGNED(5 DOWNTO 0);
+        world_speed          : IN UNSIGNED(9 DOWNTO 0);
         
         -- Output pixel color
         red_out              : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
@@ -91,7 +91,7 @@ ARCHITECTURE rtl OF renderer IS
     SIGNAL bg_seed_valid : STD_LOGIC := '0';
     SIGNAL frame_count_d : UNSIGNED(7 DOWNTO 0) := (OTHERS => '0');
     SIGNAL bg_scroll_accum : UNSIGNED(11 DOWNTO 0) := (OTHERS => '0');
-    SIGNAL bg_parallax_step : UNSIGNED(5 DOWNTO 0);
+    SIGNAL bg_parallax_step : UNSIGNED(9 DOWNTO 0);
     
     SIGNAL teleporter_preview_on : STD_LOGIC;
 
@@ -106,7 +106,7 @@ ARCHITECTURE rtl OF renderer IS
 
 BEGIN
     pixel_y_lookahead <= pixel_y + 1;
-    bg_parallax_step <= world_speed(5 DOWNTO 1);
+    bg_parallax_step <= '0' & world_speed(9 DOWNTO 1);
 
     PROCESS(player_vehicle, left_button, player_grounded, player_vy)
     BEGIN

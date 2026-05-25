@@ -84,7 +84,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             player_vy : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
             grounded : OUT STD_LOGIC;
             teleporter_preview_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
-            world_speed : OUT UNSIGNED(5 DOWNTO 0)
+            world_speed : OUT UNSIGNED(9 DOWNTO 0)
         );
     END COMPONENT game;
 
@@ -116,7 +116,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             reset            : IN STD_LOGIC;
             playing          : IN STD_LOGIC;
             random_in        : IN STD_LOGIC_VECTOR(19 DOWNTO 0);
-            world_speed      : IN UNSIGNED(5 DOWNTO 0);
+            world_speed      : IN UNSIGNED(9 DOWNTO 0);
             lasers_out       : OUT laser_pool_t
         );
     END COMPONENT obstacle_manager;
@@ -138,7 +138,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             laser_pool           : IN laser_pool_t;
             frame_count          : IN UNSIGNED(7 DOWNTO 0);
             random_in            : IN STD_LOGIC_VECTOR(19 DOWNTO 0);
-            world_speed          : IN UNSIGNED(5 DOWNTO 0);
+            world_speed          : IN UNSIGNED(9 DOWNTO 0);
             
             red_out              : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
             green_out            : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
@@ -166,7 +166,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL player_vehicle : STD_LOGIC_VECTOR(1 DOWNTO 0);
     SIGNAL debug_vehicle_select : STD_LOGIC_VECTOR(1 DOWNTO 0);
     SIGNAL teleporter_preview_y : STD_LOGIC_VECTOR(9 DOWNTO 0);
-    SIGNAL world_speed : UNSIGNED(5 DOWNTO 0);
+    SIGNAL world_speed : UNSIGNED(9 DOWNTO 0);
 
     -- mouse signals
     SIGNAL left_button, right_button : STD_LOGIC;
@@ -182,6 +182,10 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL collision_red, collision_green, collision_blue : STD_LOGIC_VECTOR(3 DOWNTO 0);
     SIGNAL vga_red, vga_green, vga_blue : STD_LOGIC_VECTOR(3 DOWNTO 0);
     SIGNAL vga_vsync_sig : STD_LOGIC;
+
+    SIGNAL paused : STD_LOGIC := '0';
+    SIGNAL key0_prev : STD_LOGIC := '1';
+    SIGNAL update_tick : STD_LOGIC := '0';
 
     SIGNAL lfsr_reset : STD_LOGIC := '0';
     SIGNAL random_num : STD_LOGIC_VECTOR(19 DOWNTO 0);
@@ -199,15 +203,27 @@ BEGIN
     vga_pll_inst: ENTITY lib_vga_pll.vga_pll
         PORT MAP (
             refclk => clock_50,
-            rst => NOT key(0),
+            rst => NOT key(3),
             outclk_0 => clock_25,
             locked => vga_pll_locked
         );
 
+    PROCESS(clock_50)
+    BEGIN
+        IF RISING_EDGE(clock_50) THEN
+            IF key0_prev = '1' AND key(0) = '0' THEN
+                paused <= NOT paused;
+            END IF;
+            key0_prev <= key(0);
+        END IF;
+    END PROCESS;
+
+    update_tick <= vga_vsync_sig AND (NOT paused);
+
     obstacle_manager_inst: ENTITY work.obstacle_manager
         PORT MAP (
             clock_50MHz => clock_50,
-            vert_sync => vga_vsync_sig,
+            vert_sync => update_tick,
             reset => mouse_reset,
             playing => playing,
             random_in => random_num,
@@ -262,7 +278,7 @@ BEGIN
     game_inst: game
         PORT MAP (
         clock_50MHz => clock_50,
-        vert_sync => vga_vsync_sig,
+        vert_sync => update_tick,
         mouse_left => left_button,
         debug_vehicle_select => debug_vehicle_select,
         playing => playing,
@@ -277,7 +293,7 @@ BEGIN
     collision_detector_inst: ENTITY work.collision_detector
     PORT MAP (
         clock_25MHz => clock_25,
-        vert_sync => vga_vsync_sig,
+        vert_sync => update_tick,
         pixel_x => UNSIGNED(pixel_column),
         pixel_y => UNSIGNED(pixel_row),
         player_y => player_y,
@@ -327,7 +343,7 @@ BEGIN
         END IF;
     END PROCESS;
 
-    mouse_reset <= NOT KEY(0);  -- active low reset
+    mouse_reset <= NOT KEY(3);  -- active low reset
     ledr(1 DOWNTO 0) <= player_vehicle;
     ledr(9) <= death_signal;
     ledr(8 DOWNTO 2) <= sw(8 DOWNTO 2);
@@ -340,9 +356,9 @@ BEGIN
     hex4 <= "0000000";
     hex5 <= "0000000";
 
-    PROCESS(vga_vsync_sig)
+    PROCESS(update_tick)
     BEGIN
-        IF RISING_EDGE(vga_vsync_sig) THEN
+        IF RISING_EDGE(update_tick) THEN
             frame_counter <= frame_counter + 1;
         END IF;
     END PROCESS;
