@@ -122,6 +122,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     COMPONENT renderer IS
         PORT (
             clock_25MHz          : IN STD_LOGIC;
+            show_djt             : IN STD_LOGIC;
             pixel_x              : IN UNSIGNED(9 DOWNTO 0);
             pixel_y              : IN UNSIGNED(9 DOWNTO 0);
     
@@ -288,6 +289,7 @@ BEGIN
     renderer_inst: ENTITY work.renderer
     PORT MAP (
         clock_25MHz => clock_25,
+        show_djt => sw(6),
         pixel_x => UNSIGNED(pixel_column),
         pixel_y => UNSIGNED(pixel_row),
         player_y => player_y,

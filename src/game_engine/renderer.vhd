@@ -10,6 +10,7 @@ USE work.obstacle_types.ALL;
 ENTITY renderer IS
     PORT (
         clock_25MHz          : IN STD_LOGIC;
+        show_djt             : IN STD_LOGIC;
         pixel_x              : IN UNSIGNED(9 DOWNTO 0);
         pixel_y              : IN UNSIGNED(9 DOWNTO 0);
 
@@ -78,6 +79,7 @@ ARCHITECTURE rtl OF renderer IS
 
     -- Background sprite signals
     SIGNAL bg_sprite_id : UNSIGNED(7 DOWNTO 0);
+    SIGNAL bg_palette_id : UNSIGNED(7 DOWNTO 0);
     SIGNAL bg_rel_x : UNSIGNED(15 DOWNTO 0);
     SIGNAL bg_rel_y : UNSIGNED(15 DOWNTO 0);
     SIGNAL bg_color : STD_LOGIC_VECTOR(11 DOWNTO 0);
@@ -225,7 +227,7 @@ BEGIN
         PORT MAP (
             clock          => clock_25MHz,
             sprite_id      => bg_sprite_id,
-            palette_id     => PALETTE_BACKGROUND2,
+            palette_id     => bg_palette_id,
             scale_shift    => 1,
             rel_x          => bg_rel_x,
             rel_y          => bg_rel_y,
@@ -251,26 +253,34 @@ BEGIN
     player_drawn <= in_player_sprite_d AND sprite_valid AND (NOT player_is_transparent);
     bg_drawn <= bg_valid AND (NOT bg_is_transparent);
 
-    PROCESS(pixel_x, pixel_y_lookahead, bg_seed, bg_scroll_x)
+    PROCESS(pixel_x, pixel_y_lookahead, bg_seed, bg_scroll_x, show_djt)
         VARIABLE tile_x : INTEGER;
         VARIABLE sel : INTEGER;
         VARIABLE scrolled_x : UNSIGNED(10 DOWNTO 0);
     BEGIN
-        scrolled_x := RESIZE(pixel_x, 11) + RESIZE(bg_scroll_x, 11);
-        bg_rel_x <= RESIZE(scrolled_x(6 DOWNTO 0), 16);
-        bg_rel_y <= RESIZE(pixel_y_lookahead, 16);
+        IF show_djt = '1' THEN
+            bg_sprite_id <= SPRITE_DJT;
+            bg_palette_id <= PALETTE_DJT;
+            bg_rel_x <= RESIZE(pixel_x, 16);
+            bg_rel_y <= RESIZE(pixel_y_lookahead, 16);
+        ELSE
+            bg_palette_id <= PALETTE_BACKGROUND2;
+            scrolled_x := RESIZE(pixel_x, 11) + RESIZE(bg_scroll_x, 11);
+            bg_rel_x <= RESIZE(scrolled_x(6 DOWNTO 0), 16);
+            bg_rel_y <= RESIZE(pixel_y_lookahead, 16);
 
-        tile_x := TO_INTEGER(scrolled_x(9 DOWNTO 7));
-        sel := (tile_x + TO_INTEGER(bg_seed)) MOD 3;
+            tile_x := TO_INTEGER(scrolled_x(9 DOWNTO 7));
+            sel := (tile_x + TO_INTEGER(bg_seed)) MOD 3;
 
-        CASE sel IS
-            WHEN 0 =>
-                bg_sprite_id <= SPRITE_BG2_LIGHT;
-            WHEN 1 =>
-                bg_sprite_id <= SPRITE_BG2_PILLAR;
-            WHEN OTHERS =>
-                bg_sprite_id <= SPRITE_BG2_PLAIN;
-        END CASE;
+            CASE sel IS
+                WHEN 0 =>
+                    bg_sprite_id <= SPRITE_BG2_LIGHT;
+                WHEN 1 =>
+                    bg_sprite_id <= SPRITE_BG2_PILLAR;
+                WHEN OTHERS =>
+                    bg_sprite_id <= SPRITE_BG2_PLAIN;
+            END CASE;
+        END IF;
     END PROCESS;
 
     laser_gen: FOR i IN 0 TO MAX_LASERS - 1 GENERATE
@@ -308,7 +318,7 @@ BEGIN
         END LOOP;
     END PROCESS;
 
-    PROCESS (pixel_y_lookahead, teleporter_preview_y, bg_drawn, bg_color)
+    PROCESS (pixel_y_lookahead, teleporter_preview_y, bg_drawn, bg_color, show_djt)
         VARIABLE r,g,b : INTEGER RANGE 0 TO 15;
     BEGIN
         IF bg_drawn = '1' THEN
@@ -319,10 +329,12 @@ BEGIN
             r := 0;  g := 0; b := 0; -- Black
         END IF;
 
-        IF UNSIGNED(pixel_y_lookahead) = UNSIGNED(teleporter_preview_y) THEN
-             r := 15; g := 6; b := 0; -- Orange
-        ELSIF (TO_INTEGER(pixel_y_lookahead) >= 470) THEN
-             r := 8;  g := 8; b := 8; -- Grey
+        IF show_djt = '0' THEN
+            IF UNSIGNED(pixel_y_lookahead) = UNSIGNED(teleporter_preview_y) THEN
+                 r := 15; g := 6; b := 0; -- Orange
+            ELSIF (TO_INTEGER(pixel_y_lookahead) >= 470) THEN
+                 r := 8;  g := 8; b := 8; -- Grey
+            END IF;
         END IF;
         base_color <= STD_LOGIC_VECTOR(TO_UNSIGNED(r,4) & TO_UNSIGNED(g,4) & TO_UNSIGNED(b,4));
     END PROCESS;
@@ -332,7 +344,11 @@ BEGIN
         VARIABLE add_r, add_g, add_b : INTEGER;
         VARIABLE final_r, final_g, final_b : INTEGER RANGE 0 TO 15;
     BEGIN
-        IF player_drawn = '1' THEN
+        IF show_djt = '1' THEN
+            final_r := TO_INTEGER(UNSIGNED(base_color_d(11 DOWNTO 8)));
+            final_g := TO_INTEGER(UNSIGNED(base_color_d(7 DOWNTO 4)));
+            final_b := TO_INTEGER(UNSIGNED(base_color_d(3 DOWNTO 0)));
+        ELSIF player_drawn = '1' THEN
             final_r := TO_INTEGER(UNSIGNED(sprite_color(11 DOWNTO 8)));
             final_g := TO_INTEGER(UNSIGNED(sprite_color(7 DOWNTO 4)));
             final_b := TO_INTEGER(UNSIGNED(sprite_color(3 DOWNTO 0)));

@@ -6,6 +6,7 @@ USE work.sprite_palettes_pkg.ALL;
 ENTITY sprite_renderer IS
     PORT (
         clock : IN STD_LOGIC;
+        show_djt : IN STD_LOGIC;
         
         -- Query inputs
         sprite_id   : IN UNSIGNED(7 DOWNTO 0);
@@ -79,6 +80,8 @@ ARCHITECTURE rtl OF sprite_renderer IS
     -- Background Sprite Signals
     SIGNAL bg_light_pixel_index, bg_pillar_pixel_index, bg_plain_pixel_index : UNSIGNED(7 DOWNTO 0);
     SIGNAL bg_light_valid, bg_pillar_valid, bg_plain_valid : STD_LOGIC;
+    SIGNAL djt_pixel_index : UNSIGNED(7 DOWNTO 0);
+    SIGNAL djt_valid : STD_LOGIC;
 
     -- Routing signals
     SIGNAL active_pixel_index : UNSIGNED(7 DOWNTO 0);
@@ -194,6 +197,10 @@ BEGIN
         GENERIC MAP (IMAGE_WIDTH => 64, IMAGE_HEIGHT => 240, MIF_FILE => "../res/background2/background-plain.mif")
         PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => bg_plain_pixel_index, valid => bg_plain_valid);
 
+    djt_rom: image_loader
+        GENERIC MAP (IMAGE_WIDTH => 640, IMAGE_HEIGHT => 375, MIF_FILE => "../res/djt/djtbl.mif")
+        PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => djt_pixel_index, valid => djt_valid);
+
     -- 3. Multiplex outputs based on sprite_id
     PROCESS(sprite_id, anim_tick,
             player_run1_pixel_index, player_run1_valid, player_run2_pixel_index, player_run2_valid,
@@ -205,7 +212,8 @@ BEGIN
             teleporter1_pixel_index, teleporter1_valid, teleporter2_pixel_index, teleporter2_valid,
             laser1_pixel_index, laser1_valid, laser2_pixel_index, laser2_valid,
             laser1_flipped_pixel_index, laser1_flipped_valid, laser2_flipped_pixel_index, laser2_flipped_valid,
-            bg_light_pixel_index, bg_light_valid, bg_pillar_pixel_index, bg_pillar_valid, bg_plain_pixel_index, bg_plain_valid)
+            bg_light_pixel_index, bg_light_valid, bg_pillar_pixel_index, bg_pillar_valid, bg_plain_pixel_index, bg_plain_valid,
+            djt_pixel_index, djt_valid)
     BEGIN
         CASE sprite_id IS
             WHEN SPRITE_BARRY_RUN => -- Running (Animated)
@@ -300,10 +308,18 @@ BEGIN
                 active_pixel_index <= bg_plain_pixel_index;
                 active_valid       <= bg_plain_valid;
 
-            -- Add more sprites here later
+            WHEN SPRITE_DJT =>
+                active_pixel_index <= djt_pixel_index;
+                active_valid       <= djt_valid;
+
             WHEN OTHERS =>
-                active_pixel_index <= (OTHERS => '0');
-                active_valid <= '0';
+                IF show_djt = '1' THEN
+                    active_pixel_index <= djt_pixel_index;
+                    active_valid       <= djt_valid;
+                ELSE
+                    active_pixel_index <= (OTHERS => '0');
+                    active_valid       <= '0';
+                END IF;
         END CASE;
     END PROCESS;
 
