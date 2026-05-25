@@ -77,10 +77,10 @@ BEGIN
                         IF temp_pool(i).is_active = '0' THEN
                             temp_pool(i).is_active := '1';
 
-                            -- Use 2 bits to determine laser type
+                            -- Use 2 bits to determine laser type (axis-aligned only)
                             CASE random_in(15 DOWNTO 14) IS
                                 -- Horizontal laser
-                                WHEN "00" =>
+                                WHEN "00" | "10" =>
                                     rand_y := RESIZE(UNSIGNED(random_in(9 DOWNTO 0)), 10);
                                     IF rand_y > SCREEN_HEIGHT - Y_MARGIN THEN
                                         rand_y := TO_UNSIGNED(SCREEN_HEIGHT - Y_MARGIN, 10);
@@ -94,7 +94,7 @@ BEGIN
                                     temp_pool(i).x1 := TO_SIGNED(SCREEN_WIDTH - 1 + LASER_LENGTH, 12);
                                 
                                 -- Vertical laser
-                                WHEN "01" =>
+                                WHEN OTHERS =>
                                     rand_y := RESIZE(UNSIGNED(random_in(9 DOWNTO 0)), 10);
                                     IF rand_y > SCREEN_HEIGHT - LASER_LENGTH - Y_MARGIN THEN
                                         rand_y := TO_UNSIGNED(SCREEN_HEIGHT - LASER_LENGTH - Y_MARGIN, 10);
@@ -107,33 +107,6 @@ BEGIN
                                     temp_pool(i).x0 := TO_SIGNED(SCREEN_WIDTH - 1, 12);
                                     temp_pool(i).x1 := TO_SIGNED(SCREEN_WIDTH - 1, 12);
 
-                                -- Diagonal (down-right)
-                                WHEN "10" =>
-                                    rand_y := RESIZE(UNSIGNED(random_in(9 DOWNTO 0)), 10);
-                                    IF rand_y > SCREEN_HEIGHT - LASER_LENGTH - Y_MARGIN THEN
-                                        rand_y := TO_UNSIGNED(SCREEN_HEIGHT - LASER_LENGTH - Y_MARGIN, 10);
-                                    ELSIF rand_y < Y_MARGIN THEN
-                                        rand_y := TO_UNSIGNED(Y_MARGIN, 10);
-                                    END IF;
-                                    temp_pool(i).y0 := RESIZE(SIGNED('0' & rand_y), 12);
-                                    temp_pool(i).y1 := temp_pool(i).y0 + LASER_LENGTH;
-
-                                    temp_pool(i).x0 := TO_SIGNED(SCREEN_WIDTH - 1, 12);
-                                    temp_pool(i).x1 := TO_SIGNED(SCREEN_WIDTH - 1 + LASER_LENGTH, 12);
-
-                                -- Diagonal (up-right)
-                                WHEN OTHERS =>
-                                    rand_y := RESIZE(UNSIGNED(random_in(9 DOWNTO 0)), 10);
-                                    IF rand_y < LASER_LENGTH + Y_MARGIN THEN
-                                        rand_y := TO_UNSIGNED(LASER_LENGTH + Y_MARGIN, 10);
-                                    ELSIF rand_y > SCREEN_HEIGHT - Y_MARGIN THEN
-                                        rand_y := TO_UNSIGNED(SCREEN_HEIGHT - Y_MARGIN, 10);
-                                    END IF;
-                                    temp_pool(i).y0 := RESIZE(SIGNED('0' & rand_y), 12);
-                                    temp_pool(i).y1 := temp_pool(i).y0 - LASER_LENGTH;
-                                    
-                                    temp_pool(i).x0 := TO_SIGNED(SCREEN_WIDTH - 1, 12);
-                                    temp_pool(i).x1 := TO_SIGNED(SCREEN_WIDTH - 1 + LASER_LENGTH, 12);
                             END CASE;
 
                             EXIT; -- exit loop after spawning one

@@ -237,9 +237,22 @@ BEGIN
             );
     END GENERATE;
     
-    -- Diagnostic: Show only the first laser to ensure fast compile times
-    combined_laser_color <= laser_colors_reg(0);
-    combined_laser_is_transparent <= laser_transparencies_reg(0);
+    PROCESS(laser_colors_reg, laser_transparencies_reg)
+        VARIABLE found : BOOLEAN := false;
+        VARIABLE idx : INTEGER;
+    BEGIN
+        combined_laser_color <= (OTHERS => '0');
+        combined_laser_is_transparent <= '1';
+        found := false;
+
+        FOR idx IN 0 TO MAX_LASERS - 1 LOOP
+            IF (NOT found) AND (laser_transparencies_reg(idx) = '0') THEN
+                combined_laser_color <= laser_colors_reg(idx);
+                combined_laser_is_transparent <= '0';
+                found := true;
+            END IF;
+        END LOOP;
+    END PROCESS;
 
     PROCESS (pixel_y_lookahead, teleporter_preview_y)
         VARIABLE r,g,b : INTEGER RANGE 0 TO 15;
