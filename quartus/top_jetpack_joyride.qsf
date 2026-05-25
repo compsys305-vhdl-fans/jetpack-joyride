@@ -486,6 +486,7 @@ set_global_assignment -name FLOW_ENABLE_IO_ASSIGNMENT_ANALYSIS ON
 
 
 
+set_global_assignment -name VHDL_FILE ../res/djt/palette.vhd
 set_global_assignment -name VHDL_FILE ../res/background2/palette.vhd
 set_global_assignment -name SOURCE_FILE vga_pll.cmp
 set_global_assignment -name VHDL_FILE ../src/game_engine/obstacle_manager.vhd
