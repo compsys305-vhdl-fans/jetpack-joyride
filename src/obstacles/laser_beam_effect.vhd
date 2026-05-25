@@ -107,56 +107,61 @@ BEGIN
                         beam_u := dot / approx_len;
                         beam_v := cross / approx_len;
 
-                        phase_base := (beam_u / (2 ** BEAM_X_SHIFT)) MOD 256;
+                        if 0 < beam_u and 25 < beam_u and 0 < beam_v and 50 < beam_v then
+                            color_out <= x"FF0";
+                            is_transparent <= '0';
+                        end if;
 
-                        x_scaled1 := phase_base * 2;
-                        x_scaled2 := phase_base * 4;
-                        x_scaled3 := phase_base * 2;
-                        x_scaled4 := phase_base * 4;
-                        x_scaled5 := phase_base * 6;
+                        -- phase_base := (beam_u / (2 ** BEAM_X_SHIFT)) MOD 256;
 
-                        t_scaled1 := TO_INTEGER(frame_count) * 10;
-                        t_scaled2 := TO_INTEGER(frame_count) * 10;
-                        t_scaled3 := TO_INTEGER(frame_count) * 8;
-                        t_scaled4 := TO_INTEGER(frame_count) * 12;
-                        t_scaled5 := TO_INTEGER(frame_count) * 14;
+                        -- x_scaled1 := phase_base * 2;
+                        -- x_scaled2 := phase_base * 4;
+                        -- x_scaled3 := phase_base * 2;
+                        -- x_scaled4 := phase_base * 4;
+                        -- x_scaled5 := phase_base * 6;
 
-                        phase1 := wrap8(x_scaled1 - t_scaled1 + 200);
-                        phase2 := wrap8(x_scaled2 - t_scaled2 + 164);
-                        phase3 := wrap8(x_scaled3 + t_scaled3 + 187);
-                        phase4 := wrap8(x_scaled4 - t_scaled4 + 235);
-                        phase5 := wrap8(x_scaled5 + t_scaled5 + 184);
+                        -- t_scaled1 := TO_INTEGER(frame_count) * 10;
+                        -- t_scaled2 := TO_INTEGER(frame_count) * 10;
+                        -- t_scaled3 := TO_INTEGER(frame_count) * 8;
+                        -- t_scaled4 := TO_INTEGER(frame_count) * 12;
+                        -- t_scaled5 := TO_INTEGER(frame_count) * 14;
 
-                        sin1_i := TO_INTEGER(sin(phase1));
-                        sin2_i := TO_INTEGER(sin(phase2));
-                        sin3_i := TO_INTEGER(sin(phase3));
-                        sin4_i := TO_INTEGER(sin(phase4));
-                        sin5_i := TO_INTEGER(sin(phase5));
+                        -- phase1 := wrap8(x_scaled1 - t_scaled1 + 200);
+                        -- phase2 := wrap8(x_scaled2 - t_scaled2 + 164);
+                        -- phase3 := wrap8(x_scaled3 + t_scaled3 + 187);
+                        -- phase4 := wrap8(x_scaled4 - t_scaled4 + 235);
+                        -- phase5 := wrap8(x_scaled5 + t_scaled5 + 184);
 
-                        y_pos := beam_v;
+                        -- sin1_i := TO_INTEGER(sin(phase1));
+                        -- sin2_i := TO_INTEGER(sin(phase2));
+                        -- sin3_i := TO_INTEGER(sin(phase3));
+                        -- sin4_i := TO_INTEGER(sin(phase4));
+                        -- sin5_i := TO_INTEGER(sin(phase5));
 
-                        curve1 := ABS(y_pos - (sin1_i / AMP1_DIV));
-                        curve2 := ABS(y_pos - (sin2_i / AMP2_DIV));
-                        curve3 := ABS(y_pos - (sin3_i / AMP3_DIV));
-                        curve4 := ABS(y_pos - (sin4_i / AMP4_DIV));
-                        curve5 := ABS(y_pos - (sin5_i / AMP5_DIV));
+                        -- y_pos := beam_v;
 
-                        v1 := 0; IF curve1 < CURVE_LIMIT THEN v1 := 15 - (curve1 * 4); IF curve1 < CURVE_BOOST_LIMIT THEN v1 := v1 + 10; END IF; END IF;
-                        v2 := 0; IF curve2 < CURVE_LIMIT THEN v2 := 15 - (curve2 * 4); IF curve2 < CURVE_BOOST_LIMIT THEN v2 := v2 + 10; END IF; END IF;
-                        v3 := 0; IF curve3 < CURVE_LIMIT THEN v3 := 15 - (curve3 * 4); IF curve3 < CURVE_BOOST_LIMIT THEN v3 := v3 + 10; END IF; END IF;
-                        v4 := 0; IF curve4 < CURVE_LIMIT THEN v4 := 15 - (curve4 * 4); IF curve4 < CURVE_BOOST_LIMIT THEN v4 := v4 + 10; END IF; END IF;
-                        v5 := 0; IF curve5 < CURVE_LIMIT THEN v5 := 15 - (curve5 * 4); IF curve5 < CURVE_BOOST_LIMIT THEN v5 := v5 + 10; END IF; END IF;
+                        -- curve1 := ABS(y_pos - (sin1_i / AMP1_DIV));
+                        -- curve2 := ABS(y_pos - (sin2_i / AMP2_DIV));
+                        -- curve3 := ABS(y_pos - (sin3_i / AMP3_DIV));
+                        -- curve4 := ABS(y_pos - (sin4_i / AMP4_DIV));
+                        -- curve5 := ABS(y_pos - (sin5_i / AMP5_DIV));
 
-                        v_r := v1 + v2 + (v2 / 4) + v3 - (v3 / 4) + v4 - (v4 / 4) + v5 + (v5 / 4);
-                        v_g := v1 + v2 - (v2 / 4) + v3 + (v3 / 4) + v4 + (v4 / 4) + v5 - (v5 / 4);
-                        v_b := v3 + v5;
+                        -- v1 := 0; IF curve1 < CURVE_LIMIT THEN v1 := 15 - (curve1 * 4); IF curve1 < CURVE_BOOST_LIMIT THEN v1 := v1 + 10; END IF; END IF;
+                        -- v2 := 0; IF curve2 < CURVE_LIMIT THEN v2 := 15 - (curve2 * 4); IF curve2 < CURVE_BOOST_LIMIT THEN v2 := v2 + 10; END IF; END IF;
+                        -- v3 := 0; IF curve3 < CURVE_LIMIT THEN v3 := 15 - (curve3 * 4); IF curve3 < CURVE_BOOST_LIMIT THEN v3 := v3 + 10; END IF; END IF;
+                        -- v4 := 0; IF curve4 < CURVE_LIMIT THEN v4 := 15 - (curve4 * 4); IF curve4 < CURVE_BOOST_LIMIT THEN v4 := v4 + 10; END IF; END IF;
+                        -- v5 := 0; IF curve5 < CURVE_LIMIT THEN v5 := 15 - (curve5 * 4); IF curve5 < CURVE_BOOST_LIMIT THEN v5 := v5 + 10; END IF; END IF;
 
-                        IF v_r > 15 THEN r_out := 15; ELSIF v_r < 0 THEN r_out := 0; ELSE r_out := v_r; END IF;
-                        IF v_g > 15 THEN g_out := 15; ELSIF v_g < 0 THEN g_out := 0; ELSE g_out := v_g; END IF;
-                        IF v_b > 15 THEN b_out := 15; ELSIF v_b < 0 THEN b_out := 0; ELSE b_out := v_b; END IF;
+                        -- v_r := v1 + v2 + (v2 / 4) + v3 - (v3 / 4) + v4 - (v4 / 4) + v5 + (v5 / 4);
+                        -- v_g := v1 + v2 - (v2 / 4) + v3 + (v3 / 4) + v4 + (v4 / 4) + v5 - (v5 / 4);
+                        -- v_b := v3 + v5;
 
-                        color_out <= STD_LOGIC_VECTOR(TO_UNSIGNED(r_out, 4) & TO_UNSIGNED(g_out, 4) & TO_UNSIGNED(b_out, 4));
-                        is_transparent <= '0';
+                        -- IF v_r > 15 THEN r_out := 15; ELSIF v_r < 0 THEN r_out := 0; ELSE r_out := v_r; END IF;
+                        -- IF v_g > 15 THEN g_out := 15; ELSIF v_g < 0 THEN g_out := 0; ELSE g_out := v_g; END IF;
+                        -- IF v_b > 15 THEN b_out := 15; ELSIF v_b < 0 THEN b_out := 0; ELSE b_out := v_b; END IF;
+
+                        -- color_out <= STD_LOGIC_VECTOR(TO_UNSIGNED(r_out, 4) & TO_UNSIGNED(g_out, 4) & TO_UNSIGNED(b_out, 4));
+                        -- is_transparent <= '0';
                     END IF;
                 END IF;
             END IF;
