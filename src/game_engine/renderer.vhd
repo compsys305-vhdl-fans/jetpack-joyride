@@ -409,9 +409,6 @@ ARCHITECTURE rtl OF renderer IS
     SIGNAL menu_drawn_d : STD_LOGIC := '0';
     SIGNAL menu_color : STD_LOGIC_VECTOR(11 DOWNTO 0);
     SIGNAL menu_color_d : STD_LOGIC_VECTOR(11 DOWNTO 0) := (OTHERS => '0');
-
-    SIGNAL laser_beam_rect_mode : STD_LOGIC := '0';
-
     -- Pipelining registers
     SIGNAL pixel_y_lookahead       : UNSIGNED(9 DOWNTO 0);
     SIGNAL base_color              : STD_LOGIC_VECTOR(11 DOWNTO 0);
