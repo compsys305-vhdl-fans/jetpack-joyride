@@ -100,6 +100,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             player_grounded      : IN STD_LOGIC;
             player_vy            : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
             laser_pool           : IN laser_pool_t;
+            missile_pool         : IN missile_pool_t;
             frame_count          : IN UNSIGNED(7 DOWNTO 0);
             random_in            : IN STD_LOGIC_VECTOR(19 DOWNTO 0);
             death                : OUT STD_LOGIC;
@@ -117,7 +118,8 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             playing          : IN STD_LOGIC;
             random_in        : IN STD_LOGIC_VECTOR(19 DOWNTO 0);
             world_speed      : IN UNSIGNED(9 DOWNTO 0);
-            lasers_out       : OUT laser_pool_t
+            lasers_out       : OUT laser_pool_t;
+            missiles_out     : OUT missile_pool_t
         );
     END COMPONENT obstacle_manager;
     
@@ -138,6 +140,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             paused               : IN STD_LOGIC;
     
             laser_pool           : IN laser_pool_t;
+            missile_pool         : IN missile_pool_t;
             frame_count          : IN UNSIGNED(7 DOWNTO 0);
             random_in            : IN STD_LOGIC_VECTOR(19 DOWNTO 0);
             world_speed          : IN UNSIGNED(9 DOWNTO 0);
@@ -197,6 +200,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
 
     -- laser pool
     SIGNAL laser_pool : laser_pool_t;
+    SIGNAL missile_pool : missile_pool_t;
 
     -- death signal
     SIGNAL death_signal : STD_LOGIC;
@@ -230,7 +234,8 @@ BEGIN
             playing => playing,
             random_in => random_num,
             world_speed => world_speed,
-            lasers_out => laser_pool
+            lasers_out => laser_pool,
+            missiles_out => missile_pool
         );
 
     mouse_inst: mouse port map(
@@ -305,6 +310,7 @@ BEGIN
         player_grounded => player_grounded,
         player_vy => player_vy,
         laser_pool => laser_pool,
+        missile_pool => missile_pool,
         frame_count => frame_counter,
         death => death_signal,
         collision_red => collision_red,
@@ -327,6 +333,7 @@ BEGIN
         death => death_signal,
         paused => paused,
         laser_pool => laser_pool,
+        missile_pool => missile_pool,
         frame_count => frame_counter,
         random_in => random_num,
         world_speed => world_speed,

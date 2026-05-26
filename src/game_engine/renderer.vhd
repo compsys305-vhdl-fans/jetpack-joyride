@@ -24,6 +24,7 @@ ENTITY renderer IS
         paused               : IN STD_LOGIC;
 
         laser_pool           : IN laser_pool_t;
+        missile_pool         : IN missile_pool_t;
         frame_count          : IN UNSIGNED(7 DOWNTO 0);
         random_in            : IN STD_LOGIC_VECTOR(19 DOWNTO 0);
         world_speed          : IN UNSIGNED(9 DOWNTO 0);
@@ -114,6 +115,18 @@ ARCHITECTURE rtl OF renderer IS
     CONSTANT PAUSE_X_LEFT : NATURAL := (640 - PAUSE_DISPLAY_WIDTH) / 2;
     CONSTANT PAUSE_Y_TOP : NATURAL := (480 - PAUSE_DISPLAY_HEIGHT) / 2;
 
+    CONSTANT WARNING_SPRITE_WIDTH : NATURAL := 16;
+    CONSTANT WARNING_SPRITE_HEIGHT : NATURAL := 16;
+    CONSTANT WARNING_SCALE_SHIFT : NATURAL := 1;
+    CONSTANT WARNING_DISPLAY_WIDTH : NATURAL := WARNING_SPRITE_WIDTH * 2;
+    CONSTANT WARNING_DISPLAY_HEIGHT : NATURAL := WARNING_SPRITE_HEIGHT * 2;
+
+    CONSTANT MISSILE_SPRITE_WIDTH : NATURAL := 16;
+    CONSTANT MISSILE_SPRITE_HEIGHT : NATURAL := 16;
+    CONSTANT MISSILE_SCALE_SHIFT : NATURAL := 1;
+    CONSTANT MISSILE_DISPLAY_WIDTH : NATURAL := MISSILE_SPRITE_WIDTH * 2;
+    CONSTANT MISSILE_DISPLAY_HEIGHT : NATURAL := MISSILE_SPRITE_HEIGHT * 2;
+
     SIGNAL death_rel_x : UNSIGNED(15 DOWNTO 0);
     SIGNAL death_rel_y : UNSIGNED(15 DOWNTO 0);
     SIGNAL in_death_sprite : STD_LOGIC;
@@ -131,6 +144,19 @@ ARCHITECTURE rtl OF renderer IS
     SIGNAL pause_sprite_is_transparent : STD_LOGIC;
     SIGNAL pause_sprite_valid : STD_LOGIC;
     SIGNAL pause_drawn : STD_LOGIC;
+
+    SIGNAL missile_rel_x : UNSIGNED(15 DOWNTO 0);
+    SIGNAL missile_rel_y : UNSIGNED(15 DOWNTO 0);
+    SIGNAL in_missile_sprite : STD_LOGIC;
+    SIGNAL in_missile_sprite_d : STD_LOGIC := '0';
+    SIGNAL missile_sprite_color : STD_LOGIC_VECTOR(11 DOWNTO 0);
+    SIGNAL missile_sprite_is_transparent : STD_LOGIC;
+    SIGNAL missile_sprite_valid : STD_LOGIC;
+    SIGNAL missile_drawn : STD_LOGIC;
+
+    SIGNAL missile_sprite_id : UNSIGNED(7 DOWNTO 0) := SPRITE_MISSILE;
+    SIGNAL missile_palette_id : UNSIGNED(7 DOWNTO 0) := PALETTE_MISSILE;
+    SIGNAL missile_scale_sel : NATURAL := MISSILE_SCALE_SHIFT;
 
     SIGNAL laser_beam_rect_mode : STD_LOGIC := '0';
 
@@ -298,6 +324,54 @@ BEGIN
         END IF;
     END PROCESS;
 
+    PROCESS(missile_pool)
+    BEGIN
+        missile_sprite_id <= SPRITE_MISSILE;
+        missile_palette_id <= PALETTE_MISSILE;
+        missile_scale_sel <= MISSILE_SCALE_SHIFT;
+
+        IF missile_pool(0).is_warning = '1' THEN
+            missile_sprite_id <= SPRITE_WARNING;
+            missile_palette_id <= PALETTE_WARNING;
+            missile_scale_sel <= WARNING_SCALE_SHIFT;
+        END IF;
+    END PROCESS;
+
+    PROCESS (pixel_x, pixel_y_lookahead, missile_pool, missile_sprite_id)
+        VARIABLE s_x, s_y : INTEGER;
+        VARIABLE m_x, m_y : INTEGER;
+        VARIABLE disp_w, disp_h : INTEGER;
+    BEGIN
+        s_x := TO_INTEGER(pixel_x);
+        s_y := TO_INTEGER(pixel_y_lookahead);
+        m_x := TO_INTEGER(missile_pool(0).x);
+        m_y := TO_INTEGER(missile_pool(0).y);
+
+        IF missile_sprite_id = SPRITE_WARNING THEN
+            disp_w := WARNING_DISPLAY_WIDTH;
+            disp_h := WARNING_DISPLAY_HEIGHT;
+        ELSE
+            disp_w := MISSILE_DISPLAY_WIDTH;
+            disp_h := MISSILE_DISPLAY_HEIGHT;
+        END IF;
+
+        IF (missile_pool(0).is_warning = '1') OR (missile_pool(0).is_active = '1') THEN
+            IF (s_x >= m_x) AND (s_x < m_x + disp_w) AND (s_y >= m_y) AND (s_y < m_y + disp_h) THEN
+                in_missile_sprite <= '1';
+                missile_rel_x <= TO_UNSIGNED(s_x - m_x, 16);
+                missile_rel_y <= TO_UNSIGNED(s_y - m_y, 16);
+            ELSE
+                in_missile_sprite <= '0';
+                missile_rel_x <= (OTHERS => '0');
+                missile_rel_y <= (OTHERS => '0');
+            END IF;
+        ELSE
+            in_missile_sprite <= '0';
+            missile_rel_x <= (OTHERS => '0');
+            missile_rel_y <= (OTHERS => '0');
+        END IF;
+    END PROCESS;
+
     player_sprite_renderer: sprite_renderer
         PORT MAP (
             clock          => clock_25MHz,
@@ -354,6 +428,20 @@ BEGIN
             valid          => pause_sprite_valid
         );
 
+    missile_sprite_renderer: sprite_renderer
+        PORT MAP (
+            clock          => clock_25MHz,
+            show_djt       => '0',
+            sprite_id      => missile_sprite_id,
+            palette_id     => missile_palette_id,
+            scale_shift    => missile_scale_sel,
+            rel_x          => missile_rel_x,
+            rel_y          => missile_rel_y,
+            color          => missile_sprite_color,
+            is_transparent => missile_sprite_is_transparent,
+            valid          => missile_sprite_valid
+        );
+
     PROCESS(clock_25MHz)
     BEGIN
         IF RISING_EDGE(clock_25MHz) THEN
@@ -373,6 +461,7 @@ BEGIN
             in_player_sprite_d <= in_player_sprite;
             in_death_sprite_d <= in_death_sprite;
             in_pause_sprite_d <= in_pause_sprite;
+            in_missile_sprite_d <= in_missile_sprite;
             laser_colors_reg <= laser_colors;
             laser_transparencies_reg <= laser_transparencies;
             base_color_d <= base_color;
@@ -382,6 +471,7 @@ BEGIN
     player_drawn <= in_player_sprite_d AND sprite_valid AND (NOT player_is_transparent);
     death_drawn <= in_death_sprite_d AND death_sprite_valid AND (NOT death_sprite_is_transparent);
     pause_drawn <= in_pause_sprite_d AND pause_sprite_valid AND (NOT pause_sprite_is_transparent);
+    missile_drawn <= in_missile_sprite_d AND missile_sprite_valid AND (NOT missile_sprite_is_transparent);
     bg_drawn <= bg_valid AND (NOT bg_is_transparent);
 
     PROCESS(pixel_x, pixel_y_lookahead, bg_seed, bg_scroll_accum, show_djt)
@@ -470,8 +560,8 @@ BEGIN
     END PROCESS;
 
     PROCESS (death_drawn, death_sprite_color, pause_drawn, pause_sprite_color, show_djt,
-             player_drawn, sprite_color, base_color_d, combined_laser_is_transparent,
-             combined_laser_color)
+             player_drawn, sprite_color, missile_drawn, missile_sprite_color, base_color_d,
+             combined_laser_is_transparent, combined_laser_color)
         VARIABLE base_r, base_g, base_b : INTEGER RANGE 0 TO 15;
         VARIABLE add_r, add_g, add_b : INTEGER;
         VARIABLE final_r, final_g, final_b : INTEGER RANGE 0 TO 15;
@@ -492,6 +582,10 @@ BEGIN
             final_r := TO_INTEGER(UNSIGNED(sprite_color(11 DOWNTO 8)));
             final_g := TO_INTEGER(UNSIGNED(sprite_color(7 DOWNTO 4)));
             final_b := TO_INTEGER(UNSIGNED(sprite_color(3 DOWNTO 0)));
+        ELSIF missile_drawn = '1' THEN
+            final_r := TO_INTEGER(UNSIGNED(missile_sprite_color(11 DOWNTO 8)));
+            final_g := TO_INTEGER(UNSIGNED(missile_sprite_color(7 DOWNTO 4)));
+            final_b := TO_INTEGER(UNSIGNED(missile_sprite_color(3 DOWNTO 0)));
         ELSE
             -- Determine base color
             base_r := TO_INTEGER(UNSIGNED(base_color_d(11 DOWNTO 8)));

@@ -94,6 +94,14 @@ ARCHITECTURE rtl OF sprite_renderer IS
     SIGNAL pause_pixel_index : UNSIGNED(7 DOWNTO 0);
     SIGNAL pause_valid : STD_LOGIC;
 
+    -- Warning Sprite Signals
+    SIGNAL warning_pixel_index : UNSIGNED(7 DOWNTO 0);
+    SIGNAL warning_valid : STD_LOGIC;
+
+    -- Missile Sprite Signals
+    SIGNAL missile1_pixel_index, missile2_pixel_index : UNSIGNED(7 DOWNTO 0);
+    SIGNAL missile1_valid, missile2_valid             : STD_LOGIC;
+
     CONSTANT DJT_SOURCE_WIDTH : NATURAL := 400;
     CONSTANT DJT_SOURCE_HEIGHT : NATURAL := 600;
     CONSTANT DJT_ROTATED_WIDTH : NATURAL := DJT_SOURCE_HEIGHT;
@@ -255,6 +263,18 @@ BEGIN
         GENERIC MAP (IMAGE_WIDTH => 34, IMAGE_HEIGHT => 13, MIF_FILE => "../res/ui/pause.mif")
         PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => pause_pixel_index, valid => pause_valid);
 
+    warning_rom: image_loader
+        GENERIC MAP (IMAGE_WIDTH => 16, IMAGE_HEIGHT => 16, MIF_FILE => "../res/warning/warning.mif")
+        PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => warning_pixel_index, valid => warning_valid);
+
+    missile1_rom: image_loader
+        GENERIC MAP (IMAGE_WIDTH => 16, IMAGE_HEIGHT => 16, MIF_FILE => "../res/missile/missile1.mif")
+        PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => missile1_pixel_index, valid => missile1_valid);
+
+    missile2_rom: image_loader
+        GENERIC MAP (IMAGE_WIDTH => 16, IMAGE_HEIGHT => 16, MIF_FILE => "../res/missile/missile2.mif")
+        PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => missile2_pixel_index, valid => missile2_valid);
+
     PROCESS(local_x, local_y)
     BEGIN
         IF (TO_INTEGER(local_x) < DJT_ROTATED_WIDTH) AND (TO_INTEGER(local_y) < DJT_ROTATED_HEIGHT) THEN
@@ -284,7 +304,9 @@ BEGIN
             bg_light_pixel_index, bg_light_valid, bg_pillar_pixel_index, bg_pillar_valid, bg_plain_pixel_index, bg_plain_valid,
             djt_pixel_index, djt_valid,
             death_pixel_index, death_valid,
-            pause_pixel_index, pause_valid)
+            pause_pixel_index, pause_valid,
+            warning_pixel_index, warning_valid,
+            missile1_pixel_index, missile1_valid, missile2_pixel_index, missile2_valid)
     BEGIN
         CASE sprite_id IS
             WHEN SPRITE_BARRY_RUN => -- Running (Animated)
@@ -390,6 +412,19 @@ BEGIN
             WHEN SPRITE_PAUSE_TEXT =>
                 active_pixel_index <= pause_pixel_index;
                 active_valid       <= pause_valid;
+
+            WHEN SPRITE_WARNING =>
+                active_pixel_index <= warning_pixel_index;
+                active_valid       <= warning_valid;
+
+            WHEN SPRITE_MISSILE =>
+                IF get_anim_frame(sprite_id, anim_tick) = 0 THEN
+                    active_pixel_index <= missile1_pixel_index;
+                    active_valid       <= missile1_valid;
+                ELSE
+                    active_pixel_index <= missile2_pixel_index;
+                    active_valid       <= missile2_valid;
+                END IF;
 
             WHEN OTHERS =>
                 IF show_djt = '1' THEN

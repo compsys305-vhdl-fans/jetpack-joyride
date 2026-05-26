@@ -4,6 +4,7 @@ USE IEEE.NUMERIC_STD.ALL;
 
 PACKAGE obstacle_types IS
     CONSTANT MAX_LASERS : INTEGER := 8;
+    CONSTANT MAX_MISSILES : INTEGER := 1;
     CONSTANT SCREEN_WIDTH : INTEGER := 640;
     CONSTANT SCREEN_HEIGHT : INTEGER := 480;
 
@@ -17,6 +18,15 @@ PACKAGE obstacle_types IS
 
     TYPE laser_pool_t IS ARRAY (0 TO MAX_LASERS - 1) OF laser_t;
 
+    TYPE missile_t IS RECORD
+        is_active : STD_LOGIC;
+        is_warning : STD_LOGIC;
+        x : SIGNED(11 DOWNTO 0);
+        y : SIGNED(11 DOWNTO 0);
+    END RECORD missile_t;
+
+    TYPE missile_pool_t IS ARRAY (0 TO MAX_MISSILES - 1) OF missile_t;
+
     -- Default value for an inactive laser
     CONSTANT INACTIVE_LASER : laser_t := (
         is_active => '0',
@@ -28,5 +38,14 @@ PACKAGE obstacle_types IS
     
     -- Default value for a whole pool of inactive lasers
     CONSTANT INACTIVE_LASER_POOL : laser_pool_t := (OTHERS => INACTIVE_LASER);
+
+    CONSTANT INACTIVE_MISSILE : missile_t := (
+        is_active => '0',
+        is_warning => '0',
+        x => (OTHERS => '0'),
+        y => (OTHERS => '0')
+    );
+
+    CONSTANT INACTIVE_MISSILE_POOL : missile_pool_t := (OTHERS => INACTIVE_MISSILE);
 
 END PACKAGE obstacle_types;

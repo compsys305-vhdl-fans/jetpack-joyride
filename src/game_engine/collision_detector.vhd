@@ -16,6 +16,7 @@ ENTITY collision_detector IS
         player_grounded      : IN STD_LOGIC;
         player_vy            : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
         laser_pool           : IN laser_pool_t;
+        missile_pool         : IN missile_pool_t;
         frame_count          : IN UNSIGNED(7 DOWNTO 0);
         death                : OUT STD_LOGIC;
         collision_red        : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
@@ -63,6 +64,16 @@ ARCHITECTURE rtl OF collision_detector IS
     SIGNAL player_sprite_is_transparent : STD_LOGIC;
     SIGNAL player_sprite_valid  : STD_LOGIC;
 
+    -- Missile sprite signals
+    SIGNAL missile_rel_x         : UNSIGNED(15 DOWNTO 0);
+    SIGNAL missile_rel_y         : UNSIGNED(15 DOWNTO 0);
+    SIGNAL in_missile_sprite     : STD_LOGIC;
+    SIGNAL in_missile_sprite_d   : STD_LOGIC := '0';
+    SIGNAL missile_sprite_color  : STD_LOGIC_VECTOR(11 DOWNTO 0);
+    SIGNAL missile_sprite_is_transparent : STD_LOGIC;
+    SIGNAL missile_sprite_valid  : STD_LOGIC;
+    SIGNAL missile_pixel_on      : STD_LOGIC;
+
     -- Laser signals
     SIGNAL is_on_any_laser_line : STD_LOGIC;
     SIGNAL player_pixel_on : STD_LOGIC;
@@ -73,6 +84,11 @@ ARCHITECTURE rtl OF collision_detector IS
     CONSTANT MAX_PLAYER_DISPLAY_HEIGHT : NATURAL := 128;
     CONSTANT BEAM_HALF_WIDTH : INTEGER := 7;
     CONSTANT NODE_HALF_SIZE : INTEGER := 8;
+    CONSTANT MISSILE_SPRITE_WIDTH : NATURAL := 16;
+    CONSTANT MISSILE_SPRITE_HEIGHT : NATURAL := 16;
+    CONSTANT MISSILE_SCALE_SHIFT : NATURAL := 1;
+    CONSTANT MISSILE_DISPLAY_WIDTH : NATURAL := MISSILE_SPRITE_WIDTH * 2;
+    CONSTANT MISSILE_DISPLAY_HEIGHT : NATURAL := MISSILE_SPRITE_HEIGHT * 2;
 
     SIGNAL pixel_y_lookahead : UNSIGNED(9 DOWNTO 0);
 
@@ -179,6 +195,33 @@ BEGIN
         END IF;
     END PROCESS;
 
+    PROCESS (pixel_x, pixel_y_lookahead, missile_pool)
+        VARIABLE s_x, s_y : INTEGER;
+        VARIABLE m_x, m_y : INTEGER;
+    BEGIN
+        IF missile_pool(0).is_active = '1' THEN
+            s_x := TO_INTEGER(pixel_x);
+            s_y := TO_INTEGER(pixel_y_lookahead);
+            m_x := TO_INTEGER(missile_pool(0).x);
+            m_y := TO_INTEGER(missile_pool(0).y);
+
+            IF (s_x >= m_x) AND (s_x < m_x + MISSILE_DISPLAY_WIDTH) AND
+               (s_y >= m_y) AND (s_y < m_y + MISSILE_DISPLAY_HEIGHT) THEN
+                in_missile_sprite <= '1';
+                missile_rel_x <= TO_UNSIGNED(s_x - m_x, 16);
+                missile_rel_y <= TO_UNSIGNED(s_y - m_y, 16);
+            ELSE
+                in_missile_sprite <= '0';
+                missile_rel_x <= (OTHERS => '0');
+                missile_rel_y <= (OTHERS => '0');
+            END IF;
+        ELSE
+            in_missile_sprite <= '0';
+            missile_rel_x <= (OTHERS => '0');
+            missile_rel_y <= (OTHERS => '0');
+        END IF;
+    END PROCESS;
+
     player_sprite_renderer: sprite_renderer
         PORT MAP (
             clock => clock_25MHz,
@@ -193,15 +236,31 @@ BEGIN
             valid => player_sprite_valid
         );
 
+    missile_sprite_renderer: sprite_renderer
+        PORT MAP (
+            clock => clock_25MHz,
+            show_djt => '0',
+            sprite_id => SPRITE_MISSILE,
+            palette_id => PALETTE_MISSILE,
+            scale_shift => MISSILE_SCALE_SHIFT,
+            rel_x => missile_rel_x,
+            rel_y => missile_rel_y,
+            color => missile_sprite_color,
+            is_transparent => missile_sprite_is_transparent,
+            valid => missile_sprite_valid
+        );
+
     PROCESS(clock_25MHz)
     BEGIN
         IF RISING_EDGE(clock_25MHz) THEN
             in_player_sprite_d <= in_player_sprite;
+            in_missile_sprite_d <= in_missile_sprite;
         END IF;
     END PROCESS;
 
     player_pixel_on <= in_player_sprite_d AND player_sprite_valid AND (NOT player_sprite_is_transparent);
-    collision_pixel_on <= player_pixel_on AND is_on_any_laser_line;
+    missile_pixel_on <= in_missile_sprite_d AND missile_sprite_valid AND (NOT missile_sprite_is_transparent);
+    collision_pixel_on <= player_pixel_on AND (is_on_any_laser_line OR missile_pixel_on);
     
     -- Laser Collision Detection (axis-aligned beam rectangle only; excludes endpoints)
     PROCESS(laser_pool, pixel_x, pixel_y)
@@ -279,7 +338,7 @@ BEGIN
         END IF;
     END PROCESS;
 
-    PROCESS(player_pixel_on, is_on_any_laser_line, collision_pixel_on)
+    PROCESS(player_pixel_on, is_on_any_laser_line, missile_pixel_on, collision_pixel_on)
     BEGIN
         IF collision_pixel_on = '1' THEN
             collision_red <= "1111";
@@ -289,6 +348,10 @@ BEGIN
             collision_red <= "0000";
             collision_green <= "0000";
             collision_blue <= "1111";
+        ELSIF missile_pixel_on = '1' THEN
+            collision_red <= "1111";
+            collision_green <= "1111";
+            collision_blue <= "0000";
         ELSIF is_on_any_laser_line = '1' THEN
             collision_red <= "1111";
             collision_green <= "0000";
