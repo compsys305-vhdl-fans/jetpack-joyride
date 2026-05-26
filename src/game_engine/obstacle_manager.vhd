@@ -6,14 +6,14 @@ USE work.obstacle_types.ALL;
 
 ENTITY obstacle_manager IS
     PORT (
-        clock_50MHz      : IN STD_LOGIC;
         vert_sync        : IN STD_LOGIC;
         reset            : IN STD_LOGIC;
         playing          : IN STD_LOGIC;
         random_in        : IN STD_LOGIC_VECTOR(19 DOWNTO 0); -- Using the existing 20-bit LFSR
         world_speed      : IN UNSIGNED(9 DOWNTO 0);
         lasers_out       : OUT laser_pool_t;
-        missiles_out     : OUT missile_pool_t
+        missiles_out     : OUT missile_pool_t;
+        coins_out        : OUT coin_pool_t
     );
 END ENTITY obstacle_manager;
 
@@ -33,6 +33,15 @@ ARCHITECTURE rtl OF obstacle_manager IS
     CONSTANT MISSILE_SPAWN_JITTER : INTEGER := 120;
     CONSTANT BASE_MISSILE_SPEED_X : INTEGER := 8; -- fallback if world speed is 0
 
+    CONSTANT COIN_WIDTH : INTEGER := 16;
+    CONSTANT COIN_HEIGHT : INTEGER := 16;
+    CONSTANT COIN_DISPLAY_WIDTH : INTEGER := COIN_WIDTH * 2;
+    CONSTANT COIN_DISPLAY_HEIGHT : INTEGER := COIN_HEIGHT * 2;
+
+    CONSTANT COIN_SPAWN_INTERVAL : INTEGER := 60; -- frames (~1s at 60Hz)
+    CONSTANT COIN_SPAWN_JITTER : INTEGER := 60;
+    CONSTANT BASE_COIN_SPEED_X : INTEGER := 4;
+
     -- Spawning rate constants
     CONSTANT INITIAL_SPAWN_INTERVAL : INTEGER := 180; -- 3 seconds
     CONSTANT MIN_SPAWN_INTERVAL : INTEGER := 60; -- 1 second
@@ -41,6 +50,7 @@ ARCHITECTURE rtl OF obstacle_manager IS
 
     SIGNAL pool : laser_pool_t := INACTIVE_LASER_POOL;
     SIGNAL missiles : missile_pool_t := INACTIVE_MISSILE_POOL;
+    SIGNAL coins : coin_pool_t := INACTIVE_COIN_POOL;
     SIGNAL playing_prev : STD_LOGIC := '0';
     
     SIGNAL spawn_counter : INTEGER RANGE 0 TO INITIAL_SPAWN_INTERVAL * 2 := INITIAL_SPAWN_INTERVAL;
@@ -51,10 +61,13 @@ ARCHITECTURE rtl OF obstacle_manager IS
     SIGNAL missile_spawn_counter : INTEGER RANGE 0 TO MISSILE_SPAWN_INTERVAL + MISSILE_SPAWN_JITTER := MISSILE_SPAWN_INTERVAL;
     SIGNAL warning_timer : INTEGER RANGE 0 TO MISSILE_WARNING_DURATION := 0;
 
+    SIGNAL coin_spawn_counter : INTEGER RANGE 0 TO COIN_SPAWN_INTERVAL + COIN_SPAWN_JITTER := COIN_SPAWN_INTERVAL;
+
 BEGIN
 
     lasers_out <= pool;
     missiles_out <= missiles;
+    coins_out <= coins;
 
     manager_proc: PROCESS(vert_sync)
         VARIABLE temp_pool : laser_pool_t;
@@ -67,19 +80,27 @@ BEGIN
         VARIABLE missile_speed_x : INTEGER;
         VARIABLE rand_missile_y : INTEGER;
         VARIABLE jitter : INTEGER;
+        VARIABLE temp_coins : coin_pool_t;
+        VARIABLE coin_speed_x : INTEGER;
+        VARIABLE rand_coin_y : INTEGER;
+        VARIABLE jitter_coin : INTEGER;
+        VARIABLE coin_spawned : BOOLEAN;
     BEGIN
         temp_pool := pool;
         temp_missiles := missiles;
+        temp_coins := coins;
         
         IF RISING_EDGE(vert_sync) THEN
             IF reset = '1' THEN
                 temp_pool := INACTIVE_LASER_POOL;
                 temp_missiles := INACTIVE_MISSILE_POOL;
+                temp_coins := INACTIVE_COIN_POOL;
                 spawn_counter <= INITIAL_SPAWN_INTERVAL;
                 dynamic_spawn_interval <= INITIAL_SPAWN_INTERVAL;
                 ramp_up_counter <= RAMP_UP_PERIOD;
                 missile_spawn_counter <= MISSILE_SPAWN_INTERVAL;
                 warning_timer <= 0;
+                coin_spawn_counter <= COIN_SPAWN_INTERVAL;
             ELSIF playing = '1' THEN
                 -- Ramp up spawn rate
                 IF ramp_up_counter = 0 THEN
@@ -132,6 +153,22 @@ BEGIN
                             temp_missiles(i).is_active := '1';
                         ELSE
                             warning_timer <= warning_timer - 1;
+                        END IF;
+                    END IF;
+                END LOOP;
+
+                -- Update existing coins
+                coin_speed_x := TO_INTEGER(world_speed);
+                IF coin_speed_x < 1 THEN
+                    coin_speed_x := BASE_COIN_SPEED_X;
+                END IF;
+
+                FOR i IN 0 TO MAX_COINS - 1 LOOP
+                    IF temp_coins(i).is_active = '1' THEN
+                        temp_coins(i).x := temp_coins(i).x - coin_speed_x;
+
+                        IF TO_INTEGER(temp_coins(i).x) < -COIN_DISPLAY_WIDTH THEN
+                            temp_coins(i) := INACTIVE_COIN;
                         END IF;
                     END IF;
                 END LOOP;
@@ -225,14 +262,42 @@ BEGIN
                         missile_spawn_counter <= missile_spawn_counter - 1;
                     END IF;
                 END IF;
+
+                -- Spawn coins continuously
+                IF coin_spawn_counter = 0 THEN
+                    coin_spawned := FALSE;
+                    FOR i IN 0 TO MAX_COINS - 1 LOOP
+                        IF (NOT coin_spawned) AND (temp_coins(i).is_active = '0') THEN
+                            rand_coin_y := TO_INTEGER(UNSIGNED(random_in(9 DOWNTO 0)));
+                            IF rand_coin_y > SCREEN_HEIGHT - COIN_DISPLAY_HEIGHT THEN
+                                rand_coin_y := SCREEN_HEIGHT - COIN_DISPLAY_HEIGHT;
+                            ELSIF rand_coin_y < 0 THEN
+                                rand_coin_y := 0;
+                            END IF;
+
+                            temp_coins(i).is_active := '1';
+                            temp_coins(i).x := TO_SIGNED(SCREEN_WIDTH - 1, 12);
+                            temp_coins(i).y := TO_SIGNED(rand_coin_y, 12);
+                            coin_spawned := TRUE;
+                        END IF;
+                    END LOOP;
+
+                    jitter_coin := TO_INTEGER(UNSIGNED(random_in(7 DOWNTO 0))) MOD COIN_SPAWN_JITTER;
+                    coin_spawn_counter <= COIN_SPAWN_INTERVAL + jitter_coin;
+                ELSE
+                    coin_spawn_counter <= coin_spawn_counter - 1;
+                END IF;
             ELSE
                 temp_pool := INACTIVE_LASER_POOL;
                 temp_missiles := INACTIVE_MISSILE_POOL;
+                temp_coins := INACTIVE_COIN_POOL;
                 missile_spawn_counter <= MISSILE_SPAWN_INTERVAL;
                 warning_timer <= 0;
+                coin_spawn_counter <= COIN_SPAWN_INTERVAL;
             END IF;
             pool <= temp_pool;
             missiles <= temp_missiles;
+            coins <= temp_coins;
             playing_prev <= playing;
         END IF;
     END PROCESS manager_proc;

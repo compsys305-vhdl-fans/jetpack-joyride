@@ -26,6 +26,7 @@ ENTITY renderer IS
 
         laser_pool           : IN laser_pool_t;
         missile_pool         : IN missile_pool_t;
+        coin_pool            : IN coin_pool_t;
         frame_count          : IN UNSIGNED(7 DOWNTO 0);
         random_in            : IN STD_LOGIC_VECTOR(19 DOWNTO 0);
         world_speed          : IN UNSIGNED(9 DOWNTO 0);
@@ -73,7 +74,6 @@ ARCHITECTURE rtl OF renderer IS
     SIGNAL sprite_color        : STD_LOGIC_VECTOR(11 DOWNTO 0);
     SIGNAL player_drawn        : STD_LOGIC;
     SIGNAL in_player_sprite_d  : STD_LOGIC := '0';
-    CONSTANT MAX_PLAYER_HEIGHT : POSITIVE := 128;
 
     -- Signals for laser calculation
     TYPE laser_color_array IS ARRAY (0 TO MAX_LASERS - 1) OF STD_LOGIC_VECTOR(11 DOWNTO 0);
@@ -97,8 +97,6 @@ ARCHITECTURE rtl OF renderer IS
     SIGNAL frame_count_d : UNSIGNED(7 DOWNTO 0) := (OTHERS => '0');
     SIGNAL bg_scroll_accum : UNSIGNED(11 DOWNTO 0) := (OTHERS => '0');
     SIGNAL bg_parallax_step : UNSIGNED(9 DOWNTO 0);
-    
-    SIGNAL teleporter_preview_on : STD_LOGIC;
 
     CONSTANT DEATH_SPRITE_WIDTH : NATURAL := 42;
     CONSTANT DEATH_SPRITE_HEIGHT : NATURAL := 13;
@@ -127,6 +125,12 @@ ARCHITECTURE rtl OF renderer IS
     CONSTANT MISSILE_SCALE_SHIFT : NATURAL := 1;
     CONSTANT MISSILE_DISPLAY_WIDTH : NATURAL := MISSILE_SPRITE_WIDTH * 2;
     CONSTANT MISSILE_DISPLAY_HEIGHT : NATURAL := MISSILE_SPRITE_HEIGHT * 2;
+
+    CONSTANT COIN_SPRITE_WIDTH : NATURAL := 16;
+    CONSTANT COIN_SPRITE_HEIGHT : NATURAL := 16;
+    CONSTANT COIN_SCALE_SHIFT : NATURAL := 1;
+    CONSTANT COIN_DISPLAY_WIDTH : NATURAL := COIN_SPRITE_WIDTH * 2;
+    CONSTANT COIN_DISPLAY_HEIGHT : NATURAL := COIN_SPRITE_HEIGHT * 2;
 
     SIGNAL death_rel_x : UNSIGNED(15 DOWNTO 0);
     SIGNAL death_rel_y : UNSIGNED(15 DOWNTO 0);
@@ -158,6 +162,15 @@ ARCHITECTURE rtl OF renderer IS
     SIGNAL missile_sprite_id : UNSIGNED(7 DOWNTO 0) := SPRITE_MISSILE;
     SIGNAL missile_palette_id : UNSIGNED(7 DOWNTO 0) := PALETTE_MISSILE;
     SIGNAL missile_scale_sel : NATURAL := MISSILE_SCALE_SHIFT;
+
+    SIGNAL coin_rel_x : UNSIGNED(15 DOWNTO 0);
+    SIGNAL coin_rel_y : UNSIGNED(15 DOWNTO 0);
+    SIGNAL in_coin_sprite : STD_LOGIC;
+    SIGNAL in_coin_sprite_d : STD_LOGIC := '0';
+    SIGNAL coin_sprite_color : STD_LOGIC_VECTOR(11 DOWNTO 0);
+    SIGNAL coin_sprite_is_transparent : STD_LOGIC;
+    SIGNAL coin_sprite_valid : STD_LOGIC;
+    SIGNAL coin_drawn : STD_LOGIC;
 
     CONSTANT SCREEN_WIDTH : NATURAL := 640;
     CONSTANT MENU_BUTTON_WIDTH : NATURAL := 200;
@@ -611,6 +624,34 @@ BEGIN
         END IF;
     END PROCESS;
 
+    PROCESS (pixel_x, pixel_y_lookahead, coin_pool)
+        VARIABLE s_x, s_y : INTEGER;
+        VARIABLE c_x, c_y : INTEGER;
+        VARIABLE found : BOOLEAN;
+    BEGIN
+        s_x := TO_INTEGER(pixel_x);
+        s_y := TO_INTEGER(pixel_y_lookahead);
+        found := false;
+        in_coin_sprite <= '0';
+        coin_rel_x <= (OTHERS => '0');
+        coin_rel_y <= (OTHERS => '0');
+
+        FOR i IN 0 TO MAX_COINS - 1 LOOP
+            IF (NOT found) AND (coin_pool(i).is_active = '1') THEN
+                c_x := TO_INTEGER(coin_pool(i).x);
+                c_y := TO_INTEGER(coin_pool(i).y);
+
+                IF (s_x >= c_x) AND (s_x < c_x + COIN_DISPLAY_WIDTH) AND
+                   (s_y >= c_y) AND (s_y < c_y + COIN_DISPLAY_HEIGHT) THEN
+                    found := true;
+                    in_coin_sprite <= '1';
+                    coin_rel_x <= TO_UNSIGNED(s_x - c_x, 16);
+                    coin_rel_y <= TO_UNSIGNED(s_y - c_y, 16);
+                END IF;
+            END IF;
+        END LOOP;
+    END PROCESS;
+
     PROCESS (pixel_x, pixel_y_lookahead, menu_active)
         VARIABLE s_x : INTEGER;
         VARIABLE s_y : INTEGER;
@@ -732,6 +773,20 @@ BEGIN
             valid          => missile_sprite_valid
         );
 
+    coin_sprite_renderer: sprite_renderer
+        PORT MAP (
+            clock          => clock_25MHz,
+            show_djt       => '0',
+            sprite_id      => SPRITE_COIN,
+            palette_id     => PALETTE_COIN,
+            scale_shift    => COIN_SCALE_SHIFT,
+            rel_x          => coin_rel_x,
+            rel_y          => coin_rel_y,
+            color          => coin_sprite_color,
+            is_transparent => coin_sprite_is_transparent,
+            valid          => coin_sprite_valid
+        );
+
     PROCESS(clock_25MHz)
     BEGIN
         IF RISING_EDGE(clock_25MHz) THEN
@@ -754,6 +809,7 @@ BEGIN
             in_missile_sprite_d <= in_missile_sprite;
             menu_drawn_d <= menu_drawn;
             menu_color_d <= menu_color;
+            in_coin_sprite_d <= in_coin_sprite;
             laser_colors_reg <= laser_colors;
             laser_transparencies_reg <= laser_transparencies;
             base_color_d <= base_color;
@@ -764,6 +820,7 @@ BEGIN
     death_drawn <= in_death_sprite_d AND death_sprite_valid AND (NOT death_sprite_is_transparent);
     pause_drawn <= in_pause_sprite_d AND pause_sprite_valid AND (NOT pause_sprite_is_transparent);
     missile_drawn <= in_missile_sprite_d AND missile_sprite_valid AND (NOT missile_sprite_is_transparent);
+    coin_drawn <= in_coin_sprite_d AND coin_sprite_valid AND (NOT coin_sprite_is_transparent);
     bg_drawn <= bg_valid AND (NOT bg_is_transparent);
 
     PROCESS(pixel_x, pixel_y_lookahead, bg_seed, bg_scroll_accum, show_djt)
@@ -803,8 +860,6 @@ BEGIN
                 show_djt => show_djt,
                 pixel_x => pixel_x,
                 pixel_y => pixel_y_lookahead,
-                frame_count => frame_count,
-                beam_rect_mode => laser_beam_rect_mode,
                 x0 => laser_pool(i).x0,
                 y0 => laser_pool(i).y0,
                 x1 => laser_pool(i).x1,
@@ -817,7 +872,6 @@ BEGIN
     
     PROCESS(laser_colors_reg, laser_transparencies_reg)
         VARIABLE found : BOOLEAN := false;
-        VARIABLE idx : INTEGER;
     BEGIN
         combined_laser_color <= (OTHERS => '0');
         combined_laser_is_transparent <= '1';
@@ -852,8 +906,8 @@ BEGIN
     END PROCESS;
 
     PROCESS (menu_drawn_d, menu_color_d, death_drawn, death_sprite_color, pause_drawn, pause_sprite_color, show_djt,
-             player_drawn, sprite_color, missile_drawn, missile_sprite_color, base_color_d,
-             combined_laser_is_transparent, combined_laser_color)
+             player_drawn, sprite_color, missile_drawn, missile_sprite_color, coin_drawn, coin_sprite_color,
+             base_color_d, combined_laser_is_transparent, combined_laser_color)
         VARIABLE base_r, base_g, base_b : INTEGER RANGE 0 TO 15;
         VARIABLE add_r, add_g, add_b : INTEGER;
         VARIABLE final_r, final_g, final_b : INTEGER RANGE 0 TO 15;
@@ -882,6 +936,10 @@ BEGIN
             final_r := TO_INTEGER(UNSIGNED(missile_sprite_color(11 DOWNTO 8)));
             final_g := TO_INTEGER(UNSIGNED(missile_sprite_color(7 DOWNTO 4)));
             final_b := TO_INTEGER(UNSIGNED(missile_sprite_color(3 DOWNTO 0)));
+        ELSIF coin_drawn = '1' THEN
+            final_r := TO_INTEGER(UNSIGNED(coin_sprite_color(11 DOWNTO 8)));
+            final_g := TO_INTEGER(UNSIGNED(coin_sprite_color(7 DOWNTO 4)));
+            final_b := TO_INTEGER(UNSIGNED(coin_sprite_color(3 DOWNTO 0)));
         ELSE
             -- Determine base color
             base_r := TO_INTEGER(UNSIGNED(base_color_d(11 DOWNTO 8)));

@@ -7,8 +7,6 @@ ENTITY laser_beam_effect IS
         clock       : IN STD_LOGIC;
         pixel_x     : IN UNSIGNED(9 DOWNTO 0);
         pixel_y     : IN UNSIGNED(9 DOWNTO 0);
-        frame_count : IN UNSIGNED(7 DOWNTO 0);
-        beam_rect_mode : IN STD_LOGIC;
         x0          : IN SIGNED(11 DOWNTO 0);
         y0          : IN SIGNED(11 DOWNTO 0);
         x1          : IN SIGNED(11 DOWNTO 0);
