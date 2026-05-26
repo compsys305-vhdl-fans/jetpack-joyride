@@ -20,7 +20,7 @@ END ENTITY obstacle_manager;
 ARCHITECTURE rtl OF obstacle_manager IS
     CONSTANT BASE_LASER_SPEED_X : INTEGER := 4; -- pixels per frame
     CONSTANT LASER_LENGTH : INTEGER := 100;
-    CONSTANT Y_MARGIN : INTEGER := 80; -- Top/bottom margin for laser spawns
+    CONSTANT Y_MARGIN : INTEGER := 40; -- Top/bottom margin for laser spawns
     CONSTANT MIN_LASER_DISTANCE : INTEGER := 32; -- Minimum vertical distance between horizontal lasers
 
     CONSTANT MISSILE_WIDTH : INTEGER := 16;
@@ -43,20 +43,19 @@ ARCHITECTURE rtl OF obstacle_manager IS
     CONSTANT BASE_COIN_SPEED_X : INTEGER := 4;
 
     -- Spawning rate constants
-    CONSTANT INITIAL_SPAWN_INTERVAL : INTEGER := 180; -- 3 seconds
-    CONSTANT MIN_SPAWN_INTERVAL : INTEGER := 60; -- 1 second
-    CONSTANT SPAWN_INTERVAL_DECREMENT : INTEGER := 10; -- frames
-    CONSTANT RAMP_UP_PERIOD : INTEGER := 600; -- 10 seconds
+    CONSTANT INITIAL_SPAWN_INTERVAL : INTEGER := 90; -- 1.5 seconds
+    CONSTANT MIN_SPAWN_INTERVAL : INTEGER := 30; -- 0.5 seconds
+    CONSTANT SPAWN_INTERVAL_DECREMENT : INTEGER := 10;
+    CONSTANT SPAWN_RAMP_RATE : INTEGER := 60; -- Time in frames to wait before decrementing spawn interval
 
     SIGNAL pool : laser_pool_t := INACTIVE_LASER_POOL;
     SIGNAL missiles : missile_pool_t := INACTIVE_MISSILE_POOL;
     SIGNAL coins : coin_pool_t := INACTIVE_COIN_POOL;
     SIGNAL playing_prev : STD_LOGIC := '0';
     
-    SIGNAL spawn_counter : INTEGER RANGE 0 TO INITIAL_SPAWN_INTERVAL * 2 := INITIAL_SPAWN_INTERVAL;
-    SIGNAL next_spawn_interval : INTEGER RANGE 0 TO INITIAL_SPAWN_INTERVAL * 2 := INITIAL_SPAWN_INTERVAL;
+    SIGNAL spawn_counter : INTEGER RANGE 0 TO INITIAL_SPAWN_INTERVAL * 2;
     SIGNAL dynamic_spawn_interval : INTEGER RANGE MIN_SPAWN_INTERVAL TO INITIAL_SPAWN_INTERVAL := INITIAL_SPAWN_INTERVAL;
-    SIGNAL ramp_up_counter : INTEGER RANGE 0 TO RAMP_UP_PERIOD := RAMP_UP_PERIOD;
+    SIGNAL ramp_up_counter : INTEGER RANGE 0 TO SPAWN_RAMP_RATE := SPAWN_RAMP_RATE;
 
     SIGNAL missile_spawn_counter : INTEGER RANGE 0 TO MISSILE_SPAWN_INTERVAL + MISSILE_SPAWN_JITTER := MISSILE_SPAWN_INTERVAL;
     SIGNAL warning_timer : INTEGER RANGE 0 TO MISSILE_WARNING_DURATION := 0;
@@ -71,7 +70,6 @@ BEGIN
 
     manager_proc: PROCESS(vert_sync)
         VARIABLE temp_pool : laser_pool_t;
-        VARIABLE new_spawn : BOOLEAN := FALSE;
         VARIABLE rand_y : UNSIGNED(9 DOWNTO 0);
         VARIABLE speed_x : INTEGER;
         VARIABLE safe_to_spawn : BOOLEAN;
@@ -97,26 +95,30 @@ BEGIN
                 temp_coins := INACTIVE_COIN_POOL;
                 spawn_counter <= INITIAL_SPAWN_INTERVAL;
                 dynamic_spawn_interval <= INITIAL_SPAWN_INTERVAL;
-                ramp_up_counter <= RAMP_UP_PERIOD;
                 missile_spawn_counter <= MISSILE_SPAWN_INTERVAL;
                 warning_timer <= 0;
                 coin_spawn_counter <= COIN_SPAWN_INTERVAL;
+                 ramp_up_counter <= SPAWN_RAMP_RATE;
+                spawn_counter <= 0; -- Start spawning immediately on next playing frame
             ELSIF playing = '1' THEN
+                IF playing_prev = '0' THEN -- Game just started
+                    spawn_counter <= 0; -- Trigger immediate spawn
+                END IF;
+
                 -- Ramp up spawn rate
                 IF ramp_up_counter = 0 THEN
                     IF dynamic_spawn_interval > MIN_SPAWN_INTERVAL THEN
                         dynamic_spawn_interval <= dynamic_spawn_interval - SPAWN_INTERVAL_DECREMENT;
                     END IF;
-                    ramp_up_counter <= RAMP_UP_PERIOD;
+                    ramp_up_counter <= SPAWN_RAMP_RATE;
                 ELSE
                     ramp_up_counter <= ramp_up_counter - 1;
                 END IF;
 
                 speed_x := TO_INTEGER(world_speed);
-                IF speed_x < 1 THEN
+                IF speed_x = 0 THEN
                     speed_x := BASE_LASER_SPEED_X;
                 END IF;
-                new_spawn := FALSE;
 
                 -- Update existing lasers
                 FOR i IN 0 TO MAX_LASERS - 1 LOOP
@@ -175,15 +177,11 @@ BEGIN
 
                 -- Check for spawning new laser
                 IF spawn_counter = 0 THEN
-                    new_spawn := TRUE;
-                    next_spawn_interval <= dynamic_spawn_interval + TO_INTEGER(UNSIGNED(random_in(3 DOWNTO 0)));
-                    spawn_counter <= next_spawn_interval;
-                ELSE
-                    spawn_counter <= spawn_counter - 1;
-                END IF;
-
-                -- Find an inactive slot to spawn a new laser
-                IF new_spawn THEN
+                    -- Set timer for next spawn. Add a small random value to vary the timing.
+                    spawn_counter <= dynamic_spawn_interval + TO_INTEGER(UNSIGNED(random_in(3 DOWNTO 0)));
+                    
+                    -- Find an inactive slot to spawn a new laser
+                    -- This is inside the spawn_counter=0 block to ensure we only try to spawn one per trigger.
                     FOR i IN 0 TO MAX_LASERS - 1 LOOP
                         IF temp_pool(i).is_active = '0' THEN
                             
@@ -194,19 +192,14 @@ BEGIN
                                 WHEN OTHERS => is_horizontal := FALSE;
                             END CASE;
 
-                            rand_y := RESIZE(UNSIGNED(random_in(9 DOWNTO 0)), 10);
+                            -- Generate a y-coordinate within the margins.
+                            -- Using modulo prevents clustering at the edges that happens with clamping.
                             IF is_horizontal THEN
-                                IF rand_y > SCREEN_HEIGHT - Y_MARGIN THEN
-                                    rand_y := TO_UNSIGNED(SCREEN_HEIGHT - Y_MARGIN, 10);
-                                ELSIF rand_y < Y_MARGIN THEN
-                                    rand_y := TO_UNSIGNED(Y_MARGIN, 10);
-                                END IF;
+                                -- Range: Y_MARGIN to SCREEN_HEIGHT - Y_MARGIN
+                                rand_y := TO_UNSIGNED(Y_MARGIN, 10) + (RESIZE(UNSIGNED(random_in(9 DOWNTO 0)), 10) MOD TO_UNSIGNED(SCREEN_HEIGHT - 2 * Y_MARGIN, 10));
                             ELSE
-                                IF rand_y > SCREEN_HEIGHT - LASER_LENGTH - Y_MARGIN THEN
-                                    rand_y := TO_UNSIGNED(SCREEN_HEIGHT - LASER_LENGTH - Y_MARGIN, 10);
-                                ELSIF rand_y < Y_MARGIN THEN
-                                    rand_y := TO_UNSIGNED(Y_MARGIN, 10);
-                                END IF;
+                                -- Range: Y_MARGIN to SCREEN_HEIGHT - LASER_LENGTH - Y_MARGIN
+                                rand_y := TO_UNSIGNED(Y_MARGIN, 10) + (RESIZE(UNSIGNED(random_in(9 DOWNTO 0)), 10) MOD TO_UNSIGNED(SCREEN_HEIGHT - LASER_LENGTH - 2 * Y_MARGIN, 10));
                             END IF;
 
                             safe_to_spawn := true;
@@ -238,6 +231,8 @@ BEGIN
                             END IF;
                         END IF;
                     END LOOP;
+                ELSE
+                    spawn_counter <= spawn_counter - 1;
                 END IF;
 
                 -- Spawn a missile warning when idle
