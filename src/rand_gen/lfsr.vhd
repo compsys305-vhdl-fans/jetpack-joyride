@@ -46,6 +46,7 @@ BEGIN
                 lfsr_next := '0' & lfsr_s(19 downto 1);
                 lfsr_next(19) := lfsr_next(19) xor fb;  -- tap 20
                 lfsr_next(16) := lfsr_next(16) xor fb;  -- tap 17
+                lfsr_next(15 DOWNTO 8) := lfsr_next(15 DOWNTO 8) xor (mouse_x(3 downto 0) & mouse_y(3 downto 0)); -- add some entropy every cycle
                 lfsr_s <= lfsr_next;
             END IF;
         END IF;
