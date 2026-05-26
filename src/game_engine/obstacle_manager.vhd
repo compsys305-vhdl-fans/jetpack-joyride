@@ -220,13 +220,20 @@ BEGIN
                             END CASE;
 
                             -- Generate a y-coordinate within the margins.
-                            -- Using modulo prevents clustering at the edges that happens with clamping.
+                            -- NOTE: We use bit-masking instead of MOD because
+                            -- MOD on unsigned vectors is unreliable in Quartus synthesis.
+                            -- Mask to 8 bits (0..255), then add Y_MARGIN and clamp.
+                            rand_y := RESIZE(UNSIGNED(random_in(7 DOWNTO 0)), 10) + TO_UNSIGNED(Y_MARGIN, 10);
                             IF is_horizontal THEN
-                                -- Range: Y_MARGIN to SCREEN_HEIGHT - Y_MARGIN
-                                rand_y := TO_UNSIGNED(Y_MARGIN, 10) + (RESIZE(UNSIGNED(random_in(9 DOWNTO 0)), 10) MOD TO_UNSIGNED(SCREEN_HEIGHT - 2 * Y_MARGIN, 10));
+                                -- Clamp to valid range: Y_MARGIN .. SCREEN_HEIGHT - Y_MARGIN
+                                IF rand_y > TO_UNSIGNED(SCREEN_HEIGHT - Y_MARGIN, 10) THEN
+                                    rand_y := TO_UNSIGNED(SCREEN_HEIGHT - Y_MARGIN, 10);
+                                END IF;
                             ELSE
-                                -- Range: Y_MARGIN to SCREEN_HEIGHT - LASER_LENGTH - Y_MARGIN
-                                rand_y := TO_UNSIGNED(Y_MARGIN, 10) + (RESIZE(UNSIGNED(random_in(9 DOWNTO 0)), 10) MOD TO_UNSIGNED(SCREEN_HEIGHT - LASER_LENGTH - 2 * Y_MARGIN, 10));
+                                -- Clamp to valid range: Y_MARGIN .. SCREEN_HEIGHT - LASER_LENGTH - Y_MARGIN
+                                IF rand_y > TO_UNSIGNED(SCREEN_HEIGHT - LASER_LENGTH - Y_MARGIN, 10) THEN
+                                    rand_y := TO_UNSIGNED(SCREEN_HEIGHT - LASER_LENGTH - Y_MARGIN, 10);
+                                END IF;
                             END IF;
 
                             safe_to_spawn := true;

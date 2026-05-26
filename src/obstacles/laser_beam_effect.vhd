@@ -27,6 +27,7 @@ BEGIN
     PROCESS (clock)
         VARIABLE ax, ay, bx, by : INTEGER;
         VARIABLE px, py : INTEGER;
+        VARIABLE min_x, max_x, min_y, max_y : INTEGER;
     BEGIN
         IF RISING_EDGE(clock) THEN
             color_out <= (OTHERS => '0');
@@ -41,12 +42,28 @@ BEGIN
                 py := TO_INTEGER(pixel_y);
 
                 IF ax = bx THEN
-                    IF (ABS(px - ax) < BEAM_HALF_WIDTH) AND (py >= ay) AND (py <= by) THEN
+                    -- Vertical laser: compute min/max Y to handle either ordering
+                    IF ay < by THEN
+                        min_y := ay;
+                        max_y := by;
+                    ELSE
+                        min_y := by;
+                        max_y := ay;
+                    END IF;
+                    IF (ABS(px - ax) < BEAM_HALF_WIDTH) AND (py >= min_y) AND (py <= max_y) THEN
                         color_out <= x"FF0";
                         is_transparent <= '0';
                     END IF;
                 ELSIF ay = by THEN
-                    IF (ABS(py - ay) < BEAM_HALF_WIDTH) AND (px >= ax) AND (px <= bx) THEN
+                    -- Horizontal laser: compute min/max X to handle either ordering
+                    IF ax < bx THEN
+                        min_x := ax;
+                        max_x := bx;
+                    ELSE
+                        min_x := bx;
+                        max_x := ax;
+                    END IF;
+                    IF (ABS(py - ay) < BEAM_HALF_WIDTH) AND (px >= min_x) AND (px <= max_x) THEN
                         color_out <= x"FF0";
                         is_transparent <= '0';
                     END IF;

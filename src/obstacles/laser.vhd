@@ -58,19 +58,36 @@ BEGIN
     node2_rel_x_s <= RESIZE(px_s - (x1 - 8), 16);
     node2_rel_y_s <= RESIZE(py_s - (y1 - 8), 16);
 
-    -- Conditionally swap X and Y relative coordinates for vertical lasers to rotate sprites
+    -- Conditionally rotate sprites for vertical lasers
     rotate_proc: PROCESS(x0, x1, node1_rel_x_s, node1_rel_y_s, node2_rel_x_s, node2_rel_y_s)
     BEGIN
+        -- Default assignments to prevent latches and ensure out-of-bounds is hidden
+        node1_rel_x <= TO_UNSIGNED(99, 16);
+        node1_rel_y <= TO_UNSIGNED(99, 16);
+        node2_rel_x <= TO_UNSIGNED(99, 16);
+        node2_rel_y <= TO_UNSIGNED(99, 16);
+
         IF x0 = x1 THEN
-            node1_rel_x <= UNSIGNED(node1_rel_y_s); -- Swap X and Y
-            node1_rel_y <= UNSIGNED(node1_rel_x_s);
-            node2_rel_x <= UNSIGNED(node2_rel_y_s);
-            node2_rel_y <= UNSIGNED(node2_rel_x_s);
+            -- Proper 90 degree counter-clockwise rotation for vertical lasers
+            -- Only render if the pixel is within the 16x16 bounding box of the node
+            IF node1_rel_x_s >= 0 AND node1_rel_x_s < 16 AND node1_rel_y_s >= 0 AND node1_rel_y_s < 16 THEN
+                node1_rel_x <= UNSIGNED(node1_rel_y_s);
+                node1_rel_y <= TO_UNSIGNED(15 - TO_INTEGER(node1_rel_x_s), 16);
+            END IF;
+            IF node2_rel_x_s >= 0 AND node2_rel_x_s < 16 AND node2_rel_y_s >= 0 AND node2_rel_y_s < 16 THEN
+                node2_rel_x <= UNSIGNED(node2_rel_y_s);
+                node2_rel_y <= TO_UNSIGNED(15 - TO_INTEGER(node2_rel_x_s), 16);
+            END IF;
         ELSE
-            node1_rel_x <= UNSIGNED(node1_rel_x_s);
-            node1_rel_y <= UNSIGNED(node1_rel_y_s);
-            node2_rel_x <= UNSIGNED(node2_rel_x_s);
-            node2_rel_y <= UNSIGNED(node2_rel_y_s);
+            -- Horizontal laser, no rotation
+            IF node1_rel_x_s >= 0 AND node1_rel_x_s < 16 AND node1_rel_y_s >= 0 AND node1_rel_y_s < 16 THEN
+                node1_rel_x <= UNSIGNED(node1_rel_x_s);
+                node1_rel_y <= UNSIGNED(node1_rel_y_s);
+            END IF;
+            IF node2_rel_x_s >= 0 AND node2_rel_x_s < 16 AND node2_rel_y_s >= 0 AND node2_rel_y_s < 16 THEN
+                node2_rel_x <= UNSIGNED(node2_rel_x_s);
+                node2_rel_y <= UNSIGNED(node2_rel_y_s);
+            END IF;
         END IF;
     END PROCESS rotate_proc;
 
