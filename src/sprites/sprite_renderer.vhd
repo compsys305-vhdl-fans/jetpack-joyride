@@ -47,6 +47,7 @@ ARCHITECTURE rtl OF sprite_renderer IS
     CONSTANT TICK_CYCLES : INTEGER := 2083333 - 1;
     SIGNAL tick_counter  : INTEGER RANGE 0 TO TICK_CYCLES := 0;
     SIGNAL anim_tick     : INTEGER RANGE 0 TO 11 := 0;
+    SIGNAL death_cycle_step : INTEGER RANGE 0 TO 5 := 0;
 
     -- Player Sprite Signals
     SIGNAL player_run1_pixel_index, player_run2_pixel_index : UNSIGNED(7 DOWNTO 0);
@@ -97,7 +98,35 @@ ARCHITECTURE rtl OF sprite_renderer IS
     -- Routing signals
     SIGNAL active_pixel_index : UNSIGNED(7 DOWNTO 0);
     SIGNAL active_valid       : STD_LOGIC;
+    SIGNAL adjusted_pixel_index : UNSIGNED(7 DOWNTO 0);
     SIGNAL mapped_color       : STD_LOGIC_VECTOR(11 DOWNTO 0);
+
+    TYPE death_cycle_idx_t IS ARRAY (0 TO 5) OF UNSIGNED(7 DOWNTO 0);
+    CONSTANT DEATH_CYCLE_ORDER : death_cycle_idx_t := (
+        x"05", -- red
+        x"04", -- orange
+        x"07", -- yellow
+        x"03", -- green
+        x"02", -- blue
+        x"06"  -- pink
+    );
+
+    FUNCTION map_death_cycle(idx : UNSIGNED(7 DOWNTO 0); step : INTEGER) RETURN UNSIGNED IS
+        VARIABLE mapped : UNSIGNED(7 DOWNTO 0) := idx;
+        VARIABLE pos : INTEGER := -1;
+    BEGIN
+        FOR i IN 0 TO 5 LOOP
+            IF idx = DEATH_CYCLE_ORDER(i) THEN
+                pos := i;
+            END IF;
+        END LOOP;
+
+        IF pos /= -1 THEN
+            mapped := DEATH_CYCLE_ORDER((pos + step) MOD 6);
+        END IF;
+
+        RETURN mapped;
+    END FUNCTION map_death_cycle;
     
 BEGIN
 
@@ -112,6 +141,12 @@ BEGIN
                     anim_tick <= 0;
                 ELSE
                     anim_tick <= anim_tick + 1;
+                END IF;
+
+                IF death_cycle_step = 5 THEN
+                    death_cycle_step <= 0;
+                ELSE
+                    death_cycle_step <= death_cycle_step + 1;
                 END IF;
             ELSE
                 tick_counter <= tick_counter + 1;
@@ -354,8 +389,17 @@ BEGIN
         END CASE;
     END PROCESS;
 
+    PROCESS(active_pixel_index, sprite_id, death_cycle_step)
+    BEGIN
+        IF sprite_id = SPRITE_DEATH_TEXT THEN
+            adjusted_pixel_index <= map_death_cycle(active_pixel_index, death_cycle_step);
+        ELSE
+            adjusted_pixel_index <= active_pixel_index;
+        END IF;
+    END PROCESS;
+
     -- 4. Apply palette and transparency check
-    mapped_color <= get_sprite_color(palette_id, active_pixel_index);
+    mapped_color <= get_sprite_color(palette_id, adjusted_pixel_index);
 
     PROCESS(mapped_color, active_valid)
     BEGIN
