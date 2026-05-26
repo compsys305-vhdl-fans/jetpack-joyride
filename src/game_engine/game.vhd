@@ -101,7 +101,7 @@ BEGIN
     -- Vehicle choice is now managed by state machine.
     screen_flash <= '1' WHEN flash_timer > 0 ELSE '0';
 
-    is_playing <= '1' WHEN game_state = STATE_PLAY ELSE '0';
+    is_playing <= '1' WHEN game_state = STATE_PLAY OR game_state = STATE_TRAINING ELSE '0';
     is_training <= '1' WHEN game_state = STATE_TRAINING ELSE '0';
     is_dead <= '1' WHEN game_state = STATE_DEATH ELSE '0';
     menu_active <= '1' WHEN game_state = STATE_MENU ELSE '0';
@@ -155,7 +155,7 @@ BEGIN
                                 game_state <= STATE_TRAINING;
                             END IF;
                         END IF;
-                    WHEN STATE_PLAY =>
+                    WHEN STATE_PLAY | STATE_TRAINING =>
                         IF powerup_collected = '1' AND powerup_collected_prev = '0' AND active_vehicle = "00" THEN
                             IF random_in = "00" THEN
                                 active_vehicle <= "01";
@@ -178,8 +178,6 @@ BEGIN
                                 game_state <= STATE_DEATH;
                             END IF;
                         END IF;
-                    WHEN STATE_TRAINING =>
-                        active_vehicle <= debug_vehicle_select;
                     WHEN STATE_DEATH =>
                         IF mouse_left = '1' AND mouse_left_prev = '0' THEN
                             game_state <= STATE_MENU;

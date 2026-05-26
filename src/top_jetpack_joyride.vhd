@@ -178,7 +178,7 @@ BEGIN
     END PROCESS;
 
     update_tick <= vga_vsync_sig AND (NOT paused);
-    obstacles_enabled <= playing AND (NOT training_mode);
+    obstacles_enabled <= playing;
 
     obstacle_manager_inst: ENTITY work.obstacle_manager
         PORT MAP (
