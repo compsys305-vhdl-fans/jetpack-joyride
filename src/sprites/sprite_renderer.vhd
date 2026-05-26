@@ -85,6 +85,10 @@ ARCHITECTURE rtl OF sprite_renderer IS
     SIGNAL djt_source_x : UNSIGNED(15 DOWNTO 0);
     SIGNAL djt_source_y : UNSIGNED(15 DOWNTO 0);
 
+    -- Death Sprite Signals
+    SIGNAL death_pixel_index : UNSIGNED(7 DOWNTO 0);
+    SIGNAL death_valid : STD_LOGIC;
+
     CONSTANT DJT_SOURCE_WIDTH : NATURAL := 400;
     CONSTANT DJT_SOURCE_HEIGHT : NATURAL := 600;
     CONSTANT DJT_ROTATED_WIDTH : NATURAL := DJT_SOURCE_HEIGHT;
@@ -204,6 +208,10 @@ BEGIN
         GENERIC MAP (IMAGE_WIDTH => 64, IMAGE_HEIGHT => 240, MIF_FILE => "../res/background2/background-plain.mif")
         PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => bg_plain_pixel_index, valid => bg_plain_valid);
 
+    death_rom: image_loader
+        GENERIC MAP (IMAGE_WIDTH => 42, IMAGE_HEIGHT => 13, MIF_FILE => "../res/death/death.mif")
+        PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => death_pixel_index, valid => death_valid);
+
     PROCESS(local_x, local_y)
     BEGIN
         IF (TO_INTEGER(local_x) < DJT_ROTATED_WIDTH) AND (TO_INTEGER(local_y) < DJT_ROTATED_HEIGHT) THEN
@@ -220,7 +228,7 @@ BEGIN
         PORT MAP (clock => clock, x => djt_source_x, y => djt_source_y, pixel_index => djt_pixel_index, valid => djt_valid);
 
     -- 3. Multiplex outputs based on sprite_id
-    PROCESS(sprite_id, anim_tick,
+    PROCESS(sprite_id, anim_tick, show_djt,
             player_run1_pixel_index, player_run1_valid, player_run2_pixel_index, player_run2_valid,
             player_air1_pixel_index, player_air1_valid, player_air2_pixel_index, player_air2_valid,
             stomper_run1_pixel_index, stomper_run1_valid, stomper_run2_pixel_index, stomper_run2_valid,
@@ -231,7 +239,8 @@ BEGIN
             laser1_pixel_index, laser1_valid, laser2_pixel_index, laser2_valid,
             laser1_flipped_pixel_index, laser1_flipped_valid, laser2_flipped_pixel_index, laser2_flipped_valid,
             bg_light_pixel_index, bg_light_valid, bg_pillar_pixel_index, bg_pillar_valid, bg_plain_pixel_index, bg_plain_valid,
-            djt_pixel_index, djt_valid)
+            djt_pixel_index, djt_valid,
+            death_pixel_index, death_valid)
     BEGIN
         CASE sprite_id IS
             WHEN SPRITE_BARRY_RUN => -- Running (Animated)
@@ -329,6 +338,10 @@ BEGIN
             WHEN SPRITE_DJT =>
                 active_pixel_index <= djt_pixel_index;
                 active_valid       <= djt_valid;
+
+            WHEN SPRITE_DEATH_TEXT =>
+                active_pixel_index <= death_pixel_index;
+                active_valid       <= death_valid;
 
             WHEN OTHERS =>
                 IF show_djt = '1' THEN

@@ -28,6 +28,7 @@ ARCHITECTURE rtl OF collision_detector IS
     COMPONENT sprite_renderer IS
         PORT (
             clock : IN STD_LOGIC;
+            show_djt : IN STD_LOGIC;
             
             -- Query inputs
             sprite_id   : IN UNSIGNED(7 DOWNTO 0);
@@ -181,6 +182,7 @@ BEGIN
     player_sprite_renderer: sprite_renderer
         PORT MAP (
             clock => clock_25MHz,
+            show_djt => '0',
             sprite_id => player_sprite_id,
             palette_id => player_palette_id,
             scale_shift => player_scale_shift,
