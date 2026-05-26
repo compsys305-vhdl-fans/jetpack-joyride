@@ -19,35 +19,54 @@ END ENTITY obstacle_manager;
 ARCHITECTURE rtl OF obstacle_manager IS
     CONSTANT BASE_LASER_SPEED_X : INTEGER := 4; -- pixels per frame
     CONSTANT LASER_LENGTH : INTEGER := 100;
-    CONSTANT SPAWN_INTERVAL_MIN : INTEGER := 60; -- frames (1 second)
-    CONSTANT SPAWN_INTERVAL_VARIATION : INTEGER := 60; -- frames (1 second)
-    CONSTANT Y_MARGIN : INTEGER := 40; -- Top/bottom margin for laser spawns
+    CONSTANT Y_MARGIN : INTEGER := 80; -- Top/bottom margin for laser spawns
+    CONSTANT MIN_LASER_DISTANCE : INTEGER := 32; -- Minimum vertical distance between horizontal lasers
+
+    -- Spawning rate constants
+    CONSTANT INITIAL_SPAWN_INTERVAL : INTEGER := 180; -- 3 seconds
+    CONSTANT MIN_SPAWN_INTERVAL : INTEGER := 60; -- 1 second
+    CONSTANT SPAWN_INTERVAL_DECREMENT : INTEGER := 10; -- frames
+    CONSTANT RAMP_UP_PERIOD : INTEGER := 600; -- 10 seconds
 
     SIGNAL pool : laser_pool_t := INACTIVE_LASER_POOL;
-    SIGNAL spawn_counter : INTEGER RANGE 0 TO SPAWN_INTERVAL_MIN + SPAWN_INTERVAL_VARIATION := SPAWN_INTERVAL_MIN;
-    SIGNAL next_spawn_interval : INTEGER RANGE 0 TO SPAWN_INTERVAL_MIN + SPAWN_INTERVAL_VARIATION := SPAWN_INTERVAL_MIN;
+    SIGNAL playing_prev : STD_LOGIC := '0';
+    
+    SIGNAL spawn_counter : INTEGER RANGE 0 TO INITIAL_SPAWN_INTERVAL * 2 := INITIAL_SPAWN_INTERVAL;
+    SIGNAL next_spawn_interval : INTEGER RANGE 0 TO INITIAL_SPAWN_INTERVAL * 2 := INITIAL_SPAWN_INTERVAL;
+    SIGNAL dynamic_spawn_interval : INTEGER RANGE MIN_SPAWN_INTERVAL TO INITIAL_SPAWN_INTERVAL := INITIAL_SPAWN_INTERVAL;
+    SIGNAL ramp_up_counter : INTEGER RANGE 0 TO RAMP_UP_PERIOD := RAMP_UP_PERIOD;
+
 BEGIN
 
     lasers_out <= pool;
 
-    manager_proc: PROCESS(vert_sync, reset, playing)
+    manager_proc: PROCESS(vert_sync)
         VARIABLE temp_pool : laser_pool_t;
         VARIABLE new_spawn : BOOLEAN := FALSE;
         VARIABLE rand_y : UNSIGNED(9 DOWNTO 0);
         VARIABLE speed_x : INTEGER;
-        VARIABLE current_spawn_counter: INTEGER RANGE 0 TO SPAWN_INTERVAL_MIN + SPAWN_INTERVAL_VARIATION;
-        VARIABLE current_next_spawn_interval: INTEGER RANGE 0 TO SPAWN_INTERVAL_MIN + SPAWN_INTERVAL_VARIATION;
-
+        VARIABLE safe_to_spawn : BOOLEAN;
+        VARIABLE is_horizontal : BOOLEAN;
     BEGIN
-        current_spawn_counter := spawn_counter;
-        current_next_spawn_interval := next_spawn_interval;
         temp_pool := pool;
         
         IF RISING_EDGE(vert_sync) THEN
             IF reset = '1' THEN
                 temp_pool := INACTIVE_LASER_POOL;
-                current_spawn_counter := SPAWN_INTERVAL_MIN;
+                spawn_counter <= INITIAL_SPAWN_INTERVAL;
+                dynamic_spawn_interval <= INITIAL_SPAWN_INTERVAL;
+                ramp_up_counter <= RAMP_UP_PERIOD;
             ELSIF playing = '1' THEN
+                -- Ramp up spawn rate
+                IF ramp_up_counter = 0 THEN
+                    IF dynamic_spawn_interval > MIN_SPAWN_INTERVAL THEN
+                        dynamic_spawn_interval <= dynamic_spawn_interval - SPAWN_INTERVAL_DECREMENT;
+                    END IF;
+                    ramp_up_counter <= RAMP_UP_PERIOD;
+                ELSE
+                    ramp_up_counter <= ramp_up_counter - 1;
+                END IF;
+
                 speed_x := TO_INTEGER(world_speed);
                 IF speed_x < 1 THEN
                     speed_x := BASE_LASER_SPEED_X;
@@ -69,61 +88,76 @@ BEGIN
                 END LOOP;
 
                 -- Check for spawning new laser
-                IF current_spawn_counter = 0 THEN
+                IF spawn_counter = 0 THEN
                     new_spawn := TRUE;
-                    current_next_spawn_interval := SPAWN_INTERVAL_MIN + (TO_INTEGER(UNSIGNED(random_in(3 DOWNTO 0))) * SPAWN_INTERVAL_VARIATION / 15);
-                    current_spawn_counter := current_next_spawn_interval;
+                    next_spawn_interval <= dynamic_spawn_interval + TO_INTEGER(UNSIGNED(random_in(3 DOWNTO 0)));
+                    spawn_counter <= next_spawn_interval;
                 ELSE
-                    current_spawn_counter := current_spawn_counter - 1;
+                    spawn_counter <= spawn_counter - 1;
                 END IF;
 
                 -- Find an inactive slot to spawn a new laser
                 IF new_spawn THEN
                     FOR i IN 0 TO MAX_LASERS - 1 LOOP
                         IF temp_pool(i).is_active = '0' THEN
-                            temp_pool(i).is_active := '1';
-
-                            -- Use 2 bits to determine laser type (axis-aligned only)
+                            
+                            -- Generate a candidate new laser
+                            is_horizontal := FALSE;
                             CASE random_in(15 DOWNTO 14) IS
-                                -- Horizontal laser
-                                WHEN "00" | "10" =>
-                                    rand_y := RESIZE(UNSIGNED(random_in(9 DOWNTO 0)), 10);
-                                    IF rand_y > SCREEN_HEIGHT - Y_MARGIN THEN
-                                        rand_y := TO_UNSIGNED(SCREEN_HEIGHT - Y_MARGIN, 10);
-                                    ELSIF rand_y < Y_MARGIN THEN
-                                        rand_y := TO_UNSIGNED(Y_MARGIN, 10);
-                                    END IF;
-                                    temp_pool(i).y0 := RESIZE(SIGNED('0' & rand_y), 12);
-                                    temp_pool(i).y1 := temp_pool(i).y0;
-
-                                    temp_pool(i).x0 := TO_SIGNED(SCREEN_WIDTH - 1, 12);
-                                    temp_pool(i).x1 := TO_SIGNED(SCREEN_WIDTH - 1 + LASER_LENGTH, 12);
-                                
-                                -- Vertical laser
-                                WHEN OTHERS =>
-                                    rand_y := RESIZE(UNSIGNED(random_in(9 DOWNTO 0)), 10);
-                                    IF rand_y > SCREEN_HEIGHT - LASER_LENGTH - Y_MARGIN THEN
-                                        rand_y := TO_UNSIGNED(SCREEN_HEIGHT - LASER_LENGTH - Y_MARGIN, 10);
-                                    ELSIF rand_y < Y_MARGIN THEN
-                                        rand_y := TO_UNSIGNED(Y_MARGIN, 10);
-                                    END IF;
-                                    temp_pool(i).y0 := RESIZE(SIGNED('0' & rand_y), 12);
-                                    temp_pool(i).y1 := temp_pool(i).y0 + LASER_LENGTH;
-
-                                    temp_pool(i).x0 := TO_SIGNED(SCREEN_WIDTH - 1, 12);
-                                    temp_pool(i).x1 := TO_SIGNED(SCREEN_WIDTH - 1, 12);
-
+                                WHEN "00" | "10" => is_horizontal := TRUE;
+                                WHEN OTHERS => is_horizontal := FALSE;
                             END CASE;
 
-                            EXIT; -- exit loop after spawning one
+                            rand_y := RESIZE(UNSIGNED(random_in(9 DOWNTO 0)), 10);
+                            IF is_horizontal THEN
+                                IF rand_y > SCREEN_HEIGHT - Y_MARGIN THEN
+                                    rand_y := TO_UNSIGNED(SCREEN_HEIGHT - Y_MARGIN, 10);
+                                ELSIF rand_y < Y_MARGIN THEN
+                                    rand_y := TO_UNSIGNED(Y_MARGIN, 10);
+                                END IF;
+                            ELSE
+                                IF rand_y > SCREEN_HEIGHT - LASER_LENGTH - Y_MARGIN THEN
+                                    rand_y := TO_UNSIGNED(SCREEN_HEIGHT - LASER_LENGTH - Y_MARGIN, 10);
+                                ELSIF rand_y < Y_MARGIN THEN
+                                    rand_y := TO_UNSIGNED(Y_MARGIN, 10);
+                                END IF;
+                            END IF;
+
+                            safe_to_spawn := true;
+                            -- Check if it collides with existing lasers
+                            IF is_horizontal THEN
+                                FOR j IN 0 TO MAX_LASERS - 1 LOOP
+                                    IF i /= j AND temp_pool(j).is_active = '1' AND temp_pool(j).y0 = temp_pool(j).y1 THEN
+                                        IF ABS(TO_INTEGER(SIGNED(rand_y)) - TO_INTEGER(temp_pool(j).y0)) < MIN_LASER_DISTANCE THEN
+                                            safe_to_spawn := false;
+                                        END IF;
+                                    END IF;
+                                END LOOP;
+                            END IF;
+                            
+                            IF safe_to_spawn THEN
+                                temp_pool(i).is_active := '1';
+                                IF is_horizontal THEN
+                                    temp_pool(i).y0 := RESIZE(SIGNED('0' & rand_y), 12);
+                                    temp_pool(i).y1 := temp_pool(i).y0;
+                                    temp_pool(i).x0 := TO_SIGNED(SCREEN_WIDTH - 1, 12);
+                                    temp_pool(i).x1 := TO_SIGNED(SCREEN_WIDTH - 1 + LASER_LENGTH, 12);
+                                ELSE
+                                    temp_pool(i).y0 := RESIZE(SIGNED('0' & rand_y), 12);
+                                    temp_pool(i).y1 := temp_pool(i).y0 + LASER_LENGTH;
+                                    temp_pool(i).x0 := TO_SIGNED(SCREEN_WIDTH - 1, 12);
+                                    temp_pool(i).x1 := TO_SIGNED(SCREEN_WIDTH - 1, 12);
+                                END IF;
+                                EXIT; -- exit loop after spawning one
+                            END IF;
                         END IF;
                     END LOOP;
                 END IF;
-
+            ELSE
+                temp_pool := INACTIVE_LASER_POOL;
             END IF;
             pool <= temp_pool;
-            spawn_counter <= current_spawn_counter;
-            next_spawn_interval <= current_next_spawn_interval;
+            playing_prev <= playing;
         END IF;
     END PROCESS manager_proc;
 

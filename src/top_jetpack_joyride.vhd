@@ -75,7 +75,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
 
     COMPONENT game IS
         PORT (
-            clock_50MHz, vert_sync : IN STD_LOGIC;
+            clock_50MHz, vert_sync, reset : IN STD_LOGIC;
             mouse_left : IN STD_LOGIC;
             debug_vehicle_select : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
             playing : OUT STD_LOGIC;
@@ -281,6 +281,7 @@ BEGIN
         PORT MAP (
         clock_50MHz => clock_50,
         vert_sync => update_tick,
+        reset => mouse_reset,
         mouse_left => left_button,
         debug_vehicle_select => debug_vehicle_select,
         playing => playing,

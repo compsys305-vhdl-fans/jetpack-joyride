@@ -143,7 +143,7 @@ ARCHITECTURE rtl OF renderer IS
 
 BEGIN
     pixel_y_lookahead <= pixel_y + 1;
-    bg_parallax_step <= '0' & world_speed(9 DOWNTO 1);
+        bg_parallax_step <= world_speed;
 
     PROCESS(player_vehicle, left_button, player_grounded, player_vy)
     BEGIN
@@ -464,8 +464,6 @@ BEGIN
         IF show_djt = '0' THEN
             IF UNSIGNED(pixel_y_lookahead) = UNSIGNED(teleporter_preview_y) THEN
                  r := 15; g := 6; b := 0; -- Orange
-            ELSIF (TO_INTEGER(pixel_y_lookahead) >= 470) THEN
-                 r := 8;  g := 8; b := 8; -- Grey
             END IF;
         END IF;
         base_color <= STD_LOGIC_VECTOR(TO_UNSIGNED(r,4) & TO_UNSIGNED(g,4) & TO_UNSIGNED(b,4));

@@ -6,6 +6,7 @@ USE IEEE.STD_LOGIC_SIGNED.ALL;
 ENTITY physics IS
     PORT (
         vert_sync : IN STD_LOGIC;
+        reset : IN STD_LOGIC;
         mouse_left : IN STD_LOGIC;
         playing : IN STD_LOGIC;  -- whether the game is currently being played or not. if not, the physics should not update, and the player should be reset to the starting position.
         -- player specific signals
@@ -106,7 +107,14 @@ BEGIN
         VARIABLE next_preview_speed : STD_LOGIC_VECTOR(9 DOWNTO 0);
     BEGIN
         IF RISING_EDGE(vert_sync) THEN
-            IF playing = '1' THEN
+            IF reset = '1' THEN
+                player_y_pos <= PLAYER_MAX_Y;
+                player_y_speed <= (OTHERS => '0');
+                teleporter_preview_pos <= PLAYER_MAX_Y;
+                teleporter_preview_speed <= (OTHERS => '0');
+                ls_thruster_tick <= '0';
+                mouse_left_prev <= '0';
+            ELSIF playing = '1' THEN
                 next_y_pos := player_y_pos;
                 next_y_speed := player_y_speed;
                 ls_thruster_tick <= '0';

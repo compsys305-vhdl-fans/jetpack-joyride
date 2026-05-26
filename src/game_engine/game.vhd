@@ -5,7 +5,7 @@ USE IEEE.NUMERIC_STD.ALL;
 
 ENTITY game IS
     PORT (
-        clock_50MHz, vert_sync : IN STD_LOGIC;
+        clock_50MHz, vert_sync, reset : IN STD_LOGIC;
         mouse_left : IN STD_LOGIC;
         debug_vehicle_select : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
         playing : OUT STD_LOGIC;  -- whether the game is currently being played or not. if not, the physics should not update, and the player should be reset to the starting position.
@@ -26,6 +26,7 @@ ARCHITECTURE behaviour OF game IS
     COMPONENT physics IS
         PORT (
             vert_sync : IN STD_LOGIC;
+            reset : IN STD_LOGIC;
             mouse_left : IN STD_LOGIC;
             playing : IN STD_LOGIC;
             player_vehicle : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
@@ -56,6 +57,7 @@ BEGIN
     physics_inst : physics
         PORT MAP (
         vert_sync => vert_sync,
+        reset => reset,
         mouse_left => mouse_left,
         playing => is_playing,
         player_vehicle => active_vehicle,
@@ -68,7 +70,9 @@ BEGIN
     -- start the physics on mouse click
     start: PROCESS (clock_50MHz) BEGIN
         IF RISING_EDGE(clock_50MHz) THEN
-            IF mouse_left = '1' THEN
+            IF reset = '1' THEN
+                is_playing <= '0';
+            ELSIF mouse_left = '1' THEN
                 is_playing <= '1';
             END IF;
         END IF;

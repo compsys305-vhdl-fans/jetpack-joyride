@@ -248,7 +248,7 @@ BEGIN
         PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => bg_plain_pixel_index, valid => bg_plain_valid);
 
     death_rom: image_loader
-        GENERIC MAP (IMAGE_WIDTH => 42, IMAGE_HEIGHT => 13, MIF_FILE => "../res/death/death.mif")
+        GENERIC MAP (IMAGE_WIDTH => 42, IMAGE_HEIGHT => 13, MIF_FILE => "../res/ui/death.mif")
         PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => death_pixel_index, valid => death_valid);
 
     pause_rom: image_loader

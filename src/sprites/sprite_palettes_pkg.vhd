@@ -9,7 +9,7 @@ USE palettes.teleporter_palette_pkg;
 USE palettes.laser_palette_pkg;
 USE palettes.background2_palette_pkg;
 USE palettes.djt_palette_pkg;
-USE palettes.death_palette_pkg;
+-- USE palettes.death_palette_pkg;
 USE palettes.ui_palette_pkg;
 
 PACKAGE sprite_palettes_pkg IS
@@ -88,7 +88,7 @@ PACKAGE BODY sprite_palettes_pkg IS
             WHEN PALETTE_DJT =>
                 RETURN djt_palette_pkg.IMAGE_PALETTE(idx);
             WHEN PALETTE_DEATH =>
-                RETURN death_palette_pkg.IMAGE_PALETTE(idx);
+                RETURN ui_palette_pkg.IMAGE_PALETTE(idx); -- Reuse UI palette for death screen for now
             WHEN PALETTE_UI =>
                 RETURN ui_palette_pkg.IMAGE_PALETTE(idx);
             WHEN OTHERS =>

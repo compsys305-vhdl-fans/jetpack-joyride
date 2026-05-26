@@ -41,7 +41,7 @@ set_global_assignment -name DEVICE 5CEBA4F23C7
 set_global_assignment -name TOP_LEVEL_ENTITY top_jetpack_joyride
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION 13
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "MON MAY  5 11:54:18 2014"
-set_global_assignment -name LAST_QUARTUS_VERSION "18.1.0 Standard Edition"
+set_global_assignment -name LAST_QUARTUS_VERSION "25.1std.0 Lite Edition"
 set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
 set_global_assignment -name CYCLONEII_RESERVE_NCEO_AFTER_CONFIGURATION "USE AS REGULAR IO"
 set_location_assignment PIN_H13 -to CLOCK2_50
@@ -486,6 +486,8 @@ set_global_assignment -name FLOW_ENABLE_IO_ASSIGNMENT_ANALYSIS ON
 
 
 
+
+set_global_assignment -name VHDL_FILE ../res/ui/palette.vhd
 set_global_assignment -name VHDL_FILE ../res/djt/palette.vhd
 set_global_assignment -name VHDL_FILE ../res/background2/palette.vhd
 set_global_assignment -name SOURCE_FILE vga_pll.cmp
