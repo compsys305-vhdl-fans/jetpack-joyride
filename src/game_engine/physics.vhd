@@ -43,6 +43,8 @@ ARCHITECTURE behaviour OF physics IS
     CONSTANT SCREEN_HEIGHT : INTEGER := 480;
     CONSTANT TOP_MARGIN : INTEGER := -100;
     CONSTANT BOTTOM_MARGIN : INTEGER := 10;
+    CONSTANT TELEPORTER_SCREEN_MIN_Y : INTEGER := 0;
+    CONSTANT TELEPORTER_SCREEN_MAX_Y : INTEGER := SCREEN_HEIGHT - 1;
 
     SIGNAL current_player_height : INTEGER := 32;
     SIGNAL player_max_y_int : INTEGER;
@@ -96,7 +98,7 @@ BEGIN
     player_max_y <= CONV_STD_LOGIC_VECTOR(player_max_y_int, 10);
     player_min_y_int <= TOP_MARGIN + current_player_height;
     player_min_y <= CONV_STD_LOGIC_VECTOR(player_min_y_int, 10);
-    teleporter_preview_mid_y <= CONV_STD_LOGIC_VECTOR((player_min_y_int + player_max_y_int) / 2, 10);
+    teleporter_preview_mid_y <= CONV_STD_LOGIC_VECTOR((TELEPORTER_SCREEN_MIN_Y + TELEPORTER_SCREEN_MAX_Y) / 2, 10);
     
     -- teleporter_preview_pos <= player_max_y;
     -- some stuff goes here
@@ -205,11 +207,11 @@ BEGIN
 
                     next_preview_pos := next_preview_pos + next_preview_speed;
 
-                    IF next_preview_pos < player_min_y THEN
-                        next_preview_pos := player_min_y;
+                    IF next_preview_pos < CONV_STD_LOGIC_VECTOR(TELEPORTER_SCREEN_MIN_Y, 10) THEN
+                        next_preview_pos := CONV_STD_LOGIC_VECTOR(TELEPORTER_SCREEN_MIN_Y, 10);
                         next_preview_speed := (OTHERS => '0');
-                    ELSIF next_preview_pos > PLAYER_MAX_Y THEN
-                        next_preview_pos := PLAYER_MAX_Y;
+                    ELSIF next_preview_pos > CONV_STD_LOGIC_VECTOR(TELEPORTER_SCREEN_MAX_Y, 10) THEN
+                        next_preview_pos := CONV_STD_LOGIC_VECTOR(TELEPORTER_SCREEN_MAX_Y, 10);
                         next_preview_speed := (OTHERS => '0');
                     END IF;
 
