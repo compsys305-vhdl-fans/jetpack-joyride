@@ -22,6 +22,7 @@ ENTITY renderer IS
         teleporter_preview_y : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
         death                : IN STD_LOGIC;
         paused               : IN STD_LOGIC;
+        menu_active          : IN STD_LOGIC;
 
         laser_pool           : IN laser_pool_t;
         missile_pool         : IN missile_pool_t;
@@ -157,6 +158,244 @@ ARCHITECTURE rtl OF renderer IS
     SIGNAL missile_sprite_id : UNSIGNED(7 DOWNTO 0) := SPRITE_MISSILE;
     SIGNAL missile_palette_id : UNSIGNED(7 DOWNTO 0) := PALETTE_MISSILE;
     SIGNAL missile_scale_sel : NATURAL := MISSILE_SCALE_SHIFT;
+
+    CONSTANT SCREEN_WIDTH : NATURAL := 640;
+    CONSTANT MENU_BUTTON_WIDTH : NATURAL := 200;
+    CONSTANT MENU_BUTTON_HEIGHT : NATURAL := 48;
+    CONSTANT MENU_BUTTON_X_LEFT : NATURAL := (SCREEN_WIDTH - MENU_BUTTON_WIDTH) / 2;
+    CONSTANT MENU_PLAY_Y_TOP : NATURAL := 170;
+    CONSTANT MENU_TRAIN_Y_TOP : NATURAL := MENU_PLAY_Y_TOP + MENU_BUTTON_HEIGHT + 24;
+    CONSTANT MENU_BORDER_THICKNESS : NATURAL := 2;
+
+    CONSTANT FONT_W : NATURAL := 5;
+    CONSTANT FONT_H : NATURAL := 7;
+    CONSTANT FONT_SCALE : NATURAL := 2;
+    CONSTANT FONT_SPACING : NATURAL := 1;
+
+    CONSTANT PLAY_LEN : NATURAL := 4;
+    CONSTANT TRAIN_LEN : NATURAL := 8;
+    CONSTANT PLAY_TEXT_WIDTH : NATURAL := (PLAY_LEN * FONT_W + (PLAY_LEN - 1) * FONT_SPACING) * FONT_SCALE;
+    CONSTANT TRAIN_TEXT_WIDTH : NATURAL := (TRAIN_LEN * FONT_W + (TRAIN_LEN - 1) * FONT_SPACING) * FONT_SCALE;
+    CONSTANT TEXT_HEIGHT : NATURAL := FONT_H * FONT_SCALE;
+
+    CONSTANT PLAY_TEXT_X_LEFT : NATURAL := MENU_BUTTON_X_LEFT + (MENU_BUTTON_WIDTH - PLAY_TEXT_WIDTH) / 2;
+    CONSTANT PLAY_TEXT_Y_TOP : NATURAL := MENU_PLAY_Y_TOP + (MENU_BUTTON_HEIGHT - TEXT_HEIGHT) / 2;
+    CONSTANT TRAIN_TEXT_X_LEFT : NATURAL := MENU_BUTTON_X_LEFT + (MENU_BUTTON_WIDTH - TRAIN_TEXT_WIDTH) / 2;
+    CONSTANT TRAIN_TEXT_Y_TOP : NATURAL := MENU_TRAIN_Y_TOP + (MENU_BUTTON_HEIGHT - TEXT_HEIGHT) / 2;
+
+    CONSTANT MENU_FILL_COLOR : STD_LOGIC_VECTOR(11 DOWNTO 0) := x"222";
+    CONSTANT MENU_BORDER_COLOR : STD_LOGIC_VECTOR(11 DOWNTO 0) := x"EEE";
+    CONSTANT MENU_TEXT_COLOR : STD_LOGIC_VECTOR(11 DOWNTO 0) := x"FFF";
+
+    CONSTANT LETTER_P : INTEGER := 0;
+    CONSTANT LETTER_L : INTEGER := 1;
+    CONSTANT LETTER_A : INTEGER := 2;
+    CONSTANT LETTER_Y : INTEGER := 3;
+    CONSTANT LETTER_T : INTEGER := 4;
+    CONSTANT LETTER_R : INTEGER := 5;
+    CONSTANT LETTER_I : INTEGER := 6;
+    CONSTANT LETTER_N : INTEGER := 7;
+    CONSTANT LETTER_G : INTEGER := 8;
+
+    CONSTANT WORD_PLAY : INTEGER := 0;
+    CONSTANT WORD_TRAINING : INTEGER := 1;
+
+    FUNCTION font_row(letter_id : INTEGER; row : INTEGER) RETURN STD_LOGIC_VECTOR IS
+        VARIABLE bits : STD_LOGIC_VECTOR(4 DOWNTO 0) := (OTHERS => '0');
+    BEGIN
+        CASE letter_id IS
+            WHEN LETTER_P =>
+                CASE row IS
+                    WHEN 0 => bits := "11110";
+                    WHEN 1 => bits := "10001";
+                    WHEN 2 => bits := "10001";
+                    WHEN 3 => bits := "11110";
+                    WHEN 4 => bits := "10000";
+                    WHEN 5 => bits := "10000";
+                    WHEN 6 => bits := "10000";
+                    WHEN OTHERS => bits := (OTHERS => '0');
+                END CASE;
+            WHEN LETTER_L =>
+                CASE row IS
+                    WHEN 0 => bits := "10000";
+                    WHEN 1 => bits := "10000";
+                    WHEN 2 => bits := "10000";
+                    WHEN 3 => bits := "10000";
+                    WHEN 4 => bits := "10000";
+                    WHEN 5 => bits := "10000";
+                    WHEN 6 => bits := "11111";
+                    WHEN OTHERS => bits := (OTHERS => '0');
+                END CASE;
+            WHEN LETTER_A =>
+                CASE row IS
+                    WHEN 0 => bits := "01110";
+                    WHEN 1 => bits := "10001";
+                    WHEN 2 => bits := "10001";
+                    WHEN 3 => bits := "11111";
+                    WHEN 4 => bits := "10001";
+                    WHEN 5 => bits := "10001";
+                    WHEN 6 => bits := "10001";
+                    WHEN OTHERS => bits := (OTHERS => '0');
+                END CASE;
+            WHEN LETTER_Y =>
+                CASE row IS
+                    WHEN 0 => bits := "10001";
+                    WHEN 1 => bits := "10001";
+                    WHEN 2 => bits := "01010";
+                    WHEN 3 => bits := "00100";
+                    WHEN 4 => bits := "00100";
+                    WHEN 5 => bits := "00100";
+                    WHEN 6 => bits := "00100";
+                    WHEN OTHERS => bits := (OTHERS => '0');
+                END CASE;
+            WHEN LETTER_T =>
+                CASE row IS
+                    WHEN 0 => bits := "11111";
+                    WHEN 1 => bits := "00100";
+                    WHEN 2 => bits := "00100";
+                    WHEN 3 => bits := "00100";
+                    WHEN 4 => bits := "00100";
+                    WHEN 5 => bits := "00100";
+                    WHEN 6 => bits := "00100";
+                    WHEN OTHERS => bits := (OTHERS => '0');
+                END CASE;
+            WHEN LETTER_R =>
+                CASE row IS
+                    WHEN 0 => bits := "11110";
+                    WHEN 1 => bits := "10001";
+                    WHEN 2 => bits := "10001";
+                    WHEN 3 => bits := "11110";
+                    WHEN 4 => bits := "10100";
+                    WHEN 5 => bits := "10010";
+                    WHEN 6 => bits := "10001";
+                    WHEN OTHERS => bits := (OTHERS => '0');
+                END CASE;
+            WHEN LETTER_I =>
+                CASE row IS
+                    WHEN 0 => bits := "11111";
+                    WHEN 1 => bits := "00100";
+                    WHEN 2 => bits := "00100";
+                    WHEN 3 => bits := "00100";
+                    WHEN 4 => bits := "00100";
+                    WHEN 5 => bits := "00100";
+                    WHEN 6 => bits := "11111";
+                    WHEN OTHERS => bits := (OTHERS => '0');
+                END CASE;
+            WHEN LETTER_N =>
+                CASE row IS
+                    WHEN 0 => bits := "10001";
+                    WHEN 1 => bits := "11001";
+                    WHEN 2 => bits := "10101";
+                    WHEN 3 => bits := "10011";
+                    WHEN 4 => bits := "10001";
+                    WHEN 5 => bits := "10001";
+                    WHEN 6 => bits := "10001";
+                    WHEN OTHERS => bits := (OTHERS => '0');
+                END CASE;
+            WHEN LETTER_G =>
+                CASE row IS
+                    WHEN 0 => bits := "01110";
+                    WHEN 1 => bits := "10001";
+                    WHEN 2 => bits := "10000";
+                    WHEN 3 => bits := "10111";
+                    WHEN 4 => bits := "10001";
+                    WHEN 5 => bits := "10001";
+                    WHEN 6 => bits := "01110";
+                    WHEN OTHERS => bits := (OTHERS => '0');
+                END CASE;
+            WHEN OTHERS =>
+                bits := (OTHERS => '0');
+        END CASE;
+
+        RETURN bits;
+    END FUNCTION;
+
+    FUNCTION word_letter(word_id : INTEGER; idx : INTEGER) RETURN INTEGER IS
+    BEGIN
+        IF word_id = WORD_PLAY THEN
+            CASE idx IS
+                WHEN 0 => RETURN LETTER_P;
+                WHEN 1 => RETURN LETTER_L;
+                WHEN 2 => RETURN LETTER_A;
+                WHEN 3 => RETURN LETTER_Y;
+                WHEN OTHERS => RETURN LETTER_A;
+            END CASE;
+        ELSE
+            CASE idx IS
+                WHEN 0 => RETURN LETTER_T;
+                WHEN 1 => RETURN LETTER_R;
+                WHEN 2 => RETURN LETTER_A;
+                WHEN 3 => RETURN LETTER_I;
+                WHEN 4 => RETURN LETTER_N;
+                WHEN 5 => RETURN LETTER_I;
+                WHEN 6 => RETURN LETTER_N;
+                WHEN 7 => RETURN LETTER_G;
+                WHEN OTHERS => RETURN LETTER_A;
+            END CASE;
+        END IF;
+    END FUNCTION;
+
+    FUNCTION text_pixel(
+        word_id : INTEGER;
+        s_x : INTEGER;
+        s_y : INTEGER;
+        origin_x : INTEGER;
+        origin_y : INTEGER
+    ) RETURN BOOLEAN IS
+        CONSTANT CELL_W : INTEGER := (FONT_W + FONT_SPACING) * FONT_SCALE;
+        VARIABLE local_x : INTEGER;
+        VARIABLE local_y : INTEGER;
+        VARIABLE letter_idx : INTEGER;
+        VARIABLE letter_x : INTEGER;
+        VARIABLE row : INTEGER;
+        VARIABLE col : INTEGER;
+        VARIABLE letter_id : INTEGER;
+        VARIABLE row_bits : STD_LOGIC_VECTOR(4 DOWNTO 0);
+        VARIABLE max_len : INTEGER;
+    BEGIN
+        local_x := s_x - origin_x;
+        local_y := s_y - origin_y;
+
+        IF local_x < 0 OR local_y < 0 THEN
+            RETURN FALSE;
+        END IF;
+
+        IF local_y >= FONT_H * FONT_SCALE THEN
+            RETURN FALSE;
+        END IF;
+
+        letter_idx := local_x / CELL_W;
+        IF word_id = WORD_PLAY THEN
+            max_len := PLAY_LEN;
+        ELSE
+            max_len := TRAIN_LEN;
+        END IF;
+
+        IF letter_idx < 0 OR letter_idx >= max_len THEN
+            RETURN FALSE;
+        END IF;
+
+        letter_x := local_x MOD CELL_W;
+        IF letter_x >= FONT_W * FONT_SCALE THEN
+            RETURN FALSE;
+        END IF;
+
+        row := local_y / FONT_SCALE;
+        col := letter_x / FONT_SCALE;
+        letter_id := word_letter(word_id, letter_idx);
+        row_bits := font_row(letter_id, row);
+
+        IF row_bits(FONT_W - 1 - col) = '1' THEN
+            RETURN TRUE;
+        END IF;
+
+        RETURN FALSE;
+    END FUNCTION;
+
+    SIGNAL menu_drawn : STD_LOGIC;
+    SIGNAL menu_drawn_d : STD_LOGIC := '0';
+    SIGNAL menu_color : STD_LOGIC_VECTOR(11 DOWNTO 0);
+    SIGNAL menu_color_d : STD_LOGIC_VECTOR(11 DOWNTO 0) := (OTHERS => '0');
 
     SIGNAL laser_beam_rect_mode : STD_LOGIC := '0';
 
@@ -372,6 +611,57 @@ BEGIN
         END IF;
     END PROCESS;
 
+    PROCESS (pixel_x, pixel_y_lookahead, menu_active)
+        VARIABLE s_x : INTEGER;
+        VARIABLE s_y : INTEGER;
+        VARIABLE in_play : BOOLEAN;
+        VARIABLE in_training : BOOLEAN;
+        VARIABLE on_border : BOOLEAN;
+        VARIABLE text_on : BOOLEAN;
+        VARIABLE left_x : INTEGER;
+        VARIABLE top_y : INTEGER;
+    BEGIN
+        menu_drawn <= '0';
+        menu_color <= (OTHERS => '0');
+
+        IF menu_active = '1' THEN
+            s_x := TO_INTEGER(pixel_x);
+            s_y := TO_INTEGER(pixel_y_lookahead);
+
+            in_play := (s_x >= MENU_BUTTON_X_LEFT) AND (s_x < MENU_BUTTON_X_LEFT + MENU_BUTTON_WIDTH) AND
+                       (s_y >= MENU_PLAY_Y_TOP) AND (s_y < MENU_PLAY_Y_TOP + MENU_BUTTON_HEIGHT);
+            in_training := (s_x >= MENU_BUTTON_X_LEFT) AND (s_x < MENU_BUTTON_X_LEFT + MENU_BUTTON_WIDTH) AND
+                           (s_y >= MENU_TRAIN_Y_TOP) AND (s_y < MENU_TRAIN_Y_TOP + MENU_BUTTON_HEIGHT);
+
+            IF in_play OR in_training THEN
+                menu_drawn <= '1';
+
+                IF in_play THEN
+                    left_x := MENU_BUTTON_X_LEFT;
+                    top_y := MENU_PLAY_Y_TOP;
+                    text_on := text_pixel(WORD_PLAY, s_x, s_y, PLAY_TEXT_X_LEFT, PLAY_TEXT_Y_TOP);
+                ELSE
+                    left_x := MENU_BUTTON_X_LEFT;
+                    top_y := MENU_TRAIN_Y_TOP;
+                    text_on := text_pixel(WORD_TRAINING, s_x, s_y, TRAIN_TEXT_X_LEFT, TRAIN_TEXT_Y_TOP);
+                END IF;
+
+                on_border := (s_x < left_x + MENU_BORDER_THICKNESS) OR
+                             (s_x >= left_x + MENU_BUTTON_WIDTH - MENU_BORDER_THICKNESS) OR
+                             (s_y < top_y + MENU_BORDER_THICKNESS) OR
+                             (s_y >= top_y + MENU_BUTTON_HEIGHT - MENU_BORDER_THICKNESS);
+
+                IF text_on THEN
+                    menu_color <= MENU_TEXT_COLOR;
+                ELSIF on_border THEN
+                    menu_color <= MENU_BORDER_COLOR;
+                ELSE
+                    menu_color <= MENU_FILL_COLOR;
+                END IF;
+            END IF;
+        END IF;
+    END PROCESS;
+
     player_sprite_renderer: sprite_renderer
         PORT MAP (
             clock          => clock_25MHz,
@@ -462,6 +752,8 @@ BEGIN
             in_death_sprite_d <= in_death_sprite;
             in_pause_sprite_d <= in_pause_sprite;
             in_missile_sprite_d <= in_missile_sprite;
+            menu_drawn_d <= menu_drawn;
+            menu_color_d <= menu_color;
             laser_colors_reg <= laser_colors;
             laser_transparencies_reg <= laser_transparencies;
             base_color_d <= base_color;
@@ -559,14 +851,18 @@ BEGIN
         base_color <= STD_LOGIC_VECTOR(TO_UNSIGNED(r,4) & TO_UNSIGNED(g,4) & TO_UNSIGNED(b,4));
     END PROCESS;
 
-    PROCESS (death_drawn, death_sprite_color, pause_drawn, pause_sprite_color, show_djt,
+    PROCESS (menu_drawn_d, menu_color_d, death_drawn, death_sprite_color, pause_drawn, pause_sprite_color, show_djt,
              player_drawn, sprite_color, missile_drawn, missile_sprite_color, base_color_d,
              combined_laser_is_transparent, combined_laser_color)
         VARIABLE base_r, base_g, base_b : INTEGER RANGE 0 TO 15;
         VARIABLE add_r, add_g, add_b : INTEGER;
         VARIABLE final_r, final_g, final_b : INTEGER RANGE 0 TO 15;
     BEGIN
-        IF death_drawn = '1' THEN
+        IF menu_drawn_d = '1' THEN
+            final_r := TO_INTEGER(UNSIGNED(menu_color_d(11 DOWNTO 8)));
+            final_g := TO_INTEGER(UNSIGNED(menu_color_d(7 DOWNTO 4)));
+            final_b := TO_INTEGER(UNSIGNED(menu_color_d(3 DOWNTO 0)));
+        ELSIF death_drawn = '1' THEN
             final_r := TO_INTEGER(UNSIGNED(death_sprite_color(11 DOWNTO 8)));
             final_g := TO_INTEGER(UNSIGNED(death_sprite_color(7 DOWNTO 4)));
             final_b := TO_INTEGER(UNSIGNED(death_sprite_color(3 DOWNTO 0)));

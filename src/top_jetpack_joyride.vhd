@@ -77,8 +77,12 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
         PORT (
             clock_50MHz, vert_sync, reset : IN STD_LOGIC;
             mouse_left : IN STD_LOGIC;
+            mouse_x : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
+            mouse_y : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
             debug_vehicle_select : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
             playing : OUT STD_LOGIC;
+            menu_active : OUT STD_LOGIC;
+            training_mode : OUT STD_LOGIC;
             player_vehicle : OUT STD_LOGIC_VECTOR(1 DOWNTO 0);
             player_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
             player_vy : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
@@ -138,6 +142,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             teleporter_preview_y : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
             death                : IN STD_LOGIC;
             paused               : IN STD_LOGIC;
+            menu_active          : IN STD_LOGIC;
     
             laser_pool           : IN laser_pool_t;
             missile_pool         : IN missile_pool_t;
@@ -168,6 +173,8 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL player_vy : STD_LOGIC_VECTOR(9 DOWNTO 0);
     SIGNAL player_grounded : STD_LOGIC;
     SIGNAL playing : STD_LOGIC;
+    SIGNAL menu_active : STD_LOGIC;
+    SIGNAL training_mode : STD_LOGIC;
     SIGNAL player_vehicle : STD_LOGIC_VECTOR(1 DOWNTO 0);
     SIGNAL debug_vehicle_select : STD_LOGIC_VECTOR(1 DOWNTO 0);
     SIGNAL teleporter_preview_y : STD_LOGIC_VECTOR(9 DOWNTO 0);
@@ -203,7 +210,9 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL missile_pool : missile_pool_t;
 
     -- death signal
+    SIGNAL death_raw : STD_LOGIC;
     SIGNAL death_signal : STD_LOGIC;
+    SIGNAL obstacles_enabled : STD_LOGIC;
 	 
 BEGIN
     vga_pll_inst: ENTITY lib_vga_pll.vga_pll
@@ -225,13 +234,14 @@ BEGIN
     END PROCESS;
 
     update_tick <= vga_vsync_sig AND (NOT paused);
+    obstacles_enabled <= playing AND (NOT training_mode);
 
     obstacle_manager_inst: ENTITY work.obstacle_manager
         PORT MAP (
             clock_50MHz => clock_50,
             vert_sync => update_tick,
             reset => mouse_reset,
-            playing => playing,
+            playing => obstacles_enabled,
             random_in => random_num,
             world_speed => world_speed,
             lasers_out => laser_pool,
@@ -288,8 +298,12 @@ BEGIN
         vert_sync => update_tick,
         reset => mouse_reset,
         mouse_left => left_button,
+        mouse_x => mouse_x,
+        mouse_y => mouse_y,
         debug_vehicle_select => debug_vehicle_select,
         playing => playing,
+        menu_active => menu_active,
+        training_mode => training_mode,
         player_vehicle => player_vehicle,
         player_y => player_y,
         player_vy => player_vy,
@@ -312,11 +326,12 @@ BEGIN
         laser_pool => laser_pool,
         missile_pool => missile_pool,
         frame_count => frame_counter,
-        death => death_signal,
+        death => death_raw,
         collision_red => collision_red,
         collision_green => collision_green,
         collision_blue => collision_blue
     );
+    death_signal <= '0' WHEN (training_mode = '1' OR menu_active = '1') ELSE death_raw;
     
     renderer_inst: ENTITY work.renderer
     PORT MAP (
@@ -332,6 +347,7 @@ BEGIN
         teleporter_preview_y => teleporter_preview_y,
         death => death_signal,
         paused => paused,
+        menu_active => menu_active,
         laser_pool => laser_pool,
         missile_pool => missile_pool,
         frame_count => frame_counter,
