@@ -106,6 +106,10 @@ ARCHITECTURE rtl OF sprite_renderer IS
     SIGNAL coin1_pixel_index, coin3_pixel_index : UNSIGNED(7 DOWNTO 0);
     SIGNAL coin1_valid, coin3_valid             : STD_LOGIC;
 
+    -- Powerup Sprite Signals
+    SIGNAL powerup_pixel_index : UNSIGNED(7 DOWNTO 0);
+    SIGNAL powerup_valid : STD_LOGIC;
+
     CONSTANT DJT_SOURCE_WIDTH : NATURAL := 400;
     CONSTANT DJT_SOURCE_HEIGHT : NATURAL := 600;
     CONSTANT DJT_ROTATED_WIDTH : NATURAL := DJT_SOURCE_HEIGHT;
@@ -287,6 +291,10 @@ BEGIN
         GENERIC MAP (IMAGE_WIDTH => 16, IMAGE_HEIGHT => 16, MIF_FILE => "../res/coin/coin3.mif")
         PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => coin3_pixel_index, valid => coin3_valid);
 
+    powerup_rom: image_loader
+        GENERIC MAP (IMAGE_WIDTH => 32, IMAGE_HEIGHT => 32, MIF_FILE => "../res/powerup/powerup.mif")
+        PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => powerup_pixel_index, valid => powerup_valid);
+
     PROCESS(local_x, local_y)
     BEGIN
         IF (TO_INTEGER(local_x) < DJT_ROTATED_WIDTH) AND (TO_INTEGER(local_y) < DJT_ROTATED_HEIGHT) THEN
@@ -319,7 +327,8 @@ BEGIN
             pause_pixel_index, pause_valid,
             warning_pixel_index, warning_valid,
             missile1_pixel_index, missile1_valid, missile2_pixel_index, missile2_valid,
-            coin1_pixel_index, coin1_valid, coin3_pixel_index, coin3_valid)
+            coin1_pixel_index, coin1_valid, coin3_pixel_index, coin3_valid,
+            powerup_pixel_index, powerup_valid)
     BEGIN
         CASE sprite_id IS
             WHEN SPRITE_BARRY_RUN => -- Running (Animated)
@@ -447,6 +456,10 @@ BEGIN
                     active_pixel_index <= coin3_pixel_index;
                     active_valid       <= coin3_valid;
                 END IF;
+
+            WHEN SPRITE_POWERUP =>
+                active_pixel_index <= powerup_pixel_index;
+                active_valid       <= powerup_valid;
 
             WHEN OTHERS =>
                 IF show_djt = '1' THEN

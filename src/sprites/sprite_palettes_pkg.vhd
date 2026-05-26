@@ -13,6 +13,7 @@ USE palettes.ui_palette_pkg;
 USE palettes.warning_palette_pkg;
 USE palettes.missile_palette_pkg;
 USE palettes.coin_palette_pkg;
+USE palettes.powerup_palette_pkg;
 
 PACKAGE sprite_palettes_pkg IS
     -- Palette IDs
@@ -28,6 +29,7 @@ PACKAGE sprite_palettes_pkg IS
     CONSTANT PALETTE_WARNING      : UNSIGNED(7 DOWNTO 0) := x"09";
     CONSTANT PALETTE_MISSILE      : UNSIGNED(7 DOWNTO 0) := x"0A";
     CONSTANT PALETTE_COIN         : UNSIGNED(7 DOWNTO 0) := x"0B";
+    CONSTANT PALETTE_POWERUP      : UNSIGNED(7 DOWNTO 0) := x"0C";
 
     -- Sprite IDs
     CONSTANT SPRITE_BARRY_RUN     : UNSIGNED(7 DOWNTO 0) := x"00";
@@ -54,6 +56,7 @@ PACKAGE sprite_palettes_pkg IS
     CONSTANT SPRITE_WARNING      : UNSIGNED(7 DOWNTO 0) := x"56";
     CONSTANT SPRITE_MISSILE      : UNSIGNED(7 DOWNTO 0) := x"57";
     CONSTANT SPRITE_COIN         : UNSIGNED(7 DOWNTO 0) := x"58";
+    CONSTANT SPRITE_POWERUP      : UNSIGNED(7 DOWNTO 0) := x"59";
 
     -- We define a function to retrieve colour to allow dynamic palette arrays seamlessly
     FUNCTION get_sprite_color (
@@ -105,6 +108,8 @@ PACKAGE BODY sprite_palettes_pkg IS
                 RETURN missile_palette_pkg.IMAGE_PALETTE(idx);
             WHEN PALETTE_COIN =>
                 RETURN coin_palette_pkg.IMAGE_PALETTE(idx);
+            WHEN PALETTE_POWERUP =>
+                RETURN powerup_palette_pkg.IMAGE_PALETTE(idx);
             WHEN OTHERS =>
                 RETURN TRANSPARENT_COLOR;
         END CASE;
@@ -116,7 +121,7 @@ PACKAGE BODY sprite_palettes_pkg IS
     ) RETURN INTEGER IS
     BEGIN
         CASE sprite_id IS
-            WHEN SPRITE_BARRY_RUN | SPRITE_BARRY_FLY | SPRITE_STOMPER_FLY | SPRITE_STOMPER_FALL | SPRITE_MISSILE | SPRITE_COIN => 
+            WHEN SPRITE_BARRY_RUN | SPRITE_BARRY_FLY | SPRITE_STOMPER_FLY | SPRITE_STOMPER_FALL | SPRITE_MISSILE | SPRITE_COIN | SPRITE_POWERUP => 
                 -- 200ms per frame (3 ticks, 12Hz)
                 IF (anim_tick MOD 6) < 3 THEN
                     RETURN 0;

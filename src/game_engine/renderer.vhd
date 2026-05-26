@@ -29,6 +29,8 @@ ENTITY renderer IS
         laser_pool           : IN laser_pool_t;
         missile_pool         : IN missile_pool_t;
         coin_pool            : IN coin_pool_t;
+        powerup_pool         : IN powerup_pool_t;
+        screen_flash         : IN STD_LOGIC;
         frame_count          : IN UNSIGNED(7 DOWNTO 0);
         random_in            : IN STD_LOGIC_VECTOR(19 DOWNTO 0);
         world_speed          : IN UNSIGNED(9 DOWNTO 0);
@@ -134,6 +136,12 @@ ARCHITECTURE rtl OF renderer IS
     CONSTANT COIN_DISPLAY_WIDTH : NATURAL := COIN_SPRITE_WIDTH * 2;
     CONSTANT COIN_DISPLAY_HEIGHT : NATURAL := COIN_SPRITE_HEIGHT * 2;
 
+    CONSTANT POWERUP_SPRITE_WIDTH : NATURAL := 32;
+    CONSTANT POWERUP_SPRITE_HEIGHT : NATURAL := 32;
+    CONSTANT POWERUP_SCALE_SHIFT : NATURAL := 1;
+    CONSTANT POWERUP_DISPLAY_WIDTH : NATURAL := POWERUP_SPRITE_WIDTH * 2;
+    CONSTANT POWERUP_DISPLAY_HEIGHT : NATURAL := POWERUP_SPRITE_HEIGHT * 2;
+
     SIGNAL death_rel_x : UNSIGNED(15 DOWNTO 0);
     SIGNAL death_rel_y : UNSIGNED(15 DOWNTO 0);
     SIGNAL in_death_sprite : STD_LOGIC;
@@ -173,6 +181,15 @@ ARCHITECTURE rtl OF renderer IS
     SIGNAL coin_sprite_is_transparent : STD_LOGIC;
     SIGNAL coin_sprite_valid : STD_LOGIC;
     SIGNAL coin_drawn : STD_LOGIC;
+
+    SIGNAL powerup_rel_x : UNSIGNED(15 DOWNTO 0);
+    SIGNAL powerup_rel_y : UNSIGNED(15 DOWNTO 0);
+    SIGNAL in_powerup_sprite : STD_LOGIC;
+    SIGNAL in_powerup_sprite_d : STD_LOGIC := '0';
+    SIGNAL powerup_sprite_color : STD_LOGIC_VECTOR(11 DOWNTO 0);
+    SIGNAL powerup_sprite_is_transparent : STD_LOGIC;
+    SIGNAL powerup_sprite_valid : STD_LOGIC;
+    SIGNAL powerup_drawn : STD_LOGIC;
 
     CONSTANT SCREEN_WIDTH : NATURAL := 640;
     CONSTANT MENU_BUTTON_WIDTH : NATURAL := 200;
@@ -659,6 +676,29 @@ BEGIN
         END LOOP;
     END PROCESS;
 
+    PROCESS (pixel_x, pixel_y_lookahead, powerup_pool)
+        VARIABLE s_x, s_y : INTEGER;
+        VARIABLE p_x, p_y : INTEGER;
+    BEGIN
+        s_x := TO_INTEGER(pixel_x);
+        s_y := TO_INTEGER(pixel_y_lookahead);
+        in_powerup_sprite <= '0';
+        powerup_rel_x <= (OTHERS => '0');
+        powerup_rel_y <= (OTHERS => '0');
+
+        IF powerup_pool(0).is_active = '1' THEN
+            p_x := TO_INTEGER(powerup_pool(0).x);
+            p_y := TO_INTEGER(powerup_pool(0).y);
+
+            IF (s_x >= p_x) AND (s_x < p_x + POWERUP_DISPLAY_WIDTH) AND
+               (s_y >= p_y) AND (s_y < p_y + POWERUP_DISPLAY_HEIGHT) THEN
+                in_powerup_sprite <= '1';
+                powerup_rel_x <= TO_UNSIGNED(s_x - p_x, 16);
+                powerup_rel_y <= TO_UNSIGNED(s_y - p_y, 16);
+            END IF;
+        END IF;
+    END PROCESS;
+
     PROCESS (pixel_x, pixel_y_lookahead, menu_active)
         VARIABLE s_x : INTEGER;
         VARIABLE s_y : INTEGER;
@@ -812,6 +852,20 @@ BEGIN
             valid          => coin_sprite_valid
         );
 
+    powerup_sprite_renderer: sprite_renderer
+        PORT MAP (
+            clock          => clock_25MHz,
+            show_djt       => '0',
+            sprite_id      => SPRITE_POWERUP,
+            palette_id     => PALETTE_POWERUP,
+            scale_shift    => POWERUP_SCALE_SHIFT,
+            rel_x          => powerup_rel_x,
+            rel_y          => powerup_rel_y,
+            color          => powerup_sprite_color,
+            is_transparent => powerup_sprite_is_transparent,
+            valid          => powerup_sprite_valid
+        );
+
     PROCESS(clock_25MHz)
     BEGIN
         IF RISING_EDGE(clock_25MHz) THEN
@@ -835,6 +889,7 @@ BEGIN
             menu_drawn_d <= menu_drawn;
             menu_color_d <= menu_color;
             in_coin_sprite_d <= in_coin_sprite;
+            in_powerup_sprite_d <= in_powerup_sprite;
             cursor_on_d <= cursor_on;
             laser_colors_reg <= laser_colors;
             laser_transparencies_reg <= laser_transparencies;
@@ -847,6 +902,7 @@ BEGIN
     pause_drawn <= in_pause_sprite_d AND pause_sprite_valid AND (NOT pause_sprite_is_transparent);
     missile_drawn <= in_missile_sprite_d AND missile_sprite_valid AND (NOT missile_sprite_is_transparent);
     coin_drawn <= in_coin_sprite_d AND coin_sprite_valid AND (NOT coin_sprite_is_transparent);
+    powerup_drawn <= in_powerup_sprite_d AND powerup_sprite_valid AND (NOT powerup_sprite_is_transparent);
     bg_drawn <= bg_valid AND (NOT bg_is_transparent);
 
     PROCESS(pixel_x, pixel_y_lookahead, bg_seed, bg_scroll_accum, show_djt)
@@ -932,13 +988,17 @@ BEGIN
     END PROCESS;
 
     PROCESS (cursor_on_d, menu_drawn_d, menu_color_d, death_drawn, death_sprite_color, pause_drawn, pause_sprite_color, show_djt,
-             player_drawn, sprite_color, missile_drawn, missile_sprite_color, coin_drawn, coin_sprite_color,
-             base_color_d, combined_laser_is_transparent, combined_laser_color)
+             player_drawn, sprite_color, missile_drawn, missile_sprite_color, coin_drawn, coin_sprite_color, powerup_drawn, powerup_sprite_color,
+             base_color_d, combined_laser_is_transparent, combined_laser_color, screen_flash)
         VARIABLE base_r, base_g, base_b : INTEGER RANGE 0 TO 15;
         VARIABLE add_r, add_g, add_b : INTEGER;
         VARIABLE final_r, final_g, final_b : INTEGER RANGE 0 TO 15;
     BEGIN
-        IF cursor_on_d = '1' THEN
+        IF screen_flash = '1' THEN
+            final_r := 15;
+            final_g := 15;
+            final_b := 15;
+        ELSIF cursor_on_d = '1' THEN
             final_r := TO_INTEGER(UNSIGNED(CURSOR_COLOR(11 DOWNTO 8)));
             final_g := TO_INTEGER(UNSIGNED(CURSOR_COLOR(7 DOWNTO 4)));
             final_b := TO_INTEGER(UNSIGNED(CURSOR_COLOR(3 DOWNTO 0)));
@@ -970,6 +1030,10 @@ BEGIN
             final_r := TO_INTEGER(UNSIGNED(coin_sprite_color(11 DOWNTO 8)));
             final_g := TO_INTEGER(UNSIGNED(coin_sprite_color(7 DOWNTO 4)));
             final_b := TO_INTEGER(UNSIGNED(coin_sprite_color(3 DOWNTO 0)));
+        ELSIF powerup_drawn = '1' THEN
+            final_r := TO_INTEGER(UNSIGNED(powerup_sprite_color(11 DOWNTO 8)));
+            final_g := TO_INTEGER(UNSIGNED(powerup_sprite_color(7 DOWNTO 4)));
+            final_b := TO_INTEGER(UNSIGNED(powerup_sprite_color(3 DOWNTO 0)));
         ELSE
             -- Determine base color
             base_r := TO_INTEGER(UNSIGNED(base_color_d(11 DOWNTO 8)));

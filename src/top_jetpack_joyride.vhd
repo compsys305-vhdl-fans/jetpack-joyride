@@ -80,8 +80,12 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             mouse_x : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
             mouse_y : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
             death_signal : IN STD_LOGIC;
+            powerup_collected : IN STD_LOGIC;
+            random_in : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
+            screen_flash : OUT STD_LOGIC;
             debug_vehicle_select : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
             playing : OUT STD_LOGIC;
+            is_dead : OUT STD_LOGIC;
             menu_active : OUT STD_LOGIC;
             training_mode : OUT STD_LOGIC;
             player_vehicle : OUT STD_LOGIC_VECTOR(1 DOWNTO 0);
@@ -146,9 +150,11 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL laser_pool : laser_pool_t;
     SIGNAL missile_pool : missile_pool_t;
     SIGNAL coin_pool : coin_pool_t := INACTIVE_COIN_POOL;
+    SIGNAL powerup_pool : powerup_pool_t := INACTIVE_POWERUP_POOL;
+    SIGNAL powerup_collected : STD_LOGIC;
+    SIGNAL screen_flash : STD_LOGIC;
     -- death signal
     SIGNAL death_raw : STD_LOGIC;
-    SIGNAL death_latched : STD_LOGIC := '0';
     SIGNAL death_signal : STD_LOGIC;
     SIGNAL obstacles_enabled : STD_LOGIC;
 	 
@@ -182,7 +188,9 @@ BEGIN
             random_in => random_num,
             world_speed => world_speed,
             lasers_out => laser_pool,
-            missiles_out => missile_pool
+            missiles_out => missile_pool,
+            coins_out => coin_pool,
+            powerups_out => powerup_pool
         );
 
     mouse_inst: mouse port map(
@@ -237,9 +245,13 @@ BEGIN
         mouse_left => left_button,
         mouse_x => mouse_x,
         mouse_y => mouse_y,
-        death_signal => death_signal,
+        death_signal => death_raw,
+        powerup_collected => powerup_collected,
+        random_in => random_num(1 DOWNTO 0),
+        screen_flash => screen_flash,
         debug_vehicle_select => debug_vehicle_select,
         playing => playing,
+        is_dead => death_signal,
         menu_active => menu_active,
         training_mode => training_mode,
         player_vehicle => player_vehicle,
@@ -264,27 +276,14 @@ BEGIN
         laser_pool => laser_pool,
         missile_pool => missile_pool,
         coin_pool => coin_pool,
+        powerup_pool => powerup_pool,
         death => death_raw,
+        powerup_collected => powerup_collected,
         collision_red => collision_red,
         collision_green => collision_green,
         collision_blue => collision_blue
     );
 
-    death_latch: PROCESS(clock_25, mouse_reset)
-    BEGIN
-        IF mouse_reset = '1' THEN
-            death_latched <= '0';
-        ELSIF RISING_EDGE(clock_25) THEN
-            IF menu_active = '1' THEN
-                death_latched <= '0';
-            ELSIF death_raw = '1' THEN
-                death_latched <= '1';
-            END IF;
-        END IF;
-    END PROCESS;
-
-    death_signal <= death_latched;
-    
     renderer_inst: ENTITY work.renderer
     PORT MAP (
         clock_25MHz => clock_25,
@@ -305,6 +304,8 @@ BEGIN
         laser_pool => laser_pool,
         missile_pool => missile_pool,
         coin_pool => coin_pool,
+        powerup_pool => powerup_pool,
+        screen_flash => screen_flash,
         frame_count => frame_counter,
         random_in => random_num,
         world_speed => world_speed,

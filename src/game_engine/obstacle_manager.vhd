@@ -13,7 +13,8 @@ ENTITY obstacle_manager IS
         world_speed      : IN UNSIGNED(9 DOWNTO 0);
         lasers_out       : OUT laser_pool_t;
         missiles_out     : OUT missile_pool_t;
-        coins_out        : OUT coin_pool_t
+        coins_out        : OUT coin_pool_t;
+        powerups_out     : OUT powerup_pool_t
     );
 END ENTITY obstacle_manager;
 
@@ -43,6 +44,8 @@ ARCHITECTURE rtl OF obstacle_manager IS
     CONSTANT COIN_SPAWN_JITTER : INTEGER := 60;
     CONSTANT BASE_COIN_SPEED_X : INTEGER := 4;
 
+    CONSTANT POWERUP_SPAWN_INTERVAL : INTEGER := 1200; -- frames (~20s at 60Hz)
+
     -- Spawning rate constants
     CONSTANT INITIAL_SPAWN_INTERVAL : INTEGER := 90; -- 1.5 seconds
     CONSTANT MIN_SPAWN_INTERVAL : INTEGER := 30; -- 0.5 seconds
@@ -52,6 +55,7 @@ ARCHITECTURE rtl OF obstacle_manager IS
     SIGNAL pool : laser_pool_t := INACTIVE_LASER_POOL;
     SIGNAL missiles : missile_pool_t := INACTIVE_MISSILE_POOL;
     SIGNAL coins : coin_pool_t := INACTIVE_COIN_POOL;
+    SIGNAL powerups : powerup_pool_t := INACTIVE_POWERUP_POOL;
     SIGNAL playing_prev : STD_LOGIC := '0';
     
     SIGNAL spawn_counter : INTEGER RANGE 0 TO INITIAL_SPAWN_INTERVAL * 2;
@@ -63,11 +67,14 @@ ARCHITECTURE rtl OF obstacle_manager IS
 
     SIGNAL coin_spawn_counter : INTEGER RANGE 0 TO COIN_SPAWN_INTERVAL + COIN_SPAWN_JITTER := COIN_SPAWN_INTERVAL;
 
+    SIGNAL powerup_spawn_counter : INTEGER RANGE 0 TO POWERUP_SPAWN_INTERVAL := POWERUP_SPAWN_INTERVAL;
+
 BEGIN
 
     lasers_out <= pool;
     missiles_out <= missiles;
     coins_out <= coins;
+    powerups_out <= powerups;
 
     manager_proc: PROCESS(vert_sync)
         VARIABLE temp_pool : laser_pool_t;
@@ -84,21 +91,26 @@ BEGIN
         VARIABLE rand_coin_y : INTEGER;
         VARIABLE jitter_coin : INTEGER;
         VARIABLE coin_spawned : BOOLEAN;
+        VARIABLE temp_powerups : powerup_pool_t;
+        VARIABLE powerup_speed_x : INTEGER;
     BEGIN
         temp_pool := pool;
         temp_missiles := missiles;
         temp_coins := coins;
+        temp_powerups := powerups;
         
         IF RISING_EDGE(vert_sync) THEN
             IF reset = '1' THEN
                 temp_pool := INACTIVE_LASER_POOL;
                 temp_missiles := INACTIVE_MISSILE_POOL;
                 temp_coins := INACTIVE_COIN_POOL;
+                temp_powerups := INACTIVE_POWERUP_POOL;
                 spawn_counter <= INITIAL_SPAWN_INTERVAL;
                 dynamic_spawn_interval <= INITIAL_SPAWN_INTERVAL;
                 missile_spawn_counter <= MISSILE_SPAWN_INTERVAL;
                 warning_timer <= 0;
                 coin_spawn_counter <= COIN_SPAWN_INTERVAL;
+                powerup_spawn_counter <= POWERUP_SPAWN_INTERVAL;
                  ramp_up_counter <= SPAWN_RAMP_RATE;
                 spawn_counter <= 0; -- Start spawning immediately on next playing frame
             ELSIF playing = '1' THEN
@@ -175,6 +187,20 @@ BEGIN
                         END IF;
                     END IF;
                 END LOOP;
+
+                -- Update existing powerups
+                powerup_speed_x := TO_INTEGER(world_speed);
+                IF powerup_speed_x < 1 THEN
+                    powerup_speed_x := BASE_COIN_SPEED_X; -- use same base speed
+                END IF;
+
+                IF temp_powerups(0).is_active = '1' THEN
+                    temp_powerups(0).x := temp_powerups(0).x - powerup_speed_x;
+                    -- Assume powerup is roughly 32x32, 64 display width
+                    IF TO_INTEGER(temp_powerups(0).x) < -64 THEN
+                        temp_powerups(0) := INACTIVE_POWERUP;
+                    END IF;
+                END IF;
 
                 -- Check for spawning new laser
                 IF spawn_counter = 0 THEN
@@ -283,17 +309,32 @@ BEGIN
                 ELSE
                     coin_spawn_counter <= coin_spawn_counter - 1;
                 END IF;
+
+                -- Spawn powerups
+                IF powerup_spawn_counter = 0 THEN
+                    IF temp_powerups(0).is_active = '0' THEN
+                        temp_powerups(0).is_active := '1';
+                        temp_powerups(0).x := TO_SIGNED(SCREEN_WIDTH - 1, 12);
+                        temp_powerups(0).y := TO_SIGNED(160, 12); -- roughly 1/3 screen height
+                    END IF;
+                    powerup_spawn_counter <= POWERUP_SPAWN_INTERVAL;
+                ELSE
+                    powerup_spawn_counter <= powerup_spawn_counter - 1;
+                END IF;
             ELSE
                 temp_pool := INACTIVE_LASER_POOL;
                 temp_missiles := INACTIVE_MISSILE_POOL;
                 temp_coins := INACTIVE_COIN_POOL;
+                temp_powerups := INACTIVE_POWERUP_POOL;
                 missile_spawn_counter <= MISSILE_SPAWN_INTERVAL;
                 warning_timer <= 0;
                 coin_spawn_counter <= COIN_SPAWN_INTERVAL;
+                powerup_spawn_counter <= POWERUP_SPAWN_INTERVAL;
             END IF;
             pool <= temp_pool;
             missiles <= temp_missiles;
             coins <= temp_coins;
+            powerups <= temp_powerups;
             playing_prev <= playing;
         END IF;
     END PROCESS manager_proc;

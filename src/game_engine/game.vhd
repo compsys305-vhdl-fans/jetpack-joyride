@@ -10,8 +10,12 @@ ENTITY game IS
         mouse_x : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
         mouse_y : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
         death_signal : IN STD_LOGIC;
+        powerup_collected : IN STD_LOGIC;
+        random_in : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
+        screen_flash : OUT STD_LOGIC;
         debug_vehicle_select : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
         playing : OUT STD_LOGIC;  -- whether the game is currently being played or not. if not, the physics should not update, and the player should be reset to the starting position.
+        is_dead : OUT STD_LOGIC;
         menu_active : OUT STD_LOGIC;
         training_mode : OUT STD_LOGIC;
         player_vehicle : OUT STD_LOGIC_VECTOR(1 DOWNTO 0);
@@ -52,6 +56,10 @@ ARCHITECTURE behaviour OF game IS
     SIGNAL is_playing : STD_LOGIC := '0';
     SIGNAL is_training : STD_LOGIC := '0';
     SIGNAL mouse_left_prev : STD_LOGIC := '0';
+    SIGNAL powerup_collected_prev : STD_LOGIC := '0';
+    SIGNAL vert_sync_prev : STD_LOGIC := '0';
+    SIGNAL invincibility_timer : INTEGER RANGE 0 TO 30 := 0;
+    SIGNAL flash_timer : INTEGER RANGE 0 TO 12 := 0;
 
     CONSTANT SCREEN_WIDTH : INTEGER := 640;
     CONSTANT SCREEN_HEIGHT : INTEGER := 480;
@@ -90,11 +98,12 @@ ARCHITECTURE behaviour OF game IS
         RETURN '0';
     END FUNCTION;
 BEGIN
-    -- Vehicle choice is centralized here. Replace this with powerup/game-state logic later.
-    active_vehicle <= debug_vehicle_select;
+    -- Vehicle choice is now managed by state machine.
+    screen_flash <= '1' WHEN flash_timer > 0 ELSE '0';
 
     is_playing <= '1' WHEN game_state = STATE_PLAY ELSE '0';
     is_training <= '1' WHEN game_state = STATE_TRAINING ELSE '0';
+    is_dead <= '1' WHEN game_state = STATE_DEATH ELSE '0';
     menu_active <= '1' WHEN game_state = STATE_MENU ELSE '0';
     training_mode <= is_training;
 
@@ -118,12 +127,27 @@ BEGIN
 
     menu_state: PROCESS (clock_50MHz) BEGIN
         IF RISING_EDGE(clock_50MHz) THEN
+            vert_sync_prev <= vert_sync;
             IF reset = '1' THEN
                 game_state <= STATE_MENU;
                 mouse_left_prev <= '0';
+                powerup_collected_prev <= '0';
+                active_vehicle <= "00";
+                invincibility_timer <= 0;
+                flash_timer <= 0;
             ELSE
+                IF vert_sync = '0' AND vert_sync_prev = '1' THEN
+                    IF invincibility_timer > 0 THEN
+                        invincibility_timer <= invincibility_timer - 1;
+                    END IF;
+                    IF flash_timer > 0 THEN
+                        flash_timer <= flash_timer - 1;
+                    END IF;
+                END IF;
+
                 CASE game_state IS
                     WHEN STATE_MENU =>
+                        active_vehicle <= "00";
                         IF mouse_left = '1' AND mouse_left_prev = '0' THEN
                             IF play_hit = '1' THEN
                                 game_state <= STATE_PLAY;
@@ -132,11 +156,30 @@ BEGIN
                             END IF;
                         END IF;
                     WHEN STATE_PLAY =>
+                        IF powerup_collected = '1' AND powerup_collected_prev = '0' AND active_vehicle = "00" THEN
+                            IF random_in = "00" THEN
+                                active_vehicle <= "01";
+                            ELSIF random_in = "01" THEN
+                                active_vehicle <= "10";
+                            ELSE
+                                active_vehicle <= "11";
+                            END IF;
+                            invincibility_timer <= 30;
+                        END IF;
+
                         IF death_signal = '1' THEN
-                            game_state <= STATE_DEATH;
+                            IF invincibility_timer > 0 THEN
+                                NULL;
+                            ELSIF active_vehicle /= "00" THEN
+                                active_vehicle <= "00";
+                                invincibility_timer <= 30;
+                                flash_timer <= 12;
+                            ELSE
+                                game_state <= STATE_DEATH;
+                            END IF;
                         END IF;
                     WHEN STATE_TRAINING =>
-                        NULL;
+                        active_vehicle <= debug_vehicle_select;
                     WHEN STATE_DEATH =>
                         IF mouse_left = '1' AND mouse_left_prev = '0' THEN
                             game_state <= STATE_MENU;
@@ -144,6 +187,7 @@ BEGIN
                 END CASE;
 
                 mouse_left_prev <= mouse_left;
+                powerup_collected_prev <= powerup_collected;
             END IF;
         END IF;
     END PROCESS menu_state;
