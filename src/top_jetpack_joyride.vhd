@@ -92,138 +92,6 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
         );
     END COMPONENT game;
 
-<<<<<<< HEAD
-||||||| parent of a62f55e (merge)
-    COMPONENT collision_detector IS
-        PORT (
-            clock_25MHz          : IN STD_LOGIC;
-            vert_sync            : IN STD_LOGIC;
-            pixel_x              : IN UNSIGNED(9 DOWNTO 0);
-            pixel_y              : IN UNSIGNED(9 DOWNTO 0);
-            player_y             : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
-            player_vehicle       : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
-            left_button          : IN STD_LOGIC;
-            player_grounded      : IN STD_LOGIC;
-            player_vy            : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
-            laser_pool           : IN laser_pool_t;
-            missile_pool         : IN missile_pool_t;
-            frame_count          : IN UNSIGNED(7 DOWNTO 0);
-            random_in            : IN STD_LOGIC_VECTOR(19 DOWNTO 0);
-            death                : OUT STD_LOGIC;
-            collision_red        : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-            collision_green      : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-            collision_blue       : OUT STD_LOGIC_VECTOR(3 DOWNTO 0)
-        );
-    END COMPONENT collision_detector;
-    
-    COMPONENT obstacle_manager IS
-        PORT (
-            clock_50MHz      : IN STD_LOGIC;
-            vert_sync        : IN STD_LOGIC;
-            reset            : IN STD_LOGIC;
-            playing          : IN STD_LOGIC;
-            random_in        : IN STD_LOGIC_VECTOR(19 DOWNTO 0);
-            world_speed      : IN UNSIGNED(9 DOWNTO 0);
-            lasers_out       : OUT laser_pool_t;
-            missiles_out     : OUT missile_pool_t
-        );
-    END COMPONENT obstacle_manager;
-    
-    COMPONENT renderer IS
-        PORT (
-            clock_25MHz          : IN STD_LOGIC;
-            show_djt             : IN STD_LOGIC;
-            pixel_x              : IN UNSIGNED(9 DOWNTO 0);
-            pixel_y              : IN UNSIGNED(9 DOWNTO 0);
-    
-            player_y             : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
-            player_vehicle       : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
-            left_button          : IN STD_LOGIC;
-            player_grounded      : IN STD_LOGIC;
-            player_vy            : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
-            teleporter_preview_y : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
-            death                : IN STD_LOGIC;
-            paused               : IN STD_LOGIC;
-            menu_active          : IN STD_LOGIC;
-    
-            laser_pool           : IN laser_pool_t;
-            missile_pool         : IN missile_pool_t;
-            frame_count          : IN UNSIGNED(7 DOWNTO 0);
-            random_in            : IN STD_LOGIC_VECTOR(19 DOWNTO 0);
-            world_speed          : IN UNSIGNED(9 DOWNTO 0);
-            
-            red_out              : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-            green_out            : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-            blue_out             : OUT STD_LOGIC_VECTOR(3 DOWNTO 0)
-        );
-    END COMPONENT renderer;
-
-=======
-    COMPONENT collision_detector IS
-        PORT (
-            clock_25MHz          : IN STD_LOGIC;
-            vert_sync            : IN STD_LOGIC;
-            pixel_x              : IN UNSIGNED(9 DOWNTO 0);
-            pixel_y              : IN UNSIGNED(9 DOWNTO 0);
-            player_y             : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
-            player_vehicle       : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
-            left_button          : IN STD_LOGIC;
-            player_grounded      : IN STD_LOGIC;
-            player_vy            : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
-            laser_pool           : IN laser_pool_t;
-            missile_pool         : IN missile_pool_t;
-            frame_count          : IN UNSIGNED(7 DOWNTO 0);
-            random_in            : IN STD_LOGIC_VECTOR(19 DOWNTO 0);
-            death                : OUT STD_LOGIC;
-            collision_red        : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-            collision_green      : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-            collision_blue       : OUT STD_LOGIC_VECTOR(3 DOWNTO 0)
-        );
-    END COMPONENT collision_detector;
-    
-    COMPONENT obstacle_manager IS
-        PORT (
-            clock_50MHz      : IN STD_LOGIC;
-            vert_sync        : IN STD_LOGIC;
-            reset            : IN STD_LOGIC;
-            playing          : IN STD_LOGIC;
-            random_in        : IN STD_LOGIC_VECTOR(19 DOWNTO 0);
-            world_speed      : IN UNSIGNED(9 DOWNTO 0);
-            lasers_out       : OUT laser_pool_t;
-            missiles_out     : OUT missile_pool_t
-        );
-    END COMPONENT obstacle_manager;
-    
-    COMPONENT renderer IS
-        PORT (
-            clock_25MHz          : IN STD_LOGIC;
-            show_djt             : IN STD_LOGIC;
-            pixel_x              : IN UNSIGNED(9 DOWNTO 0);
-            pixel_y              : IN UNSIGNED(9 DOWNTO 0);
-    
-            player_y             : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
-            player_vehicle       : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
-            left_button          : IN STD_LOGIC;
-            player_grounded      : IN STD_LOGIC;
-            player_vy            : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
-            teleporter_preview_y : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
-            death                : IN STD_LOGIC;
-            paused               : IN STD_LOGIC;
-            menu_active          : IN STD_LOGIC;
-    
-            laser_pool           : IN laser_pool_t;
-            missile_pool         : IN missile_pool_t;
-            frame_count          : IN UNSIGNED(7 DOWNTO 0);
-            random_in            : IN STD_LOGIC_VECTOR(19 DOWNTO 0);
-            world_speed          : IN UNSIGNED(9 DOWNTO 0);
-            
-            red_out              : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-            green_out            : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
-            blue_out             : OUT STD_LOGIC_VECTOR(3 DOWNTO 0)
-        );
-    END COMPONENT renderer;
-
->>>>>>> a62f55e (merge)
     COMPONENT vga_pll IS
         PORT (
             refclk   : IN STD_LOGIC;
@@ -393,7 +261,7 @@ BEGIN
         laser_pool => laser_pool,
         missile_pool => missile_pool,
         coin_pool => coin_pool,
-        death => death_signal,
+        death => death_raw,
         collision_red => collision_red,
         collision_green => collision_green,
         collision_blue => collision_blue
