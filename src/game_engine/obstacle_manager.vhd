@@ -26,6 +26,7 @@ ARCHITECTURE rtl OF obstacle_manager IS
     CONSTANT MISSILE_WIDTH : INTEGER := 16;
     CONSTANT MISSILE_HEIGHT : INTEGER := 16;
     CONSTANT MISSILE_DISPLAY_WIDTH : INTEGER := MISSILE_WIDTH * 2;
+    CONSTANT MISSILE_OFFSET : INTEGER := 16;
     CONSTANT MISSILE_DISPLAY_HEIGHT : INTEGER := MISSILE_HEIGHT * 2;
 
     CONSTANT MISSILE_WARNING_DURATION : INTEGER := 180; -- frames (~3s at 60Hz)
@@ -247,7 +248,7 @@ BEGIN
 
                         temp_missiles(0).is_warning := '1';
                         temp_missiles(0).is_active := '0';
-                        temp_missiles(0).x := TO_SIGNED(SCREEN_WIDTH - MISSILE_DISPLAY_WIDTH, 12);
+                        temp_missiles(0).x := TO_SIGNED(SCREEN_WIDTH - MISSILE_DISPLAY_WIDTH - MISSILE_OFFSET, 12);
                         temp_missiles(0).y := TO_SIGNED(rand_missile_y, 12);
                         warning_timer <= MISSILE_WARNING_DURATION;
 

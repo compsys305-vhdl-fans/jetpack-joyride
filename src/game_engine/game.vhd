@@ -9,6 +9,7 @@ ENTITY game IS
         mouse_left : IN STD_LOGIC;
         mouse_x : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
         mouse_y : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
+        death_signal : IN STD_LOGIC;
         debug_vehicle_select : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
         playing : OUT STD_LOGIC;  -- whether the game is currently being played or not. if not, the physics should not update, and the player should be reset to the starting position.
         menu_active : OUT STD_LOGIC;
@@ -46,7 +47,7 @@ ARCHITECTURE behaviour OF game IS
     SIGNAL teleporter_preview_pos : STD_LOGIC_VECTOR(9 DOWNTO 0) := (OTHERS => '0');
     SIGNAL is_player_grounded : STD_LOGIC := '0';
     SIGNAL active_vehicle : STD_LOGIC_VECTOR(1 DOWNTO 0) := (OTHERS => '0');
-    TYPE game_state_t IS (STATE_MENU, STATE_PLAY, STATE_TRAINING);
+    TYPE game_state_t IS (STATE_MENU, STATE_PLAY, STATE_TRAINING, STATE_DEATH);
     SIGNAL game_state : game_state_t := STATE_MENU;
     SIGNAL is_playing : STD_LOGIC := '0';
     SIGNAL is_training : STD_LOGIC := '0';
@@ -92,7 +93,7 @@ BEGIN
     -- Vehicle choice is centralized here. Replace this with powerup/game-state logic later.
     active_vehicle <= debug_vehicle_select;
 
-    is_playing <= '1' WHEN game_state /= STATE_MENU ELSE '0';
+    is_playing <= '1' WHEN game_state = STATE_PLAY ELSE '0';
     is_training <= '1' WHEN game_state = STATE_TRAINING ELSE '0';
     menu_active <= '1' WHEN game_state = STATE_MENU ELSE '0';
     training_mode <= is_training;
@@ -121,15 +122,27 @@ BEGIN
                 game_state <= STATE_MENU;
                 mouse_left_prev <= '0';
             ELSE
-                IF game_state = STATE_MENU THEN
-                    IF mouse_left = '1' AND mouse_left_prev = '0' THEN
-                        IF play_hit = '1' THEN
-                            game_state <= STATE_PLAY;
-                        ELSIF training_hit = '1' THEN
-                            game_state <= STATE_TRAINING;
+                CASE game_state IS
+                    WHEN STATE_MENU =>
+                        IF mouse_left = '1' AND mouse_left_prev = '0' THEN
+                            IF play_hit = '1' THEN
+                                game_state <= STATE_PLAY;
+                            ELSIF training_hit = '1' THEN
+                                game_state <= STATE_TRAINING;
+                            END IF;
                         END IF;
-                    END IF;
-                END IF;
+                    WHEN STATE_PLAY =>
+                        IF death_signal = '1' THEN
+                            game_state <= STATE_DEATH;
+                        END IF;
+                    WHEN STATE_TRAINING =>
+                        NULL;
+                    WHEN STATE_DEATH =>
+                        IF mouse_left = '1' AND mouse_left_prev = '0' THEN
+                            game_state <= STATE_MENU;
+                        END IF;
+                END CASE;
+
                 mouse_left_prev <= mouse_left;
             END IF;
         END IF;

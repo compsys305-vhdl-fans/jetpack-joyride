@@ -86,6 +86,7 @@ ARCHITECTURE rtl OF collision_detector IS
 
     -- Laser signals
     SIGNAL is_on_any_laser_line : STD_LOGIC;
+    SIGNAL is_on_any_laser_line_d : STD_LOGIC := '0';
     SIGNAL player_pixel_on : STD_LOGIC;
     SIGNAL collision_pixel_on : STD_LOGIC;
 
@@ -313,13 +314,14 @@ BEGIN
             in_player_sprite_d <= in_player_sprite;
             in_missile_sprite_d <= in_missile_sprite;
             in_coin_sprite_d <= in_coin_sprite;
+            is_on_any_laser_line_d <= is_on_any_laser_line;
         END IF;
     END PROCESS;
 
     player_pixel_on <= in_player_sprite_d AND player_sprite_valid AND (NOT player_sprite_is_transparent);
     missile_pixel_on <= in_missile_sprite_d AND missile_sprite_valid AND (NOT missile_sprite_is_transparent);
     coin_pixel_on <= in_coin_sprite_d AND coin_sprite_valid AND (NOT coin_sprite_is_transparent);
-    collision_pixel_on <= player_pixel_on AND (is_on_any_laser_line OR missile_pixel_on);
+    collision_pixel_on <= player_pixel_on AND (is_on_any_laser_line_d OR missile_pixel_on);
     
     -- Laser Collision Detection (axis-aligned beam rectangle only; excludes endpoints)
     PROCESS(laser_pool, pixel_x, pixel_y)

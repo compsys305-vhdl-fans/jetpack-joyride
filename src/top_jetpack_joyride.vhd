@@ -79,6 +79,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             mouse_left : IN STD_LOGIC;
             mouse_x : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
             mouse_y : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
+            death_signal : IN STD_LOGIC;
             debug_vehicle_select : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
             playing : OUT STD_LOGIC;
             menu_active : OUT STD_LOGIC;
@@ -236,6 +237,7 @@ BEGIN
         mouse_left => left_button,
         mouse_x => mouse_x,
         mouse_y => mouse_y,
+        death_signal => death_signal,
         debug_vehicle_select => debug_vehicle_select,
         playing => playing,
         menu_active => menu_active,
