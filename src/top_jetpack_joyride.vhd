@@ -101,7 +101,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
         );
     END COMPONENT vga_pll;
 
-    SIGNAL clock_25 : STD_LOGIC :F '0';
+    SIGNAL clock_25 : STD_LOGIC := '0';
     SIGNAL vga_pll_locked : STD_LOGIC := '0';
 
     -- player signals
@@ -147,6 +147,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL coin_pool : coin_pool_t := INACTIVE_COIN_POOL;
     -- death signal
     SIGNAL death_raw : STD_LOGIC;
+    SIGNAL death_latched : STD_LOGIC := '0';
     SIGNAL death_signal : STD_LOGIC;
     SIGNAL obstacles_enabled : STD_LOGIC;
 	 
@@ -266,7 +267,21 @@ BEGIN
         collision_green => collision_green,
         collision_blue => collision_blue
     );
-    death_signal <= '0' WHEN (training_mode = '1' OR menu_active = '1') ELSE death_raw;
+
+    death_latch: PROCESS(clock_25, mouse_reset)
+    BEGIN
+        IF mouse_reset = '1' THEN
+            death_latched <= '0';
+        ELSIF RISING_EDGE(clock_25) THEN
+            IF menu_active = '1' THEN
+                death_latched <= '0';
+            ELSIF death_raw = '1' THEN
+                death_latched <= '1';
+            END IF;
+        END IF;
+    END PROCESS;
+
+    death_signal <= death_latched;
     
     renderer_inst: ENTITY work.renderer
     PORT MAP (
