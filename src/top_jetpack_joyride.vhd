@@ -201,7 +201,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     -- laser pool
     SIGNAL laser_pool : laser_pool_t;
     SIGNAL missile_pool : missile_pool_t;
-    SIGNAL coin_pool : coin_pool_t;
+    SIGNAL coin_pool : coin_pool_t := INACTIVE_COIN_POOL;
     -- death signal
     SIGNAL death_signal : STD_LOGIC;
 	 
