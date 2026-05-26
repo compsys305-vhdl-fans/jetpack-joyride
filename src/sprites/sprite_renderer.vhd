@@ -473,11 +473,22 @@ BEGIN
     END PROCESS;
 
     PROCESS(active_pixel_index, sprite_id, death_cycle_step)
+        -- The original pixel index from the sprite MIF file
+        VARIABLE original_index : UNSIGNED(7 DOWNTO 0);
     BEGIN
+        original_index := active_pixel_index;
+
         IF (sprite_id = SPRITE_DEATH_TEXT) OR (sprite_id = SPRITE_PAUSE_TEXT) THEN
-            adjusted_pixel_index <= map_rainbow_cycle(active_pixel_index, death_cycle_step);
+            -- The UI sprites use a special rainbow cycle effect.
+            -- However, this should only apply to the fill colours, not the
+            -- transparent background (index 0) or the black outline (index 1).
+            IF original_index > x"01" THEN
+                adjusted_pixel_index <= map_rainbow_cycle(original_index, death_cycle_step);
+            ELSE
+                adjusted_pixel_index <= original_index;
+            END IF;
         ELSE
-            adjusted_pixel_index <= active_pixel_index;
+            adjusted_pixel_index <= original_index;
         END IF;
     END PROCESS;
 
