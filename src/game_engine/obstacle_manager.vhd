@@ -6,7 +6,6 @@ USE work.obstacle_types.ALL;
 
 ENTITY obstacle_manager IS
     PORT (
-        clock_50MHz      : IN STD_LOGIC;
         vert_sync        : IN STD_LOGIC;
         reset            : IN STD_LOGIC;
         playing          : IN STD_LOGIC;

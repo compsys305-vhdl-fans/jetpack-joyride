@@ -73,7 +73,6 @@ ARCHITECTURE rtl OF renderer IS
     SIGNAL sprite_color        : STD_LOGIC_VECTOR(11 DOWNTO 0);
     SIGNAL player_drawn        : STD_LOGIC;
     SIGNAL in_player_sprite_d  : STD_LOGIC := '0';
-    CONSTANT MAX_PLAYER_HEIGHT : POSITIVE := 128;
 
     -- Signals for laser calculation
     TYPE laser_color_array IS ARRAY (0 TO MAX_LASERS - 1) OF STD_LOGIC_VECTOR(11 DOWNTO 0);
@@ -97,8 +96,6 @@ ARCHITECTURE rtl OF renderer IS
     SIGNAL frame_count_d : UNSIGNED(7 DOWNTO 0) := (OTHERS => '0');
     SIGNAL bg_scroll_accum : UNSIGNED(11 DOWNTO 0) := (OTHERS => '0');
     SIGNAL bg_parallax_step : UNSIGNED(9 DOWNTO 0);
-    
-    SIGNAL teleporter_preview_on : STD_LOGIC;
 
     CONSTANT DEATH_SPRITE_WIDTH : NATURAL := 42;
     CONSTANT DEATH_SPRITE_HEIGHT : NATURAL := 13;
@@ -173,8 +170,6 @@ ARCHITECTURE rtl OF renderer IS
     SIGNAL coin_sprite_is_transparent : STD_LOGIC;
     SIGNAL coin_sprite_valid : STD_LOGIC;
     SIGNAL coin_drawn : STD_LOGIC;
-
-    SIGNAL laser_beam_rect_mode : STD_LOGIC := '0';
 
     -- Pipelining registers
     SIGNAL pixel_y_lookahead       : UNSIGNED(9 DOWNTO 0);
@@ -571,8 +566,6 @@ BEGIN
                 show_djt => show_djt,
                 pixel_x => pixel_x,
                 pixel_y => pixel_y_lookahead,
-                frame_count => frame_count,
-                beam_rect_mode => laser_beam_rect_mode,
                 x0 => laser_pool(i).x0,
                 y0 => laser_pool(i).y0,
                 x1 => laser_pool(i).x1,
@@ -585,7 +578,6 @@ BEGIN
     
     PROCESS(laser_colors_reg, laser_transparencies_reg)
         VARIABLE found : BOOLEAN := false;
-        VARIABLE idx : INTEGER;
     BEGIN
         combined_laser_color <= (OTHERS => '0');
         combined_laser_is_transparent <= '1';

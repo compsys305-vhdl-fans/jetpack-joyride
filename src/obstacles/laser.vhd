@@ -9,9 +9,6 @@ ENTITY laser IS
         show_djt    : IN STD_LOGIC;
         pixel_x     : IN UNSIGNED(9 DOWNTO 0);
         pixel_y     : IN UNSIGNED(9 DOWNTO 0);
-        frame_count : IN UNSIGNED(7 DOWNTO 0);
-        beam_rect_mode : IN STD_LOGIC;
-        
         x0          : IN SIGNED(11 DOWNTO 0);
         y0          : IN SIGNED(11 DOWNTO 0);
         x1          : IN SIGNED(11 DOWNTO 0);
@@ -113,8 +110,6 @@ BEGIN
             clock          => clock,
             pixel_x        => pixel_x,
             pixel_y        => pixel_y,
-            frame_count    => frame_count,
-            beam_rect_mode => beam_rect_mode,
             x0             => x0,
             y0             => y0,
             x1             => x1,

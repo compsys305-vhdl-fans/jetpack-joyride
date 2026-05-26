@@ -18,7 +18,6 @@ ENTITY collision_detector IS
         laser_pool           : IN laser_pool_t;
         missile_pool         : IN missile_pool_t;
         coin_pool            : IN coin_pool_t;
-        frame_count          : IN UNSIGNED(7 DOWNTO 0);
         death                : OUT STD_LOGIC;
         collision_red        : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
         collision_green      : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);

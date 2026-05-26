@@ -201,7 +201,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     -- laser pool
     SIGNAL laser_pool : laser_pool_t;
     SIGNAL missile_pool : missile_pool_t;
-
+    SIGNAL coin_pool : coin_pool_t;
     -- death signal
     SIGNAL death_signal : STD_LOGIC;
 	 
@@ -228,7 +228,6 @@ BEGIN
 
     obstacle_manager_inst: ENTITY work.obstacle_manager
         PORT MAP (
-            clock_50MHz => clock_50,
             vert_sync => update_tick,
             reset => mouse_reset,
             playing => playing,
@@ -311,7 +310,7 @@ BEGIN
         player_vy => player_vy,
         laser_pool => laser_pool,
         missile_pool => missile_pool,
-        frame_count => frame_counter,
+        coin_pool => coin_pool,
         death => death_signal,
         collision_red => collision_red,
         collision_green => collision_green,
@@ -334,6 +333,7 @@ BEGIN
         paused => paused,
         laser_pool => laser_pool,
         missile_pool => missile_pool,
+        coin_pool => coin_pool,
         frame_count => frame_counter,
         random_in => random_num,
         world_speed => world_speed,
