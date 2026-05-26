@@ -143,6 +143,8 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             death                : IN STD_LOGIC;
             paused               : IN STD_LOGIC;
             menu_active          : IN STD_LOGIC;
+            mouse_x              : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
+            mouse_y              : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
     
             laser_pool           : IN laser_pool_t;
             missile_pool         : IN missile_pool_t;
@@ -347,6 +349,8 @@ BEGIN
         death => death_signal,
         paused => paused,
         menu_active => menu_active,
+        mouse_x => mouse_x,
+        mouse_y => mouse_y,
         laser_pool => laser_pool,
         missile_pool => missile_pool,
         coin_pool => coin_pool,

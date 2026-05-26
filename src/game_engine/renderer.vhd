@@ -23,6 +23,8 @@ ENTITY renderer IS
         death                : IN STD_LOGIC;
         paused               : IN STD_LOGIC;
         menu_active          : IN STD_LOGIC;
+        mouse_x              : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
+        mouse_y              : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
 
         laser_pool           : IN laser_pool_t;
         missile_pool         : IN missile_pool_t;
@@ -410,6 +412,11 @@ ARCHITECTURE rtl OF renderer IS
     SIGNAL menu_color : STD_LOGIC_VECTOR(11 DOWNTO 0);
     SIGNAL menu_color_d : STD_LOGIC_VECTOR(11 DOWNTO 0) := (OTHERS => '0');
 
+    CONSTANT CURSOR_HALF_SIZE : INTEGER := 2;
+    CONSTANT CURSOR_COLOR : STD_LOGIC_VECTOR(11 DOWNTO 0) := x"FFF";
+    SIGNAL cursor_on : STD_LOGIC := '0';
+    SIGNAL cursor_on_d : STD_LOGIC := '0';
+
     SIGNAL laser_beam_rect_mode : STD_LOGIC := '0';
 
     -- Pipelining registers
@@ -703,6 +710,24 @@ BEGIN
         END IF;
     END PROCESS;
 
+    PROCESS (pixel_x, pixel_y_lookahead, mouse_x, mouse_y)
+        VARIABLE px : INTEGER;
+        VARIABLE py : INTEGER;
+        VARIABLE mx : INTEGER;
+        VARIABLE my : INTEGER;
+    BEGIN
+        px := TO_INTEGER(pixel_x);
+        py := TO_INTEGER(pixel_y_lookahead);
+        mx := TO_INTEGER(UNSIGNED(mouse_x));
+        my := TO_INTEGER(UNSIGNED(mouse_y));
+
+        IF (ABS(px - mx) <= CURSOR_HALF_SIZE) AND (ABS(py - my) <= CURSOR_HALF_SIZE) THEN
+            cursor_on <= '1';
+        ELSE
+            cursor_on <= '0';
+        END IF;
+    END PROCESS;
+
     player_sprite_renderer: sprite_renderer
         PORT MAP (
             clock          => clock_25MHz,
@@ -810,6 +835,7 @@ BEGIN
             menu_drawn_d <= menu_drawn;
             menu_color_d <= menu_color;
             in_coin_sprite_d <= in_coin_sprite;
+            cursor_on_d <= cursor_on;
             laser_colors_reg <= laser_colors;
             laser_transparencies_reg <= laser_transparencies;
             base_color_d <= base_color;
@@ -905,14 +931,18 @@ BEGIN
         base_color <= STD_LOGIC_VECTOR(TO_UNSIGNED(r,4) & TO_UNSIGNED(g,4) & TO_UNSIGNED(b,4));
     END PROCESS;
 
-    PROCESS (menu_drawn_d, menu_color_d, death_drawn, death_sprite_color, pause_drawn, pause_sprite_color, show_djt,
+    PROCESS (cursor_on_d, menu_drawn_d, menu_color_d, death_drawn, death_sprite_color, pause_drawn, pause_sprite_color, show_djt,
              player_drawn, sprite_color, missile_drawn, missile_sprite_color, coin_drawn, coin_sprite_color,
              base_color_d, combined_laser_is_transparent, combined_laser_color)
         VARIABLE base_r, base_g, base_b : INTEGER RANGE 0 TO 15;
         VARIABLE add_r, add_g, add_b : INTEGER;
         VARIABLE final_r, final_g, final_b : INTEGER RANGE 0 TO 15;
     BEGIN
-        IF menu_drawn_d = '1' THEN
+        IF cursor_on_d = '1' THEN
+            final_r := TO_INTEGER(UNSIGNED(CURSOR_COLOR(11 DOWNTO 8)));
+            final_g := TO_INTEGER(UNSIGNED(CURSOR_COLOR(7 DOWNTO 4)));
+            final_b := TO_INTEGER(UNSIGNED(CURSOR_COLOR(3 DOWNTO 0)));
+        ELSIF menu_drawn_d = '1' THEN
             final_r := TO_INTEGER(UNSIGNED(menu_color_d(11 DOWNTO 8)));
             final_g := TO_INTEGER(UNSIGNED(menu_color_d(7 DOWNTO 4)));
             final_b := TO_INTEGER(UNSIGNED(menu_color_d(3 DOWNTO 0)));
