@@ -21,6 +21,7 @@ ENTITY renderer IS
         player_vy            : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
         teleporter_preview_y : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
         death                : IN STD_LOGIC;
+        paused               : IN STD_LOGIC;
 
         laser_pool           : IN laser_pool_t;
         frame_count          : IN UNSIGNED(7 DOWNTO 0);
@@ -105,6 +106,14 @@ ARCHITECTURE rtl OF renderer IS
     CONSTANT DEATH_X_LEFT : NATURAL := (640 - DEATH_DISPLAY_WIDTH) / 2;
     CONSTANT DEATH_Y_TOP : NATURAL := (480 - DEATH_DISPLAY_HEIGHT) / 2;
 
+    CONSTANT PAUSE_SPRITE_WIDTH : NATURAL := 34;
+    CONSTANT PAUSE_SPRITE_HEIGHT : NATURAL := 13;
+    CONSTANT PAUSE_SCALE_SHIFT : NATURAL := 1;
+    CONSTANT PAUSE_DISPLAY_WIDTH : NATURAL := PAUSE_SPRITE_WIDTH * 2;
+    CONSTANT PAUSE_DISPLAY_HEIGHT : NATURAL := PAUSE_SPRITE_HEIGHT * 2;
+    CONSTANT PAUSE_X_LEFT : NATURAL := (640 - PAUSE_DISPLAY_WIDTH) / 2;
+    CONSTANT PAUSE_Y_TOP : NATURAL := (480 - PAUSE_DISPLAY_HEIGHT) / 2;
+
     SIGNAL death_rel_x : UNSIGNED(15 DOWNTO 0);
     SIGNAL death_rel_y : UNSIGNED(15 DOWNTO 0);
     SIGNAL in_death_sprite : STD_LOGIC;
@@ -113,6 +122,15 @@ ARCHITECTURE rtl OF renderer IS
     SIGNAL death_sprite_is_transparent : STD_LOGIC;
     SIGNAL death_sprite_valid : STD_LOGIC;
     SIGNAL death_drawn : STD_LOGIC;
+
+    SIGNAL pause_rel_x : UNSIGNED(15 DOWNTO 0);
+    SIGNAL pause_rel_y : UNSIGNED(15 DOWNTO 0);
+    SIGNAL in_pause_sprite : STD_LOGIC;
+    SIGNAL in_pause_sprite_d : STD_LOGIC := '0';
+    SIGNAL pause_sprite_color : STD_LOGIC_VECTOR(11 DOWNTO 0);
+    SIGNAL pause_sprite_is_transparent : STD_LOGIC;
+    SIGNAL pause_sprite_valid : STD_LOGIC;
+    SIGNAL pause_drawn : STD_LOGIC;
 
     SIGNAL laser_beam_rect_mode : STD_LOGIC := '0';
 
@@ -256,6 +274,30 @@ BEGIN
         END IF;
     END PROCESS;
 
+    PROCESS (pixel_x, pixel_y_lookahead, paused)
+        VARIABLE s_x : UNSIGNED(15 DOWNTO 0);
+        VARIABLE s_y : UNSIGNED(15 DOWNTO 0);
+        VARIABLE left_x : UNSIGNED(15 DOWNTO 0);
+        VARIABLE top_y : UNSIGNED(15 DOWNTO 0);
+    BEGIN
+        s_x := RESIZE(pixel_x, 16);
+        s_y := RESIZE(pixel_y_lookahead, 16);
+        left_x := TO_UNSIGNED(PAUSE_X_LEFT, 16);
+        top_y := TO_UNSIGNED(PAUSE_Y_TOP, 16);
+
+        IF (paused = '1') AND
+           (s_x >= left_x) AND (s_x < left_x + TO_UNSIGNED(PAUSE_DISPLAY_WIDTH, 16)) AND
+           (s_y >= top_y) AND (s_y < top_y + TO_UNSIGNED(PAUSE_DISPLAY_HEIGHT, 16)) THEN
+            in_pause_sprite <= '1';
+            pause_rel_x <= s_x - left_x;
+            pause_rel_y <= s_y - top_y;
+        ELSE
+            in_pause_sprite <= '0';
+            pause_rel_x <= (OTHERS => '0');
+            pause_rel_y <= (OTHERS => '0');
+        END IF;
+    END PROCESS;
+
     player_sprite_renderer: sprite_renderer
         PORT MAP (
             clock          => clock_25MHz,
@@ -298,6 +340,20 @@ BEGIN
             valid          => death_sprite_valid
         );
 
+    pause_sprite_renderer: sprite_renderer
+        PORT MAP (
+            clock          => clock_25MHz,
+            show_djt       => '0',
+            sprite_id      => SPRITE_PAUSE_TEXT,
+            palette_id     => PALETTE_UI,
+            scale_shift    => PAUSE_SCALE_SHIFT,
+            rel_x          => pause_rel_x,
+            rel_y          => pause_rel_y,
+            color          => pause_sprite_color,
+            is_transparent => pause_sprite_is_transparent,
+            valid          => pause_sprite_valid
+        );
+
     PROCESS(clock_25MHz)
     BEGIN
         IF RISING_EDGE(clock_25MHz) THEN
@@ -316,6 +372,7 @@ BEGIN
             frame_count_d <= frame_count;
             in_player_sprite_d <= in_player_sprite;
             in_death_sprite_d <= in_death_sprite;
+            in_pause_sprite_d <= in_pause_sprite;
             laser_colors_reg <= laser_colors;
             laser_transparencies_reg <= laser_transparencies;
             base_color_d <= base_color;
@@ -324,6 +381,7 @@ BEGIN
 
     player_drawn <= in_player_sprite_d AND sprite_valid AND (NOT player_is_transparent);
     death_drawn <= in_death_sprite_d AND death_sprite_valid AND (NOT death_sprite_is_transparent);
+    pause_drawn <= in_pause_sprite_d AND pause_sprite_valid AND (NOT pause_sprite_is_transparent);
     bg_drawn <= bg_valid AND (NOT bg_is_transparent);
 
     PROCESS(pixel_x, pixel_y_lookahead, bg_seed, bg_scroll_accum, show_djt)
@@ -413,8 +471,9 @@ BEGIN
         base_color <= STD_LOGIC_VECTOR(TO_UNSIGNED(r,4) & TO_UNSIGNED(g,4) & TO_UNSIGNED(b,4));
     END PROCESS;
 
-    PROCESS (death_drawn, death_sprite_color, show_djt, player_drawn, sprite_color, base_color_d,
-             combined_laser_is_transparent, combined_laser_color)
+    PROCESS (death_drawn, death_sprite_color, pause_drawn, pause_sprite_color, show_djt,
+             player_drawn, sprite_color, base_color_d, combined_laser_is_transparent,
+             combined_laser_color)
         VARIABLE base_r, base_g, base_b : INTEGER RANGE 0 TO 15;
         VARIABLE add_r, add_g, add_b : INTEGER;
         VARIABLE final_r, final_g, final_b : INTEGER RANGE 0 TO 15;
@@ -423,6 +482,10 @@ BEGIN
             final_r := TO_INTEGER(UNSIGNED(death_sprite_color(11 DOWNTO 8)));
             final_g := TO_INTEGER(UNSIGNED(death_sprite_color(7 DOWNTO 4)));
             final_b := TO_INTEGER(UNSIGNED(death_sprite_color(3 DOWNTO 0)));
+        ELSIF pause_drawn = '1' THEN
+            final_r := TO_INTEGER(UNSIGNED(pause_sprite_color(11 DOWNTO 8)));
+            final_g := TO_INTEGER(UNSIGNED(pause_sprite_color(7 DOWNTO 4)));
+            final_b := TO_INTEGER(UNSIGNED(pause_sprite_color(3 DOWNTO 0)));
         ELSIF show_djt = '1' THEN
             final_r := TO_INTEGER(UNSIGNED(base_color_d(11 DOWNTO 8)));
             final_g := TO_INTEGER(UNSIGNED(base_color_d(7 DOWNTO 4)));

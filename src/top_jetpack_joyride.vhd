@@ -135,6 +135,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             player_vy            : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
             teleporter_preview_y : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
             death                : IN STD_LOGIC;
+            paused               : IN STD_LOGIC;
     
             laser_pool           : IN laser_pool_t;
             frame_count          : IN UNSIGNED(7 DOWNTO 0);
@@ -323,6 +324,7 @@ BEGIN
         player_vy => player_vy,
         teleporter_preview_y => teleporter_preview_y,
         death => death_signal,
+        paused => paused,
         laser_pool => laser_pool,
         frame_count => frame_counter,
         random_in => random_num,

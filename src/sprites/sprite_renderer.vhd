@@ -90,6 +90,10 @@ ARCHITECTURE rtl OF sprite_renderer IS
     SIGNAL death_pixel_index : UNSIGNED(7 DOWNTO 0);
     SIGNAL death_valid : STD_LOGIC;
 
+    -- Pause Sprite Signals
+    SIGNAL pause_pixel_index : UNSIGNED(7 DOWNTO 0);
+    SIGNAL pause_valid : STD_LOGIC;
+
     CONSTANT DJT_SOURCE_WIDTH : NATURAL := 400;
     CONSTANT DJT_SOURCE_HEIGHT : NATURAL := 600;
     CONSTANT DJT_ROTATED_WIDTH : NATURAL := DJT_SOURCE_HEIGHT;
@@ -111,7 +115,7 @@ ARCHITECTURE rtl OF sprite_renderer IS
         x"06"  -- pink
     );
 
-    FUNCTION map_death_cycle(idx : UNSIGNED(7 DOWNTO 0); step : INTEGER) RETURN UNSIGNED IS
+    FUNCTION map_rainbow_cycle(idx : UNSIGNED(7 DOWNTO 0); step : INTEGER) RETURN UNSIGNED IS
         VARIABLE mapped : UNSIGNED(7 DOWNTO 0) := idx;
         VARIABLE pos : INTEGER := -1;
     BEGIN
@@ -126,7 +130,7 @@ ARCHITECTURE rtl OF sprite_renderer IS
         END IF;
 
         RETURN mapped;
-    END FUNCTION map_death_cycle;
+    END FUNCTION map_rainbow_cycle;
     
 BEGIN
 
@@ -247,6 +251,10 @@ BEGIN
         GENERIC MAP (IMAGE_WIDTH => 42, IMAGE_HEIGHT => 13, MIF_FILE => "../res/death/death.mif")
         PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => death_pixel_index, valid => death_valid);
 
+    pause_rom: image_loader
+        GENERIC MAP (IMAGE_WIDTH => 34, IMAGE_HEIGHT => 13, MIF_FILE => "../res/ui/pause.mif")
+        PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => pause_pixel_index, valid => pause_valid);
+
     PROCESS(local_x, local_y)
     BEGIN
         IF (TO_INTEGER(local_x) < DJT_ROTATED_WIDTH) AND (TO_INTEGER(local_y) < DJT_ROTATED_HEIGHT) THEN
@@ -275,7 +283,8 @@ BEGIN
             laser1_flipped_pixel_index, laser1_flipped_valid, laser2_flipped_pixel_index, laser2_flipped_valid,
             bg_light_pixel_index, bg_light_valid, bg_pillar_pixel_index, bg_pillar_valid, bg_plain_pixel_index, bg_plain_valid,
             djt_pixel_index, djt_valid,
-            death_pixel_index, death_valid)
+            death_pixel_index, death_valid,
+            pause_pixel_index, pause_valid)
     BEGIN
         CASE sprite_id IS
             WHEN SPRITE_BARRY_RUN => -- Running (Animated)
@@ -378,6 +387,10 @@ BEGIN
                 active_pixel_index <= death_pixel_index;
                 active_valid       <= death_valid;
 
+            WHEN SPRITE_PAUSE_TEXT =>
+                active_pixel_index <= pause_pixel_index;
+                active_valid       <= pause_valid;
+
             WHEN OTHERS =>
                 IF show_djt = '1' THEN
                     active_pixel_index <= djt_pixel_index;
@@ -391,8 +404,8 @@ BEGIN
 
     PROCESS(active_pixel_index, sprite_id, death_cycle_step)
     BEGIN
-        IF sprite_id = SPRITE_DEATH_TEXT THEN
-            adjusted_pixel_index <= map_death_cycle(active_pixel_index, death_cycle_step);
+        IF (sprite_id = SPRITE_DEATH_TEXT) OR (sprite_id = SPRITE_PAUSE_TEXT) THEN
+            adjusted_pixel_index <= map_rainbow_cycle(active_pixel_index, death_cycle_step);
         ELSE
             adjusted_pixel_index <= active_pixel_index;
         END IF;
