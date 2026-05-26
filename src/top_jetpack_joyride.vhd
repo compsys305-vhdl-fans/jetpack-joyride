@@ -101,7 +101,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
         );
     END COMPONENT vga_pll;
 
-    SIGNAL clock_25 : STD_LOGIC :F '0';
+    SIGNAL clock_25 : STD_LOGIC := '0';
     SIGNAL vga_pll_locked : STD_LOGIC := '0';
 
     -- player signals
