@@ -161,6 +161,7 @@ BEGIN
                             next_y_speed := next_y_speed + PLAYER_Y_ACCELERATION;
                         END IF;
                     WHEN "11" =>  -- crazy freaking teleporter
+                        next_y_speed := (OTHERS => '0');
                         IF next_preview_pos > TELEPORTER_PREVIEW_MID_Y THEN
                             next_preview_speed := next_preview_speed - TELEPORTER_PREVIEW_ACCELERATION;
                         ELSIF next_preview_pos < TELEPORTER_PREVIEW_MID_Y THEN

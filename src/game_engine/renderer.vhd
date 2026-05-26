@@ -968,7 +968,7 @@ BEGIN
         END LOOP;
     END PROCESS;
 
-    PROCESS (pixel_y_lookahead, teleporter_preview_y, bg_drawn, bg_color, show_djt)
+    PROCESS (pixel_y_lookahead, teleporter_preview_y, bg_drawn, bg_color, show_djt, player_vehicle)
         VARIABLE r,g,b : INTEGER RANGE 0 TO 15;
     BEGIN
         IF bg_drawn = '1' THEN
@@ -979,7 +979,7 @@ BEGIN
             r := 0;  g := 0; b := 0; -- Black
         END IF;
 
-        IF show_djt = '0' THEN
+        IF show_djt = '0' AND player_vehicle = "11" THEN
             IF UNSIGNED(pixel_y_lookahead) = UNSIGNED(teleporter_preview_y) THEN
                  r := 15; g := 6; b := 0; -- Orange
             END IF;
