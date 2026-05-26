@@ -390,7 +390,7 @@ BEGIN
 
     PROCESS(clock_25MHz, vert_sync)
     BEGIN
-        IF vert_sync = '1' THEN
+        IF vert_sync = '0' THEN
             death_reg <= '0';
         ELSIF RISING_EDGE(clock_25MHz) THEN
             IF collision_pixel_on = '1' THEN
@@ -424,7 +424,7 @@ BEGIN
         ELSE
             collision_red <= "0000";
             collision_green <= "0000";
-            collision_blue <= "0000";
+            collision_blue <= "000" & collision_pixel_on;
         END IF;
     END PROCESS;
 
