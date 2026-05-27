@@ -50,7 +50,8 @@ ARCHITECTURE rtl OF obstacle_manager IS
 
     -- Spawning rate constants
     CONSTANT INITIAL_SPAWN_INTERVAL : INTEGER := 90; -- 1.5 seconds
-    CONSTANT MIN_SPAWN_INTERVAL : INTEGER := 30; -- 0.5 seconds
+    CONSTANT MIN_SPAWN_INTERVAL : INTEGER := 30; -- 0.5 seconds at base speed
+    CONSTANT MIN_EFFECTIVE_SPAWN_INTERVAL : INTEGER := 12; -- lower clamp after speed scaling
     CONSTANT SPAWN_INTERVAL_DECREMENT : INTEGER := 10;
     CONSTANT SPAWN_RAMP_RATE : INTEGER := 60; -- Time in frames to wait before decrementing spawn interval
 
@@ -84,10 +85,12 @@ BEGIN
         VARIABLE speed_x : INTEGER;
         VARIABLE safe_to_spawn : BOOLEAN;
         VARIABLE is_horizontal : BOOLEAN;
+        VARIABLE spawn_due : BOOLEAN;
         VARIABLE rand_val : INTEGER;
         VARIABLE max_y : INTEGER;
         VARIABLE y_range : INTEGER;
         VARIABLE laser_end_x : INTEGER;
+        VARIABLE next_laser_spawn_interval : INTEGER;
         VARIABLE coin_idx : INTEGER;
         VARIABLE temp_missiles : missile_pool_t;
         VARIABLE missile_speed_x : INTEGER;
@@ -113,23 +116,22 @@ BEGIN
                 temp_missiles := INACTIVE_MISSILE_POOL;
                 temp_coins := INACTIVE_COIN_POOL;
                 temp_powerups := INACTIVE_POWERUP_POOL;
-                spawn_counter <= INITIAL_SPAWN_INTERVAL;
                 dynamic_spawn_interval <= INITIAL_SPAWN_INTERVAL;
                 missile_spawn_counter <= MISSILE_SPAWN_INTERVAL;
                 warning_timer <= 0;
                 coin_spawn_counter <= COIN_SPAWN_INTERVAL;
                 powerup_spawn_counter <= POWERUP_SPAWN_INTERVAL;
-                 ramp_up_counter <= SPAWN_RAMP_RATE;
+                ramp_up_counter <= SPAWN_RAMP_RATE;
                 spawn_counter <= 0; -- Start spawning immediately on next playing frame
             ELSIF playing = '1' THEN
-                IF playing_prev = '0' THEN -- Game just started
-                    spawn_counter <= 0; -- Trigger immediate spawn
-                END IF;
-
                 -- Ramp up spawn rate
                 IF ramp_up_counter = 0 THEN
                     IF dynamic_spawn_interval > MIN_SPAWN_INTERVAL THEN
-                        dynamic_spawn_interval <= dynamic_spawn_interval - SPAWN_INTERVAL_DECREMENT;
+                        IF dynamic_spawn_interval - SPAWN_INTERVAL_DECREMENT < MIN_SPAWN_INTERVAL THEN
+                            dynamic_spawn_interval <= MIN_SPAWN_INTERVAL;
+                        ELSE
+                            dynamic_spawn_interval <= dynamic_spawn_interval - SPAWN_INTERVAL_DECREMENT;
+                        END IF;
                     END IF;
                     ramp_up_counter <= SPAWN_RAMP_RATE;
                 ELSE
@@ -223,9 +225,14 @@ BEGIN
                 END IF;
 
                 -- Check for spawning new laser
-                IF spawn_counter = 0 THEN
+                spawn_due := (spawn_counter = 0) OR (playing_prev = '0');
+                IF spawn_due THEN
                     -- Set timer for next spawn. Add a small random value to vary the timing.
-                    spawn_counter <= dynamic_spawn_interval + TO_INTEGER(UNSIGNED(random_in(3 DOWNTO 0)));
+                    next_laser_spawn_interval := (dynamic_spawn_interval * BASE_LASER_SPEED_X) / speed_x;
+                    IF next_laser_spawn_interval < MIN_EFFECTIVE_SPAWN_INTERVAL THEN
+                        next_laser_spawn_interval := MIN_EFFECTIVE_SPAWN_INTERVAL;
+                    END IF;
+                    spawn_counter <= next_laser_spawn_interval + TO_INTEGER(UNSIGNED(random_in(3 DOWNTO 0)));
                     
                     -- Find an inactive slot to spawn a new laser
                     -- This is inside the spawn_counter=0 block to ensure we only try to spawn one per trigger.
@@ -349,6 +356,9 @@ BEGIN
                 temp_missiles := INACTIVE_MISSILE_POOL;
                 temp_coins := INACTIVE_COIN_POOL;
                 temp_powerups := INACTIVE_POWERUP_POOL;
+                spawn_counter <= INITIAL_SPAWN_INTERVAL;
+                dynamic_spawn_interval <= INITIAL_SPAWN_INTERVAL;
+                ramp_up_counter <= SPAWN_RAMP_RATE;
                 missile_spawn_counter <= MISSILE_SPAWN_INTERVAL;
                 warning_timer <= 0;
                 coin_spawn_counter <= COIN_SPAWN_INTERVAL;
