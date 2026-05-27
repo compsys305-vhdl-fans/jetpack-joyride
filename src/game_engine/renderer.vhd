@@ -602,7 +602,7 @@ BEGIN
         left_x := TO_UNSIGNED(PAUSE_X_LEFT, 16);
         top_y := TO_UNSIGNED(PAUSE_Y_TOP, 16);
 
-        IF (paused = '1') AND
+        IF (paused = '1') AND (menu_active = '0') AND (death = '0') AND
            (s_x >= left_x) AND (s_x < left_x + TO_UNSIGNED(PAUSE_DISPLAY_WIDTH, 16)) AND
            (s_y >= top_y) AND (s_y < top_y + TO_UNSIGNED(PAUSE_DISPLAY_HEIGHT, 16)) THEN
             in_pause_sprite <= '1';

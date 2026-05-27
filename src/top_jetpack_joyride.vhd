@@ -167,10 +167,10 @@ BEGIN
             locked => vga_pll_locked
         );
 
-    PROCESS(clock_50)
+    PROCESS(clock_50, menu_active, death_signal)
     BEGIN
         IF RISING_EDGE(clock_50) THEN
-            IF key0_prev = '1' AND key(0) = '0' THEN
+            IF key0_prev = '1' AND key(0) = '0' AND menu_active = '0' AND death_signal = '0' THEN
                 paused <= NOT paused;
             END IF;
             key0_prev <= key(0);
