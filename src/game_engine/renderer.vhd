@@ -907,9 +907,9 @@ BEGIN
         PORT MAP (
             clock          => clock_25MHz,
             show_djt       => '0',
-            sprite_id      => SPRITE_DEATH_TEXT,
-            palette_id     => PALETTE_DEATH,
-            scale_shift    => DEATH_SCALE_SHIFT,
+            sprite_id      => SPRITE_TITLE,
+            palette_id     => PALETTE_TITLE,
+            scale_shift    => 0,
             rel_x          => title_rel_x,
             rel_y          => title_rel_y,
             color          => title_sprite_color,
