@@ -356,7 +356,7 @@ BEGIN
                     coin_spawned := FALSE;
                     FOR i IN 0 TO MAX_COINS - 1 LOOP
                         IF (NOT coin_spawned) AND (temp_coins(i).is_active = '0') THEN
-                            coin_range := SCREEN_HEIGHT - COIN_DISPLAY_HEIGHT;
+                            coin_range := FLOOR_TOP_Y - COIN_DISPLAY_HEIGHT;
                             IF coin_range < 0 THEN
                                 rand_coin_y := 0;
                             ELSE
