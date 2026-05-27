@@ -447,17 +447,17 @@ ARCHITECTURE rtl OF renderer IS
     CONSTANT SCORE_TEXT_HEIGHT : NATURAL := FONT_H * FONT_SCALE;
 
     FUNCTION pow10(exp : INTEGER) RETURN INTEGER IS
-        VARIABLE result : INTEGER := 1;
     BEGIN
-        IF exp <= 0 THEN
-            RETURN 1;
-        END IF;
-
-        FOR i IN 1 TO exp LOOP
-            result := result * 10;
-        END LOOP;
-
-        RETURN result;
+        CASE exp IS
+            WHEN 0 => RETURN 1;
+            WHEN 1 => RETURN 10;
+            WHEN 2 => RETURN 100;
+            WHEN 3 => RETURN 1000;
+            WHEN 4 => RETURN 10000;
+            WHEN 5 => RETURN 100000;
+            WHEN 6 => RETURN 1000000;
+            WHEN OTHERS => RETURN 1; -- Default case, though should not be hit with current logic
+        END CASE;
     END FUNCTION;
 
     FUNCTION digit_row(digit : INTEGER; row : INTEGER) RETURN STD_LOGIC_VECTOR IS
