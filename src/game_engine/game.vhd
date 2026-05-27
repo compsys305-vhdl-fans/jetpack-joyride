@@ -80,6 +80,8 @@ ARCHITECTURE behaviour OF game IS
 
     SIGNAL distance_reg : UNSIGNED(31 DOWNTO 0) := (OTHERS => '0');
     SIGNAL coin_count_reg : UNSIGNED(15 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL distance_accumulator : INTEGER RANGE 0 TO 100 := 0;
+    SIGNAL score_reg : UNSIGNED(31 DOWNTO 0) := (OTHERS => '0');
 
     FUNCTION point_in_rect(
         x : UNSIGNED(9 DOWNTO 0);
@@ -215,16 +217,33 @@ BEGIN
     BEGIN
         IF RISING_EDGE(vert_sync) THEN
             IF is_playing = '1' THEN
-                distance_reg <= distance_reg + RESIZE(world_speed_reg, distance_reg'length);
+                distance_accumulator <= distance_accumulator + TO_INTEGER(world_speed_reg);
+                IF distance_accumulator >= 100 THEN
+                    distance_accumulator <= distance_accumulator - 100;
+                    distance_reg <= distance_reg + 1;
+                END IF;
+
                 IF coin_collected = '1' THEN
                     coin_count_reg <= coin_count_reg + 1;
                 END IF;
             ELSE
                 distance_reg <= (OTHERS => '0');
                 coin_count_reg <= (OTHERS => '0');
+                distance_accumulator <= 0;
             END IF;
         END IF;
     END PROCESS score_proc;
+
+    score_calc_proc: PROCESS(vert_sync)
+    BEGIN
+        IF RISING_EDGE(vert_sync) THEN
+            IF is_playing = '1' THEN
+                score_reg <= distance_reg + RESIZE(coin_count_reg * 10, 32);
+            ELSE
+                score_reg <= (OTHERS => '0');
+            END IF;
+        END IF;
+    END PROCESS score_calc_proc;
 
     -- some stuff goes here, such as handling the global game state, and connecting the physics and rendering engines together.
     
@@ -235,5 +254,5 @@ BEGIN
     grounded <= is_player_grounded;
     teleporter_preview_y <= teleporter_preview_pos;
     world_speed <= world_speed_reg;
-    score_out <= distance_reg + RESIZE(RESIZE(coin_count_reg, distance_reg'length) * TO_UNSIGNED(5000, distance_reg'length), distance_reg'length);
+    score_out <= score_reg;
 END ARCHITECTURE behaviour;
