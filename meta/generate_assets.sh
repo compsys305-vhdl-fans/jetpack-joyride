@@ -1,5 +1,5 @@
 #!/bin/zsh
-set -ex
+set -e
 setopt null_glob
 
 script_dir="$(cd -- "$(dirname -- "$0")" && pwd)"
