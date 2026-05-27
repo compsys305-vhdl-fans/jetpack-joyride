@@ -626,6 +626,8 @@ ARCHITECTURE rtl OF renderer IS
     SIGNAL score_shadow_drawn : STD_LOGIC;
     SIGNAL score_drawn_d : STD_LOGIC := '0';
     SIGNAL score_shadow_drawn_d : STD_LOGIC := '0';
+    SIGNAL score_value_reg : UNSIGNED(31 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL frame_count_prev : UNSIGNED(7 DOWNTO 0) := (OTHERS => '0');
 
     CONSTANT CURSOR_HALF_SIZE : INTEGER := 2;
     CONSTANT CURSOR_COLOR : STD_LOGIC_VECTOR(11 DOWNTO 0) := x"FFF";
@@ -972,7 +974,7 @@ BEGIN
         END IF;
     END PROCESS;
 
-    PROCESS (pixel_x, pixel_y_lookahead, score_value, menu_active)
+    PROCESS (pixel_x, pixel_y_lookahead, score_value_reg, menu_active)
         VARIABLE s_x : INTEGER;
         VARIABLE s_y : INTEGER;
         VARIABLE score_int : INTEGER;
@@ -983,7 +985,7 @@ BEGIN
         IF menu_active = '0' THEN
             s_x := TO_INTEGER(pixel_x);
             s_y := TO_INTEGER(pixel_y_lookahead);
-            score_int := TO_INTEGER(score_value);
+            score_int := TO_INTEGER(score_value_reg);
 
             IF score_pixel(score_int, s_x, s_y, SCORE_MARGIN_X + 1, SCORE_MARGIN_Y + 1) THEN
                 score_shadow_drawn <= '1';
@@ -1150,6 +1152,10 @@ BEGIN
             menu_color_d <= menu_color;
             score_drawn_d <= score_drawn;
             score_shadow_drawn_d <= score_shadow_drawn;
+            IF frame_count /= frame_count_prev THEN
+                score_value_reg <= score_value;
+            END IF;
+            frame_count_prev <= frame_count;
             in_coin_sprite_d <= in_coin_sprite;
             in_powerup_sprite_d <= in_powerup_sprite;
             cursor_on_d <= cursor_on;
