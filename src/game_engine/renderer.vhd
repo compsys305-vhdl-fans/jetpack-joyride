@@ -199,6 +199,20 @@ ARCHITECTURE rtl OF renderer IS
     CONSTANT MENU_TRAIN_Y_TOP : NATURAL := MENU_PLAY_Y_TOP + MENU_BUTTON_HEIGHT + 24;
     CONSTANT MENU_BORDER_THICKNESS : NATURAL := 2;
 
+    CONSTANT TITLE_SPRITE_WIDTH : NATURAL := 240;
+    CONSTANT TITLE_SPRITE_HEIGHT : NATURAL := 60;
+    CONSTANT TITLE_SPRITE_LEFT : NATURAL := (SCREEN_WIDTH - TITLE_SPRITE_WIDTH) / 2;
+    CONSTANT TITLE_SPRITE_TOP : NATURAL := 100;
+    SIGNAL title_rel_x : UNSIGNED(15 DOWNTO 0);
+    SIGNAL title_rel_y : UNSIGNED(15 DOWNTO 0);
+    SIGNAL in_title_sprite : STD_LOGIC;
+    SIGNAL in_title_sprite_d : STD_LOGIC := '0';
+    SIGNAL title_sprite_color : STD_LOGIC_VECTOR(11 DOWNTO 0);
+    SIGNAL title_sprite_color_d : STD_LOGIC_VECTOR(11 DOWNTO 0);
+    SIGNAL title_sprite_is_transparent : STD_LOGIC;
+    SIGNAL title_sprite_valid : STD_LOGIC;
+    SIGNAL title_drawn : STD_LOGIC;
+
     CONSTANT FONT_W : NATURAL := 5;
     CONSTANT FONT_H : NATURAL := 7;
     CONSTANT FONT_SCALE : NATURAL := 2;
@@ -708,14 +722,37 @@ BEGIN
         VARIABLE text_on : BOOLEAN;
         VARIABLE left_x : INTEGER;
         VARIABLE top_y : INTEGER;
+
+        VARIABLE s_x_u : UNSIGNED(15 DOWNTO 0);
+        VARIABLE s_y_u : UNSIGNED(15 DOWNTO 0);
+        VARIABLE left_x_u : UNSIGNED(15 DOWNTO 0);
+        VARIABLE top_y_u : UNSIGNED(15 DOWNTO 0);
     BEGIN
+        -- Default assignments
         menu_drawn <= '0';
         menu_color <= (OTHERS => '0');
+        in_title_sprite <= '0';
+        title_rel_x <= (OTHERS => '0');
+        title_rel_y <= (OTHERS => '0');
 
         IF menu_active = '1' THEN
             s_x := TO_INTEGER(pixel_x);
             s_y := TO_INTEGER(pixel_y_lookahead);
 
+            -- Title sprite logic
+            s_x_u := RESIZE(pixel_x, 16);
+            s_y_u := RESIZE(pixel_y_lookahead, 16);
+            left_x_u := TO_UNSIGNED(TITLE_SPRITE_LEFT, 16);
+            top_y_u := TO_UNSIGNED(TITLE_SPRITE_TOP, 16);
+
+            IF (s_x_u >= left_x_u) AND (s_x_u < left_x_u + TO_UNSIGNED(TITLE_SPRITE_WIDTH, 16)) AND
+               (s_y_u >= top_y_u) AND (s_y_u < top_y_u + TO_UNSIGNED(TITLE_SPRITE_HEIGHT, 16)) THEN
+                in_title_sprite <= '1';
+                title_rel_x <= s_x_u - left_x_u;
+                title_rel_y <= s_y_u - top_y_u;
+            END IF;
+
+            -- Menu buttons logic
             in_play := (s_x >= MENU_BUTTON_X_LEFT) AND (s_x < MENU_BUTTON_X_LEFT + MENU_BUTTON_WIDTH) AND
                        (s_y >= MENU_PLAY_Y_TOP) AND (s_y < MENU_PLAY_Y_TOP + MENU_BUTTON_HEIGHT);
             in_training := (s_x >= MENU_BUTTON_X_LEFT) AND (s_x < MENU_BUTTON_X_LEFT + MENU_BUTTON_WIDTH) AND
@@ -866,6 +903,20 @@ BEGIN
             valid          => powerup_sprite_valid
         );
 
+    title_sprite_renderer: sprite_renderer
+        PORT MAP (
+            clock          => clock_25MHz,
+            show_djt       => '0',
+            sprite_id      => SPRITE_DEATH_TEXT,
+            palette_id     => PALETTE_DEATH,
+            scale_shift    => DEATH_SCALE_SHIFT,
+            rel_x          => title_rel_x,
+            rel_y          => title_rel_y,
+            color          => title_sprite_color,
+            is_transparent => title_sprite_is_transparent,
+            valid          => title_sprite_valid
+        );
+
     PROCESS(clock_25MHz)
     BEGIN
         IF RISING_EDGE(clock_25MHz) THEN
@@ -886,6 +937,8 @@ BEGIN
             in_death_sprite_d <= in_death_sprite;
             in_pause_sprite_d <= in_pause_sprite;
             in_missile_sprite_d <= in_missile_sprite;
+            in_title_sprite_d <= in_title_sprite;
+            title_sprite_color_d <= title_sprite_color;
             menu_drawn_d <= menu_drawn;
             menu_color_d <= menu_color;
             in_coin_sprite_d <= in_coin_sprite;
@@ -903,6 +956,7 @@ BEGIN
     missile_drawn <= in_missile_sprite_d AND missile_sprite_valid AND (NOT missile_sprite_is_transparent);
     coin_drawn <= in_coin_sprite_d AND coin_sprite_valid AND (NOT coin_sprite_is_transparent);
     powerup_drawn <= in_powerup_sprite_d AND powerup_sprite_valid AND (NOT powerup_sprite_is_transparent);
+    title_drawn <= in_title_sprite_d AND title_sprite_valid AND (NOT title_sprite_is_transparent);
     bg_drawn <= bg_valid AND (NOT bg_is_transparent);
 
     PROCESS(pixel_x, pixel_y_lookahead, bg_seed, bg_scroll_accum, show_djt)
@@ -989,7 +1043,7 @@ BEGIN
 
     PROCESS (cursor_on_d, menu_drawn_d, menu_color_d, death_drawn, death_sprite_color, pause_drawn, pause_sprite_color, show_djt,
              player_drawn, sprite_color, missile_drawn, missile_sprite_color, coin_drawn, coin_sprite_color, powerup_drawn, powerup_sprite_color,
-             base_color_d, combined_laser_is_transparent, combined_laser_color, screen_flash)
+             base_color_d, combined_laser_is_transparent, combined_laser_color, screen_flash, title_drawn, title_sprite_color_d)
         VARIABLE base_r, base_g, base_b : INTEGER RANGE 0 TO 15;
         VARIABLE add_r, add_g, add_b : INTEGER;
         VARIABLE final_r, final_g, final_b : INTEGER RANGE 0 TO 15;
@@ -1002,6 +1056,10 @@ BEGIN
             final_r := TO_INTEGER(UNSIGNED(CURSOR_COLOR(11 DOWNTO 8)));
             final_g := TO_INTEGER(UNSIGNED(CURSOR_COLOR(7 DOWNTO 4)));
             final_b := TO_INTEGER(UNSIGNED(CURSOR_COLOR(3 DOWNTO 0)));
+        ELSIF title_drawn = '1' THEN
+            final_r := TO_INTEGER(UNSIGNED(title_sprite_color_d(11 DOWNTO 8)));
+            final_g := TO_INTEGER(UNSIGNED(title_sprite_color_d(7 DOWNTO 4)));
+            final_b := TO_INTEGER(UNSIGNED(title_sprite_color_d(3 DOWNTO 0)));
         ELSIF menu_drawn_d = '1' THEN
             final_r := TO_INTEGER(UNSIGNED(menu_color_d(11 DOWNTO 8)));
             final_g := TO_INTEGER(UNSIGNED(menu_color_d(7 DOWNTO 4)));
