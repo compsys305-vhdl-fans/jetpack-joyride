@@ -55,7 +55,7 @@ ARCHITECTURE rtl OF obstacle_manager IS
 
     -- Spawning rate constants
     CONSTANT INITIAL_SPAWN_INTERVAL : INTEGER := 90; -- 1.5 seconds
-    CONSTANT MIN_SPAWN_INTERVAL : INTEGER := 30; -- 0.5 seconds at base speed
+    CONSTANT MIN_SPAWN_INTERVAL : INTEGER := 5; -- 0.083 seconds
     CONSTANT MIN_EFFECTIVE_SPAWN_INTERVAL : INTEGER := 12; -- lower clamp after speed scaling
     CONSTANT SPAWN_INTERVAL_DECREMENT : INTEGER := 10;
     CONSTANT SPAWN_RAMP_RATE : INTEGER := 60; -- Time in frames to wait before decrementing spawn interval
