@@ -24,6 +24,8 @@ ARCHITECTURE rtl OF obstacle_manager IS
     CONSTANT BASE_LASER_SPEED_X : INTEGER := 4; -- pixels per frame
     CONSTANT LASER_LENGTH : NATURAL := 100;
     CONSTANT Y_MARGIN : INTEGER := 40; -- Top/bottom margin for laser spawns
+    CONSTANT FLOOR_TOP_Y : INTEGER := SCREEN_HEIGHT - 64;
+    CONSTANT LASER_NODE_BOTTOM_EXTENT : INTEGER := 7;
     CONSTANT MIN_LASER_DISTANCE : INTEGER := 32; -- Minimum vertical distance between horizontal lasers
 
     CONSTANT MISSILE_WIDTH : INTEGER := 16;
@@ -251,9 +253,9 @@ BEGIN
                             safe_to_spawn := true;
                             rand_val := TO_INTEGER(UNSIGNED(random_in(9 DOWNTO 0)));
                             IF is_horizontal THEN
-                                max_y := SCREEN_HEIGHT - Y_MARGIN;
+                                max_y := FLOOR_TOP_Y - LASER_NODE_BOTTOM_EXTENT;
                             ELSE
-                                max_y := SCREEN_HEIGHT - Y_MARGIN - INTEGER(LASER_LENGTH);
+                                max_y := FLOOR_TOP_Y - LASER_NODE_BOTTOM_EXTENT - INTEGER(LASER_LENGTH);
                             END IF;
 
                             y_range := max_y - Y_MARGIN + 1;
