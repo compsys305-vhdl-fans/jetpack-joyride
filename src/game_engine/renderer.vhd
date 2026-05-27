@@ -624,9 +624,7 @@ ARCHITECTURE rtl OF renderer IS
     SIGNAL menu_color_d : STD_LOGIC_VECTOR(11 DOWNTO 0) := (OTHERS => '0');
 
     SIGNAL score_drawn : STD_LOGIC;
-    SIGNAL score_shadow_drawn : STD_LOGIC;
     SIGNAL score_drawn_d : STD_LOGIC := '0';
-    SIGNAL score_shadow_drawn_d : STD_LOGIC := '0';
     SIGNAL score_value_reg : UNSIGNED(31 DOWNTO 0) := (OTHERS => '0');
     SIGNAL frame_count_prev : UNSIGNED(7 DOWNTO 0) := (OTHERS => '0');
 
@@ -981,16 +979,12 @@ BEGIN
         VARIABLE score_int : INTEGER;
     BEGIN
         score_drawn <= '0';
-        score_shadow_drawn <= '0';
 
         IF menu_active = '0' THEN
             s_x := TO_INTEGER(pixel_x);
             s_y := TO_INTEGER(pixel_y_lookahead);
             score_int := TO_INTEGER(score_value_reg);
 
-            IF score_pixel(score_int, s_x, s_y, SCORE_MARGIN_X + 1, SCORE_MARGIN_Y + 1) THEN
-                score_shadow_drawn <= '1';
-            END IF;
             IF score_pixel(score_int, s_x, s_y, SCORE_MARGIN_X, SCORE_MARGIN_Y) THEN
                 score_drawn <= '1';
             END IF;
@@ -1152,7 +1146,6 @@ BEGIN
             menu_drawn_d <= menu_drawn;
             menu_color_d <= menu_color;
             score_drawn_d <= score_drawn;
-            score_shadow_drawn_d <= score_shadow_drawn;
             IF frame_count /= frame_count_prev THEN
                 score_value_reg <= score_value;
             END IF;
@@ -1261,7 +1254,7 @@ BEGIN
     END PROCESS;
 
     PROCESS (cursor_on_d, menu_drawn_d, menu_color_d, death_drawn, death_sprite_color, pause_drawn, pause_sprite_color,
-             score_drawn_d, score_shadow_drawn_d, show_djt, player_drawn, sprite_color, missile_drawn, missile_sprite_color,
+             score_drawn_d, show_djt, player_drawn, sprite_color, missile_drawn, missile_sprite_color,
              coin_drawn, coin_sprite_color, powerup_drawn, powerup_sprite_color, base_color_d,
              combined_laser_is_transparent, combined_laser_is_sprite_pixel, combined_laser_color, screen_flash, title_drawn, title_sprite_color_d)
         VARIABLE base_r, base_g, base_b : INTEGER RANGE 0 TO 15;
@@ -1296,10 +1289,6 @@ BEGIN
             final_r := 15;
             final_g := 15;
             final_b := 15;
-        ELSIF score_shadow_drawn_d = '1' THEN
-            final_r := 0;
-            final_g := 0;
-            final_b := 0;
         ELSIF show_djt = '1' THEN
             final_r := TO_INTEGER(UNSIGNED(base_color_d(11 DOWNTO 8)));
             final_g := TO_INTEGER(UNSIGNED(base_color_d(7 DOWNTO 4)));
