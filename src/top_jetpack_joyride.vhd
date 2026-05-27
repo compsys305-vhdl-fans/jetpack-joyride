@@ -81,6 +81,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             mouse_y : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
             death_signal : IN STD_LOGIC;
             powerup_collected : IN STD_LOGIC;
+            coin_collected : IN STD_LOGIC;
             random_in : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
             screen_flash : OUT STD_LOGIC;
             debug_vehicle_select : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
@@ -93,7 +94,8 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             player_vy : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
             grounded : OUT STD_LOGIC;
             teleporter_preview_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
-            world_speed : OUT UNSIGNED(9 DOWNTO 0)
+            world_speed : OUT UNSIGNED(9 DOWNTO 0);
+            score_out : OUT UNSIGNED(31 DOWNTO 0)
         );
     END COMPONENT game;
 
@@ -152,7 +154,10 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL coin_pool : coin_pool_t := INACTIVE_COIN_POOL;
     SIGNAL powerup_pool : powerup_pool_t := INACTIVE_POWERUP_POOL;
     SIGNAL powerup_collected : STD_LOGIC;
+    SIGNAL coin_collected : STD_LOGIC;
+    SIGNAL coin_collected_idx : UNSIGNED(2 DOWNTO 0);
     SIGNAL screen_flash : STD_LOGIC;
+    SIGNAL score_value : UNSIGNED(31 DOWNTO 0);
     -- death signal
     SIGNAL death_raw : STD_LOGIC;
     SIGNAL death_signal : STD_LOGIC;
@@ -187,6 +192,8 @@ BEGIN
             playing => obstacles_enabled,
             random_in => random_num,
             world_speed => world_speed,
+            coin_collected => coin_collected,
+            coin_collected_idx => coin_collected_idx,
             lasers_out => laser_pool,
             missiles_out => missile_pool,
             coins_out => coin_pool,
@@ -247,6 +254,7 @@ BEGIN
         mouse_y => mouse_y,
         death_signal => death_raw,
         powerup_collected => powerup_collected,
+        coin_collected => coin_collected,
         random_in => random_num(1 DOWNTO 0),
         screen_flash => screen_flash,
         debug_vehicle_select => debug_vehicle_select,
@@ -259,7 +267,8 @@ BEGIN
         player_vy => player_vy,
         grounded => player_grounded,
         teleporter_preview_y => teleporter_preview_y,
-        world_speed => world_speed
+        world_speed => world_speed,
+        score_out => score_value
     );
 
     collision_detector_inst: ENTITY work.collision_detector
@@ -279,6 +288,8 @@ BEGIN
         powerup_pool => powerup_pool,
         death => death_raw,
         powerup_collected => powerup_collected,
+        coin_collected => coin_collected,
+        coin_collected_idx => coin_collected_idx,
         collision_red => collision_red,
         collision_green => collision_green,
         collision_blue => collision_blue
@@ -306,6 +317,7 @@ BEGIN
         coin_pool => coin_pool,
         powerup_pool => powerup_pool,
         screen_flash => screen_flash,
+        score_value => score_value,
         frame_count => frame_counter,
         random_in => random_num,
         world_speed => world_speed,

@@ -1,7 +1,6 @@
 LIBRARY IEEE;
 USE IEEE.STD_LOGIC_1164.ALL;
 USE IEEE.NUMERIC_STD.ALL;
-USE IEEE.NUMERIC_STD.ALL;
 
 ENTITY game IS
     PORT (
@@ -11,6 +10,7 @@ ENTITY game IS
         mouse_y : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
         death_signal : IN STD_LOGIC;
         powerup_collected : IN STD_LOGIC;
+        coin_collected : IN STD_LOGIC;
         random_in : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
         screen_flash : OUT STD_LOGIC;
         debug_vehicle_select : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
@@ -23,7 +23,8 @@ ENTITY game IS
         player_vy : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
         grounded : OUT STD_LOGIC;
         teleporter_preview_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
-        world_speed : OUT UNSIGNED(9 DOWNTO 0)
+        world_speed : OUT UNSIGNED(9 DOWNTO 0);
+        score_out : OUT UNSIGNED(31 DOWNTO 0)
     );
 END game;
 
@@ -76,6 +77,9 @@ ARCHITECTURE behaviour OF game IS
     CONSTANT SPEED_UP_INTERVAL : INTEGER := 600; -- frames (~10s at 60Hz)
     SIGNAL world_speed_reg : UNSIGNED(9 DOWNTO 0) := BASE_WORLD_SPEED;
     SIGNAL speed_counter : INTEGER RANGE 0 TO SPEED_UP_INTERVAL := SPEED_UP_INTERVAL;
+
+    SIGNAL distance_reg : UNSIGNED(31 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL coin_count_reg : UNSIGNED(15 DOWNTO 0) := (OTHERS => '0');
 
     FUNCTION point_in_rect(
         x : UNSIGNED(9 DOWNTO 0);
@@ -207,6 +211,21 @@ BEGIN
         END IF;
     END PROCESS speed_ramp;
 
+    score_proc: PROCESS (vert_sync)
+    BEGIN
+        IF RISING_EDGE(vert_sync) THEN
+            IF is_playing = '1' THEN
+                distance_reg <= distance_reg + RESIZE(world_speed_reg, distance_reg'length);
+                IF coin_collected = '1' THEN
+                    coin_count_reg <= coin_count_reg + 1;
+                END IF;
+            ELSE
+                distance_reg <= (OTHERS => '0');
+                coin_count_reg <= (OTHERS => '0');
+            END IF;
+        END IF;
+    END PROCESS score_proc;
+
     -- some stuff goes here, such as handling the global game state, and connecting the physics and rendering engines together.
     
     playing <= is_playing;
@@ -216,4 +235,5 @@ BEGIN
     grounded <= is_player_grounded;
     teleporter_preview_y <= teleporter_preview_pos;
     world_speed <= world_speed_reg;
+    score_out <= distance_reg + RESIZE(RESIZE(coin_count_reg, distance_reg'length) * TO_UNSIGNED(5000, distance_reg'length), distance_reg'length);
 END ARCHITECTURE behaviour;

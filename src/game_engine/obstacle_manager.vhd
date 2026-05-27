@@ -11,6 +11,8 @@ ENTITY obstacle_manager IS
         playing          : IN STD_LOGIC;
         random_in        : IN STD_LOGIC_VECTOR(19 DOWNTO 0); -- Using the existing 20-bit LFSR
         world_speed      : IN UNSIGNED(9 DOWNTO 0);
+        coin_collected   : IN STD_LOGIC;
+        coin_collected_idx : IN UNSIGNED(2 DOWNTO 0);
         lasers_out       : OUT laser_pool_t;
         missiles_out     : OUT missile_pool_t;
         coins_out        : OUT coin_pool_t;
@@ -86,6 +88,7 @@ BEGIN
         VARIABLE max_y : INTEGER;
         VARIABLE y_range : INTEGER;
         VARIABLE laser_end_x : INTEGER;
+        VARIABLE coin_idx : INTEGER;
         VARIABLE temp_missiles : missile_pool_t;
         VARIABLE missile_speed_x : INTEGER;
         VARIABLE rand_missile_y : INTEGER;
@@ -93,6 +96,7 @@ BEGIN
         VARIABLE temp_coins : coin_pool_t;
         VARIABLE coin_speed_x : INTEGER;
         VARIABLE rand_coin_y : INTEGER;
+        VARIABLE coin_range : INTEGER;
         VARIABLE jitter_coin : INTEGER;
         VARIABLE coin_spawned : BOOLEAN;
         VARIABLE temp_powerups : powerup_pool_t;
@@ -135,6 +139,13 @@ BEGIN
                 speed_x := TO_INTEGER(world_speed);
                 IF speed_x = 0 THEN
                     speed_x := BASE_LASER_SPEED_X;
+                END IF;
+
+                IF coin_collected = '1' THEN
+                    coin_idx := TO_INTEGER(coin_collected_idx);
+                    IF coin_idx < MAX_COINS THEN
+                        temp_coins(coin_idx) := INACTIVE_COIN;
+                    END IF;
                 END IF;
 
                 -- Update existing lasers
@@ -302,11 +313,11 @@ BEGIN
                     coin_spawned := FALSE;
                     FOR i IN 0 TO MAX_COINS - 1 LOOP
                         IF (NOT coin_spawned) AND (temp_coins(i).is_active = '0') THEN
-                            rand_coin_y := TO_INTEGER(UNSIGNED(random_in(9 DOWNTO 0)));
-                            IF rand_coin_y > SCREEN_HEIGHT - COIN_DISPLAY_HEIGHT THEN
-                                rand_coin_y := SCREEN_HEIGHT - COIN_DISPLAY_HEIGHT;
-                            ELSIF rand_coin_y < 0 THEN
+                            coin_range := SCREEN_HEIGHT - COIN_DISPLAY_HEIGHT;
+                            IF coin_range < 0 THEN
                                 rand_coin_y := 0;
+                            ELSE
+                                rand_coin_y := TO_INTEGER(UNSIGNED(random_in(9 DOWNTO 0))) MOD (coin_range + 1);
                             END IF;
 
                             temp_coins(i).is_active := '1';

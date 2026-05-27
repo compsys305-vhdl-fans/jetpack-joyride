@@ -21,6 +21,8 @@ ENTITY collision_detector IS
         powerup_pool         : IN powerup_pool_t;
         death                : OUT STD_LOGIC;
         powerup_collected    : OUT STD_LOGIC;
+        coin_collected       : OUT STD_LOGIC;
+        coin_collected_idx   : OUT UNSIGNED(2 DOWNTO 0);
         collision_red        : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
         collision_green      : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
         collision_blue       : OUT STD_LOGIC_VECTOR(3 DOWNTO 0)
@@ -85,6 +87,8 @@ ARCHITECTURE rtl OF collision_detector IS
     SIGNAL coin_sprite_is_transparent : STD_LOGIC;
     SIGNAL coin_sprite_valid  : STD_LOGIC;
     SIGNAL coin_pixel_on      : STD_LOGIC;
+    SIGNAL coin_hit_idx        : UNSIGNED(2 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL coin_hit_idx_d      : UNSIGNED(2 DOWNTO 0) := (OTHERS => '0');
 
     -- Powerup sprite signals
     SIGNAL powerup_rel_x         : UNSIGNED(15 DOWNTO 0);
@@ -97,6 +101,10 @@ ARCHITECTURE rtl OF collision_detector IS
     SIGNAL powerup_pixel_on      : STD_LOGIC;
     SIGNAL powerup_collected_pixel : STD_LOGIC;
     SIGNAL powerup_collected_reg : STD_LOGIC := '0';
+    SIGNAL coin_collected_pixel : STD_LOGIC;
+    SIGNAL coin_collected_reg : STD_LOGIC := '0';
+    SIGNAL coin_collected_idx_reg : UNSIGNED(2 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL vert_sync_d : STD_LOGIC := '1';
 
     -- Laser signals
     SIGNAL is_on_any_laser_line : STD_LOGIC;
@@ -269,6 +277,7 @@ BEGIN
         in_coin_sprite <= '0';
         coin_rel_x <= (OTHERS => '0');
         coin_rel_y <= (OTHERS => '0');
+        coin_hit_idx <= (OTHERS => '0');
 
         FOR i IN 0 TO MAX_COINS - 1 LOOP
             IF (NOT found) AND (coin_pool(i).is_active = '1') THEN
@@ -281,6 +290,7 @@ BEGIN
                     in_coin_sprite <= '1';
                     coin_rel_x <= TO_UNSIGNED(s_x - c_x, 16);
                     coin_rel_y <= TO_UNSIGNED(s_y - c_y, 16);
+                    coin_hit_idx <= TO_UNSIGNED(i, coin_hit_idx'length);
                 END IF;
             END IF;
         END LOOP;
@@ -377,6 +387,7 @@ BEGIN
             in_coin_sprite_d <= in_coin_sprite;
             in_powerup_sprite_d <= in_powerup_sprite;
             is_on_any_laser_line_d <= is_on_any_laser_line;
+            coin_hit_idx_d <= coin_hit_idx;
         END IF;
     END PROCESS;
 
@@ -386,6 +397,7 @@ BEGIN
     powerup_pixel_on <= in_powerup_sprite_d AND powerup_sprite_valid AND (NOT powerup_sprite_is_transparent);
     collision_pixel_on <= player_pixel_on AND (is_on_any_laser_line_d OR missile_pixel_on);
     powerup_collected_pixel <= player_pixel_on AND powerup_pixel_on;
+    coin_collected_pixel <= player_pixel_on AND coin_pixel_on;
     
     -- Laser Collision Detection (axis-aligned beam rectangle only; excludes endpoints)
     PROCESS(laser_pool, pixel_x, pixel_y)
@@ -452,17 +464,27 @@ BEGIN
         END IF;
     END PROCESS;
 
-    PROCESS(clock_25MHz, vert_sync)
+    PROCESS(clock_25MHz)
     BEGIN
-        IF vert_sync = '0' THEN
-            death_reg <= '0';
-            powerup_collected_reg <= '0';
-        ELSIF RISING_EDGE(clock_25MHz) THEN
-            IF collision_pixel_on = '1' THEN
-                death_reg <= '1';
-            END IF;
-            IF powerup_collected_pixel = '1' THEN
-                powerup_collected_reg <= '1';
+        IF RISING_EDGE(clock_25MHz) THEN
+            vert_sync_d <= vert_sync;
+
+            IF vert_sync = '1' AND vert_sync_d = '0' THEN
+                death_reg <= '0';
+                powerup_collected_reg <= '0';
+                coin_collected_reg <= '0';
+                coin_collected_idx_reg <= (OTHERS => '0');
+            ELSE
+                IF collision_pixel_on = '1' THEN
+                    death_reg <= '1';
+                END IF;
+                IF powerup_collected_pixel = '1' THEN
+                    powerup_collected_reg <= '1';
+                END IF;
+                IF coin_collected_pixel = '1' THEN
+                    coin_collected_reg <= '1';
+                    coin_collected_idx_reg <= coin_hit_idx_d;
+                END IF;
             END IF;
         END IF;
     END PROCESS;
@@ -502,5 +524,7 @@ BEGIN
 
     death <= death_reg;
     powerup_collected <= powerup_collected_reg;
+    coin_collected <= coin_collected_reg;
+    coin_collected_idx <= coin_collected_idx_reg;
 
 END ARCHITECTURE rtl;
