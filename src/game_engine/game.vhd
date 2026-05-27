@@ -24,7 +24,7 @@ ENTITY game IS
         grounded : OUT STD_LOGIC;
         teleporter_preview_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
         world_speed : OUT UNSIGNED(9 DOWNTO 0);
-        score_digits_out : OUT STD_LOGIC_VECTOR(27 DOWNTO 0)
+        score_out : OUT UNSIGNED(31 DOWNTO 0)
     );
 END game;
 
@@ -82,7 +82,6 @@ ARCHITECTURE behaviour OF game IS
     SIGNAL coin_count_reg : UNSIGNED(15 DOWNTO 0) := (OTHERS => '0');
     SIGNAL distance_accumulator : INTEGER RANGE 0 TO 100 := 0;
     SIGNAL score_reg : UNSIGNED(31 DOWNTO 0) := (OTHERS => '0');
-    SIGNAL score_digits_reg : STD_LOGIC_VECTOR(27 DOWNTO 0) := (OTHERS => '0');
 
     FUNCTION point_in_rect(
         x : UNSIGNED(9 DOWNTO 0);
@@ -246,16 +245,6 @@ BEGIN
         END IF;
     END PROCESS score_calc_proc;
 
-    score_digits_proc: PROCESS(vert_sync)
-        VARIABLE s : INTEGER;
-    BEGIN
-        IF RISING_EDGE(vert_sync) THEN
-            s := TO_INTEGER(score_reg);
-            score_digits_reg <= STD_LOGIC_VECTOR(score_reg(27 DOWNTO 0));
-        END IF;
-    END PROCESS score_digits_proc;
-    score_digits_out <= score_digits_reg;
-
     -- some stuff goes here, such as handling the global game state, and connecting the physics and rendering engines together.
     
     playing <= is_playing;
@@ -265,4 +254,5 @@ BEGIN
     grounded <= is_player_grounded;
     teleporter_preview_y <= teleporter_preview_pos;
     world_speed <= world_speed_reg;
+    score_out <= score_reg;
 END ARCHITECTURE behaviour;

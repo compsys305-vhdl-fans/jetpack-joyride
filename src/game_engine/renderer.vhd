@@ -31,7 +31,7 @@ ENTITY renderer IS
         coin_pool            : IN coin_pool_t;
         powerup_pool         : IN powerup_pool_t;
         screen_flash         : IN STD_LOGIC;
-        score_digits_in      : IN STD_LOGIC_VECTOR(27 DOWNTO 0);
+        score_value          : IN UNSIGNED(31 DOWNTO 0);
         frame_count          : IN UNSIGNED(7 DOWNTO 0);
         random_in            : IN STD_LOGIC_VECTOR(19 DOWNTO 0);
         world_speed          : IN UNSIGNED(9 DOWNTO 0);
@@ -217,9 +217,6 @@ ARCHITECTURE rtl OF renderer IS
     SIGNAL title_sprite_is_transparent : STD_LOGIC;
     SIGNAL title_sprite_valid : STD_LOGIC;
     SIGNAL title_drawn : STD_LOGIC;
-
-    SIGNAL score_digits_meta : STD_LOGIC_VECTOR(27 DOWNTO 0);
-    SIGNAL score_digits_sync : STD_LOGIC_VECTOR(27 DOWNTO 0);
 
     CONSTANT FONT_W : NATURAL := 5;
     CONSTANT FONT_H : NATURAL := 7;
@@ -1097,20 +1094,22 @@ BEGIN
             END IF;
 
             IF frame_count /= frame_count_prev THEN
-                score_digits_arr(0) <= TO_INTEGER(UNSIGNED(score_digits_sync(27 DOWNTO 24)));
-                score_digits_arr(1) <= TO_INTEGER(UNSIGNED(score_digits_sync(23 DOWNTO 20)));
-                score_digits_arr(2) <= TO_INTEGER(UNSIGNED(score_digits_sync(19 DOWNTO 16)));
-                score_digits_arr(3) <= TO_INTEGER(UNSIGNED(score_digits_sync(15 DOWNTO 12)));
-                score_digits_arr(4) <= TO_INTEGER(UNSIGNED(score_digits_sync(11 DOWNTO  8)));
-                score_digits_arr(5) <= TO_INTEGER(UNSIGNED(score_digits_sync( 7 DOWNTO  4)));
-                score_digits_arr(6) <= TO_INTEGER(UNSIGNED(score_digits_sync( 3 DOWNTO  0)));
+                score_int := TO_INTEGER(score_value);
 
-                IF score_digits_sync(27 DOWNTO 24) > "0000" THEN score_digit_visible(0) <= '1'; ELSE score_digit_visible(0) <= '0'; END IF;
-                IF score_digits_sync(23 DOWNTO 20) > "0000" THEN score_digit_visible(1) <= '1'; ELSE score_digit_visible(1) <= '0'; END IF;
-                IF score_digits_sync(19 DOWNTO 16) > "0000" THEN score_digit_visible(2) <= '1'; ELSE score_digit_visible(2) <= '0'; END IF;
-                IF score_digits_sync(15 DOWNTO 12) > "0000" THEN score_digit_visible(3) <= '1'; ELSE score_digit_visible(3) <= '0'; END IF;
-                IF score_digits_sync(11 DOWNTO 8) > "0000" THEN score_digit_visible(4) <= '1'; ELSE score_digit_visible(4) <= '0'; END IF;
-                IF score_digits_sync(7 DOWNTO 4) > "0000" THEN score_digit_visible(5) <= '1'; ELSE score_digit_visible(5) <= '0'; END IF;
+                score_digits_arr(0) <= (score_int / 1000000) MOD 10;
+                score_digits_arr(1) <= (score_int / 100000) MOD 10;
+                score_digits_arr(2) <= (score_int / 10000) MOD 10;
+                score_digits_arr(3) <= (score_int / 1000) MOD 10;
+                score_digits_arr(4) <= (score_int / 100) MOD 10;
+                score_digits_arr(5) <= (score_int / 10) MOD 10;
+                score_digits_arr(6) <= score_int MOD 10;
+
+                IF score_int >= 1000000 THEN score_digit_visible(0) <= '1'; ELSE score_digit_visible(0) <= '0'; END IF;
+                IF score_int >= 100000 THEN score_digit_visible(1) <= '1'; ELSE score_digit_visible(1) <= '0'; END IF;
+                IF score_int >= 10000 THEN score_digit_visible(2) <= '1'; ELSE score_digit_visible(2) <= '0'; END IF;
+                IF score_int >= 1000 THEN score_digit_visible(3) <= '1'; ELSE score_digit_visible(3) <= '0'; END IF;
+                IF score_int >= 100 THEN score_digit_visible(4) <= '1'; ELSE score_digit_visible(4) <= '0'; END IF;
+                IF score_int >= 10 THEN score_digit_visible(5) <= '1'; ELSE score_digit_visible(5) <= '0'; END IF;
                 score_digit_visible(6) <= '1';
             END IF;
             frame_count_prev <= frame_count;
@@ -1121,14 +1120,6 @@ BEGIN
             laser_transparencies_reg <= laser_transparencies;
             laser_sprite_pixels_reg <= laser_sprite_pixels;
             base_color_d <= base_color;
-        END IF;
-    END PROCESS;
-
-    score_synchroniser: PROCESS(clock_25MHz)
-    BEGIN
-        IF RISING_EDGE(clock_25MHz) THEN
-            score_digits_meta <= score_digits_in;
-            score_digits_sync <= score_digits_meta;
         END IF;
     END PROCESS;
 
