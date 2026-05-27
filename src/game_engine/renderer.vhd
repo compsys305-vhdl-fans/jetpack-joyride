@@ -560,7 +560,7 @@ ARCHITECTURE rtl OF renderer IS
     SIGNAL score_drawn_d : STD_LOGIC := '0';
     SIGNAL frame_count_prev : UNSIGNED(7 DOWNTO 0) := (OTHERS => '0');
     TYPE score_digit_array IS ARRAY (0 TO SCORE_DIGITS - 1) OF INTEGER RANGE 0 TO 9;
-    SIGNAL score_digits : score_digit_array := (OTHERS => 0);
+    SIGNAL score_digits_arr : score_digit_array := (OTHERS => 0);
     SIGNAL score_digit_visible : STD_LOGIC_VECTOR(0 TO SCORE_DIGITS - 1) := (6 => '1', OTHERS => '0');
 
     CONSTANT CURSOR_HALF_SIZE : INTEGER := 2;
@@ -1084,7 +1084,7 @@ BEGIN
                     IF (score_digit_x < FONT_W * FONT_SCALE) AND (score_digit_visible(score_digit_idx) = '1') THEN
                         score_row := score_local_y / FONT_SCALE;
                         score_col := score_digit_x / FONT_SCALE;
-                        score_row_bits := digit_row(score_digits(score_digit_idx), score_row);
+                        score_row_bits := digit_row(score_digits_arr(score_digit_idx), score_row);
 
                         IF score_row_bits(FONT_W - 1 - score_col) = '1' THEN
                             score_drawn_d <= '1';
@@ -1096,13 +1096,13 @@ BEGIN
             IF frame_count /= frame_count_prev THEN
                 score_int := TO_INTEGER(score_value);
 
-                score_digits(0) <= (score_int / 1000000) MOD 10;
-                score_digits(1) <= (score_int / 100000) MOD 10;
-                score_digits(2) <= (score_int / 10000) MOD 10;
-                score_digits(3) <= (score_int / 1000) MOD 10;
-                score_digits(4) <= (score_int / 100) MOD 10;
-                score_digits(5) <= (score_int / 10) MOD 10;
-                score_digits(6) <= score_int MOD 10;
+                score_digits_arr(0) <= (score_int / 1000000) MOD 10;
+                score_digits_arr(1) <= (score_int / 100000) MOD 10;
+                score_digits_arr(2) <= (score_int / 10000) MOD 10;
+                score_digits_arr(3) <= (score_int / 1000) MOD 10;
+                score_digits_arr(4) <= (score_int / 100) MOD 10;
+                score_digits_arr(5) <= (score_int / 10) MOD 10;
+                score_digits_arr(6) <= score_int MOD 10;
 
                 IF score_int >= 1000000 THEN score_digit_visible(0) <= '1'; ELSE score_digit_visible(0) <= '0'; END IF;
                 IF score_int >= 100000 THEN score_digit_visible(1) <= '1'; ELSE score_digit_visible(1) <= '0'; END IF;
