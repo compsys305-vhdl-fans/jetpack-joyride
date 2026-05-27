@@ -216,7 +216,11 @@ BEGIN
     score_proc: PROCESS (vert_sync)
     BEGIN
         IF RISING_EDGE(vert_sync) THEN
-            IF is_playing = '1' THEN
+            IF reset = '1' OR game_state = STATE_MENU THEN
+                distance_reg <= (OTHERS => '0');
+                coin_count_reg <= (OTHERS => '0');
+                distance_accumulator <= 0;
+            ELSIF is_playing = '1' THEN
                 distance_accumulator <= distance_accumulator + TO_INTEGER(world_speed_reg);
                 IF distance_accumulator >= 100 THEN
                     distance_accumulator <= distance_accumulator - 100;
@@ -226,10 +230,6 @@ BEGIN
                 IF coin_collected = '1' THEN
                     coin_count_reg <= coin_count_reg + 1;
                 END IF;
-            ELSE
-                distance_reg <= (OTHERS => '0');
-                coin_count_reg <= (OTHERS => '0');
-                distance_accumulator <= 0;
             END IF;
         END IF;
     END PROCESS score_proc;
@@ -237,10 +237,10 @@ BEGIN
     score_calc_proc: PROCESS(vert_sync)
     BEGIN
         IF RISING_EDGE(vert_sync) THEN
-            IF is_playing = '1' THEN
-                score_reg <= distance_reg + RESIZE(coin_count_reg * 10, 32);
-            ELSE
+            IF reset = '1' OR game_state = STATE_MENU THEN
                 score_reg <= (OTHERS => '0');
+            ELSIF is_playing = '1' THEN
+                score_reg <= distance_reg + RESIZE(coin_count_reg * 10, 32);
             END IF;
         END IF;
     END PROCESS score_calc_proc;

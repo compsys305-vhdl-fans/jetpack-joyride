@@ -162,7 +162,31 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL death_raw : STD_LOGIC;
     SIGNAL death_signal : STD_LOGIC;
     SIGNAL obstacles_enabled : STD_LOGIC;
-	 
+
+    SIGNAL score_digit0 : INTEGER RANGE 0 TO 9 := 0;
+    SIGNAL score_digit1 : INTEGER RANGE 0 TO 9 := 0;
+    SIGNAL score_digit2 : INTEGER RANGE 0 TO 9 := 0;
+    SIGNAL score_digit3 : INTEGER RANGE 0 TO 9 := 0;
+    SIGNAL score_digit4 : INTEGER RANGE 0 TO 9 := 0;
+    SIGNAL score_digit5 : INTEGER RANGE 0 TO 9 := 0;
+
+    FUNCTION seven_seg_digit(digit : INTEGER) RETURN STD_LOGIC_VECTOR IS
+    BEGIN
+        CASE digit IS
+            WHEN 0 => RETURN "1000000";
+            WHEN 1 => RETURN "1111001";
+            WHEN 2 => RETURN "0100100";
+            WHEN 3 => RETURN "0110000";
+            WHEN 4 => RETURN "0011001";
+            WHEN 5 => RETURN "0010010";
+            WHEN 6 => RETURN "0000010";
+            WHEN 7 => RETURN "1111000";
+            WHEN 8 => RETURN "0000000";
+            WHEN 9 => RETURN "0010000";
+            WHEN OTHERS => RETURN "1111111";
+        END CASE;
+    END FUNCTION seven_seg_digit;
+
 BEGIN
     vga_pll_inst: ENTITY lib_vga_pll.vga_pll
         PORT MAP (
@@ -346,13 +370,31 @@ BEGIN
     ledr(9) <= death_signal;
     ledr(8 DOWNTO 2) <= sw(8 DOWNTO 2);
 
-    -- unused currently, but we should map this to score eventually when it exists
-    hex0 <= "0000000";
-    hex1 <= "0000000";
-    hex2 <= "0000000";
-    hex3 <= "0000000";
-    hex4 <= "0000000";
-    hex5 <= "0000000";
+    hex0 <= seven_seg_digit(score_digit0);
+    hex1 <= seven_seg_digit(score_digit1);
+    hex2 <= seven_seg_digit(score_digit2);
+    hex3 <= seven_seg_digit(score_digit3);
+    hex4 <= seven_seg_digit(score_digit4);
+    hex5 <= seven_seg_digit(score_digit5);
+
+    PROCESS(update_tick)
+        VARIABLE score_int : INTEGER RANGE 0 TO 999999;
+    BEGIN
+        IF RISING_EDGE(update_tick) THEN
+            IF score_value > TO_UNSIGNED(999999, score_value'length) THEN
+                score_int := 999999;
+            ELSE
+                score_int := TO_INTEGER(score_value);
+            END IF;
+
+            score_digit0 <= score_int MOD 10;
+            score_digit1 <= (score_int / 10) MOD 10;
+            score_digit2 <= (score_int / 100) MOD 10;
+            score_digit3 <= (score_int / 1000) MOD 10;
+            score_digit4 <= (score_int / 10000) MOD 10;
+            score_digit5 <= (score_int / 100000) MOD 10;
+        END IF;
+    END PROCESS;
 
     PROCESS(update_tick)
     BEGIN
