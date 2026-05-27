@@ -94,7 +94,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             grounded : OUT STD_LOGIC;
             teleporter_preview_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
             world_speed : OUT UNSIGNED(9 DOWNTO 0);
-            score_out : OUT UNSIGNED(31 DOWNTO 0)
+            score_digits_out : OUT STD_LOGIC_VECTOR(27 DOWNTO 0)
         );
     END COMPONENT game;
 
@@ -155,32 +155,32 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL coin_collected : STD_LOGIC;
     SIGNAL coin_collected_idx : UNSIGNED(2 DOWNTO 0);
     SIGNAL screen_flash : STD_LOGIC;
-    SIGNAL score_value : UNSIGNED(31 DOWNTO 0);
+    SIGNAL score_value : STD_LOGIC_VECTOR(27 DOWNTO 0);
     -- death signal
     SIGNAL death_raw : STD_LOGIC;
     SIGNAL death_signal : STD_LOGIC;
     SIGNAL obstacles_enabled : STD_LOGIC;
 
-    SIGNAL score_digit0 : INTEGER RANGE 0 TO 9 := 0;
-    SIGNAL score_digit1 : INTEGER RANGE 0 TO 9 := 0;
-    SIGNAL score_digit2 : INTEGER RANGE 0 TO 9 := 0;
-    SIGNAL score_digit3 : INTEGER RANGE 0 TO 9 := 0;
-    SIGNAL score_digit4 : INTEGER RANGE 0 TO 9 := 0;
-    SIGNAL score_digit5 : INTEGER RANGE 0 TO 9 := 0;
+    SIGNAL score_digit0 : STD_LOGIC_VECTOR(3 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL score_digit1 : STD_LOGIC_VECTOR(3 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL score_digit2 : STD_LOGIC_VECTOR(3 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL score_digit3 : STD_LOGIC_VECTOR(3 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL score_digit4 : STD_LOGIC_VECTOR(3 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL score_digit5 : STD_LOGIC_VECTOR(3 DOWNTO 0) := (OTHERS => '0');
 
-    FUNCTION seven_seg_digit(digit : INTEGER) RETURN STD_LOGIC_VECTOR IS
+    FUNCTION seven_seg_digit(digit : STD_LOGIC_VECTOR(3 DOWNTO 0)) RETURN STD_LOGIC_VECTOR IS
     BEGIN
         CASE digit IS
-            WHEN 0 => RETURN "1000000";
-            WHEN 1 => RETURN "1111001";
-            WHEN 2 => RETURN "0100100";
-            WHEN 3 => RETURN "0110000";
-            WHEN 4 => RETURN "0011001";
-            WHEN 5 => RETURN "0010010";
-            WHEN 6 => RETURN "0000010";
-            WHEN 7 => RETURN "1111000";
-            WHEN 8 => RETURN "0000000";
-            WHEN 9 => RETURN "0010000";
+            WHEN x"0" => RETURN "1000000";
+            WHEN x"1" => RETURN "1111001";
+            WHEN x"2" => RETURN "0100100";
+            WHEN x"3" => RETURN "0110000";
+            WHEN x"4" => RETURN "0011001";
+            WHEN x"5" => RETURN "0010010";
+            WHEN x"6" => RETURN "0000010";
+            WHEN x"7" => RETURN "1111000";
+            WHEN x"8" => RETURN "0000000";
+            WHEN x"9" => RETURN "0010000";
             WHEN OTHERS => RETURN "1111111";
         END CASE;
     END FUNCTION seven_seg_digit;
@@ -291,7 +291,7 @@ BEGIN
         grounded => player_grounded,
         teleporter_preview_y => teleporter_preview_y,
         world_speed => world_speed,
-        score_out => score_value
+        score_digits_out => score_value
     );
 
     collision_detector_inst: ENTITY work.collision_detector
@@ -340,7 +340,7 @@ BEGIN
         coin_pool => coin_pool,
         powerup_pool => powerup_pool,
         screen_flash => screen_flash,
-        score_value => score_value,
+        score_digits_in => score_value,
         frame_count => frame_counter,
         random_in => random_num,
         world_speed => world_speed,
@@ -375,21 +375,14 @@ BEGIN
     hex5 <= seven_seg_digit(score_digit5);
 
     PROCESS(update_tick)
-        VARIABLE score_int : INTEGER RANGE 0 TO 999999;
     BEGIN
         IF RISING_EDGE(update_tick) THEN
-            IF score_value > TO_UNSIGNED(999999, score_value'length) THEN
-                score_int := 999999;
-            ELSE
-                score_int := TO_INTEGER(score_value);
-            END IF;
-
-            score_digit0 <= score_int MOD 10;
-            score_digit1 <= (score_int / 10) MOD 10;
-            score_digit2 <= (score_int / 100) MOD 10;
-            score_digit3 <= (score_int / 1000) MOD 10;
-            score_digit4 <= (score_int / 10000) MOD 10;
-            score_digit5 <= (score_int / 100000) MOD 10;
+            score_digit0 <= score_value(3 DOWNTO 0);
+            score_digit1 <= score_value(7 DOWNTO 4);
+            score_digit2 <= score_value(11 DOWNTO 8);
+            score_digit3 <= score_value(15 DOWNTO 12);
+            score_digit4 <= score_value(19 DOWNTO 16);
+            score_digit5 <= score_value(23 DOWNTO 20);
         END IF;
     END PROCESS;
 
