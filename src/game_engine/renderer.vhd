@@ -83,10 +83,13 @@ ARCHITECTURE rtl OF renderer IS
     -- Signals for laser calculation
     TYPE laser_color_array IS ARRAY (0 TO MAX_LASERS - 1) OF STD_LOGIC_VECTOR(11 DOWNTO 0);
     TYPE laser_transparency_array IS ARRAY (0 TO MAX_LASERS - 1) OF STD_LOGIC;
+    TYPE laser_sprite_pixel_array IS ARRAY (0 TO MAX_LASERS - 1) OF STD_LOGIC;
     SIGNAL laser_colors        : laser_color_array;
     SIGNAL laser_transparencies: laser_transparency_array;
+    SIGNAL laser_sprite_pixels : laser_sprite_pixel_array;
     SIGNAL combined_laser_color : STD_LOGIC_VECTOR(11 DOWNTO 0);
     SIGNAL combined_laser_is_transparent : STD_LOGIC;
+    SIGNAL combined_laser_is_sprite_pixel : STD_LOGIC;
 
     -- Background sprite signals
     SIGNAL bg_sprite_id : UNSIGNED(7 DOWNTO 0);
@@ -637,6 +640,7 @@ ARCHITECTURE rtl OF renderer IS
     SIGNAL base_color_d            : STD_LOGIC_VECTOR(11 DOWNTO 0);
     SIGNAL laser_colors_reg        : laser_color_array;
     SIGNAL laser_transparencies_reg: laser_transparency_array;
+    SIGNAL laser_sprite_pixels_reg : laser_sprite_pixel_array;
 
 BEGIN
     pixel_y_lookahead <= pixel_y + 1;
@@ -1151,6 +1155,7 @@ BEGIN
             cursor_on_d <= cursor_on;
             laser_colors_reg <= laser_colors;
             laser_transparencies_reg <= laser_transparencies;
+            laser_sprite_pixels_reg <= laser_sprite_pixels;
             base_color_d <= base_color;
         END IF;
     END PROCESS;
@@ -1206,21 +1211,24 @@ BEGIN
                 length => laser_pool(i).length,
                 is_active => laser_pool(i).is_active,
                 color_out => laser_colors(i),
-                is_transparent => laser_transparencies(i)
+                is_transparent => laser_transparencies(i),
+                is_sprite_pixel => laser_sprite_pixels(i)
             );
     END GENERATE;
     
-    PROCESS(laser_colors_reg, laser_transparencies_reg)
+    PROCESS(laser_colors_reg, laser_transparencies_reg, laser_sprite_pixels_reg)
         VARIABLE found : BOOLEAN := false;
     BEGIN
         combined_laser_color <= (OTHERS => '0');
         combined_laser_is_transparent <= '1';
+        combined_laser_is_sprite_pixel <= '0';
         found := false;
 
         FOR idx IN 0 TO MAX_LASERS - 1 LOOP
             IF (NOT found) AND (laser_transparencies_reg(idx) = '0') THEN
                 combined_laser_color <= laser_colors_reg(idx);
                 combined_laser_is_transparent <= '0';
+                combined_laser_is_sprite_pixel <= laser_sprite_pixels_reg(idx);
                 found := true;
             END IF;
         END LOOP;
@@ -1248,7 +1256,7 @@ BEGIN
     PROCESS (cursor_on_d, menu_drawn_d, menu_color_d, death_drawn, death_sprite_color, pause_drawn, pause_sprite_color,
              score_drawn_d, score_shadow_drawn_d, show_djt, player_drawn, sprite_color, missile_drawn, missile_sprite_color,
              coin_drawn, coin_sprite_color, powerup_drawn, powerup_sprite_color, base_color_d,
-             combined_laser_is_transparent, combined_laser_color, screen_flash, title_drawn, title_sprite_color_d)
+             combined_laser_is_transparent, combined_laser_is_sprite_pixel, combined_laser_color, screen_flash, title_drawn, title_sprite_color_d)
         VARIABLE base_r, base_g, base_b : INTEGER RANGE 0 TO 15;
         VARIABLE add_r, add_g, add_b : INTEGER;
         VARIABLE final_r, final_g, final_b : INTEGER RANGE 0 TO 15;
@@ -1316,6 +1324,10 @@ BEGIN
                 final_r := base_r;
                 final_g := base_g;
                 final_b := base_b;
+            ELSIF combined_laser_is_sprite_pixel = '1' THEN
+                final_r := TO_INTEGER(UNSIGNED(combined_laser_color(11 DOWNTO 8)));
+                final_g := TO_INTEGER(UNSIGNED(combined_laser_color(7 DOWNTO 4)));
+                final_b := TO_INTEGER(UNSIGNED(combined_laser_color(3 DOWNTO 0)));
             ELSE
                 add_r := base_r + TO_INTEGER(UNSIGNED(combined_laser_color(11 DOWNTO 8)));
                 add_g := base_g + TO_INTEGER(UNSIGNED(combined_laser_color(7 DOWNTO 4)));

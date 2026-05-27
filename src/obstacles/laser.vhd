@@ -16,7 +16,8 @@ ENTITY laser IS
         is_active   : IN STD_LOGIC;
         
         color_out      : OUT STD_LOGIC_VECTOR(11 DOWNTO 0);
-        is_transparent : OUT STD_LOGIC
+        is_transparent : OUT STD_LOGIC;
+        is_sprite_pixel : OUT STD_LOGIC
     );
 END ENTITY laser;
 
@@ -165,19 +166,24 @@ BEGIN
             IF node1_is_transparent = '0' THEN
                 color_out <= node1_color;
                 is_transparent <= '0';
+                is_sprite_pixel <= '1';
             ELSIF node2_is_transparent = '0' THEN
                 color_out <= node2_color;
                 is_transparent <= '0';
+                is_sprite_pixel <= '1';
             ELSIF beam_is_transparent = '0' THEN
                 color_out <= beam_color;
                 is_transparent <= '0';
+                is_sprite_pixel <= '0';
             ELSE
                 color_out <= (OTHERS => '0');
                 is_transparent <= '1';
+                is_sprite_pixel <= '0';
             END IF;
         ELSE
             color_out <= (OTHERS => '0');
             is_transparent <= '1';
+            is_sprite_pixel <= '0';
         END IF;
     END PROCESS;
 
