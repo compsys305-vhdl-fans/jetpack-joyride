@@ -192,6 +192,8 @@ BEGIN
             playing => obstacles_enabled,
             random_in => random_num,
             world_speed => world_speed,
+            player_y => player_y,
+            player_vehicle => player_vehicle,
             coin_collected => coin_collected,
             coin_collected_idx => coin_collected_idx,
             lasers_out => laser_pool,

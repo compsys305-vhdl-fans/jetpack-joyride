@@ -11,6 +11,8 @@ ENTITY obstacle_manager IS
         playing          : IN STD_LOGIC;
         random_in        : IN STD_LOGIC_VECTOR(19 DOWNTO 0); -- Using the existing 20-bit LFSR
         world_speed      : IN UNSIGNED(9 DOWNTO 0);
+        player_y         : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
+        player_vehicle   : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
         coin_collected   : IN STD_LOGIC;
         coin_collected_idx : IN UNSIGNED(2 DOWNTO 0);
         lasers_out       : OUT laser_pool_t;
@@ -38,6 +40,7 @@ ARCHITECTURE rtl OF obstacle_manager IS
     CONSTANT MISSILE_SPAWN_INTERVAL : INTEGER := 240; -- frames (~4s at 60Hz)
     CONSTANT MISSILE_SPAWN_JITTER : INTEGER := 120;
     CONSTANT BASE_MISSILE_SPEED_X : INTEGER := 8; -- fallback if world speed is 0
+    CONSTANT PLAYER_MAX_DISPLAY_HEIGHT : INTEGER := 128;
 
     CONSTANT COIN_WIDTH : INTEGER := 16;
     CONSTANT COIN_HEIGHT : INTEGER := 16;
@@ -96,7 +99,11 @@ BEGIN
         VARIABLE coin_idx : INTEGER;
         VARIABLE temp_missiles : missile_pool_t;
         VARIABLE missile_speed_x : INTEGER;
-        VARIABLE rand_missile_y : INTEGER;
+        VARIABLE player_y_int : INTEGER;
+        VARIABLE player_display_height : INTEGER;
+        VARIABLE player_render_offset : INTEGER;
+        VARIABLE target_missile_y : INTEGER;
+        VARIABLE missile_y : INTEGER;
         VARIABLE jitter : INTEGER;
         VARIABLE temp_coins : coin_pool_t;
         VARIABLE coin_speed_x : INTEGER;
@@ -145,6 +152,32 @@ BEGIN
                     speed_x := BASE_LASER_SPEED_X;
                 END IF;
 
+                player_y_int := TO_INTEGER(UNSIGNED(player_y));
+                CASE player_vehicle IS
+                    WHEN "00" =>
+                        player_display_height := 32;
+                        player_render_offset := PLAYER_MAX_DISPLAY_HEIGHT - player_display_height;
+                    WHEN "01" =>
+                        player_display_height := 128;
+                        player_render_offset := PLAYER_MAX_DISPLAY_HEIGHT - player_display_height;
+                    WHEN "10" =>
+                        player_display_height := 64;
+                        player_render_offset := PLAYER_MAX_DISPLAY_HEIGHT - player_display_height;
+                    WHEN "11" =>
+                        player_display_height := 64;
+                        player_render_offset := 0;
+                    WHEN OTHERS =>
+                        player_display_height := 32;
+                        player_render_offset := PLAYER_MAX_DISPLAY_HEIGHT - player_display_height;
+                END CASE;
+
+                target_missile_y := player_y_int + player_render_offset + (player_display_height / 2) - (MISSILE_DISPLAY_HEIGHT / 2);
+                IF target_missile_y > SCREEN_HEIGHT - MISSILE_DISPLAY_HEIGHT THEN
+                    target_missile_y := SCREEN_HEIGHT - MISSILE_DISPLAY_HEIGHT;
+                ELSIF target_missile_y < 0 THEN
+                    target_missile_y := 0;
+                END IF;
+
                 IF coin_collected = '1' THEN
                     coin_idx := TO_INTEGER(coin_collected_idx);
                     IF coin_idx < MAX_COINS THEN
@@ -187,6 +220,14 @@ BEGIN
                     END IF;
 
                     IF temp_missiles(i).is_warning = '1' THEN
+                        missile_y := TO_INTEGER(temp_missiles(i).y);
+                        IF missile_y < target_missile_y THEN
+                            missile_y := missile_y + 1;
+                        ELSIF missile_y > target_missile_y THEN
+                            missile_y := missile_y - 1;
+                        END IF;
+                        temp_missiles(i).y := TO_SIGNED(missile_y, 12);
+
                         IF warning_timer = 0 THEN
                             temp_missiles(i).is_warning := '0';
                             temp_missiles(i).is_active := '1';
@@ -297,17 +338,10 @@ BEGIN
                 -- Spawn a missile warning when idle
                 IF (temp_missiles(0).is_active = '0') AND (temp_missiles(0).is_warning = '0') THEN
                     IF missile_spawn_counter = 0 THEN
-                        rand_missile_y := TO_INTEGER(UNSIGNED(random_in(9 DOWNTO 0)));
-                        IF rand_missile_y > SCREEN_HEIGHT - MISSILE_DISPLAY_HEIGHT THEN
-                            rand_missile_y := SCREEN_HEIGHT - MISSILE_DISPLAY_HEIGHT;
-                        ELSIF rand_missile_y < 0 THEN
-                            rand_missile_y := 0;
-                        END IF;
-
                         temp_missiles(0).is_warning := '1';
                         temp_missiles(0).is_active := '0';
                         temp_missiles(0).x := TO_SIGNED(SCREEN_WIDTH - MISSILE_DISPLAY_WIDTH - MISSILE_OFFSET, 12);
-                        temp_missiles(0).y := TO_SIGNED(rand_missile_y, 12);
+                        temp_missiles(0).y := TO_SIGNED(target_missile_y, 12);
                         warning_timer <= MISSILE_WARNING_DURATION;
 
                         jitter := TO_INTEGER(UNSIGNED(random_in(7 DOWNTO 0))) MOD MISSILE_SPAWN_JITTER;
