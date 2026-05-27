@@ -386,12 +386,12 @@ BEGIN
                 END IF;
 
             WHEN SPRITE_BIRD_HOLD =>
-                active_pixel_index <= bird2_pixel_index;
-                active_valid       <= bird2_valid;
-
-            WHEN SPRITE_BIRD_NOHOLD =>
                 active_pixel_index <= bird1_pixel_index;
                 active_valid       <= bird1_valid;
+
+            WHEN SPRITE_BIRD_NOHOLD =>
+                active_pixel_index <= bird2_pixel_index;
+                active_valid       <= bird2_valid;
                 
             WHEN SPRITE_TELEPORTER =>
                 IF get_anim_frame(sprite_id, anim_tick) = 0 THEN
