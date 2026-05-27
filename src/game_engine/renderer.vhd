@@ -199,10 +199,11 @@ ARCHITECTURE rtl OF renderer IS
     CONSTANT MENU_TRAIN_Y_TOP : NATURAL := MENU_PLAY_Y_TOP + MENU_BUTTON_HEIGHT + 24;
     CONSTANT MENU_BORDER_THICKNESS : NATURAL := 2;
 
-    CONSTANT TITLE_SPRITE_WIDTH : NATURAL := 240;
-    CONSTANT TITLE_SPRITE_HEIGHT : NATURAL := 60;
+    CONSTANT TITLE_SPRITE_WIDTH : NATURAL := 480;
+    CONSTANT TITLE_SPRITE_HEIGHT : NATURAL := 120;
     CONSTANT TITLE_SPRITE_LEFT : NATURAL := (SCREEN_WIDTH - TITLE_SPRITE_WIDTH) / 2;
     CONSTANT TITLE_SPRITE_TOP : NATURAL := 100;
+    CONSTANT TITLE_SCALE_SHIFT : NATURAL := 1;
     SIGNAL title_rel_x : UNSIGNED(15 DOWNTO 0);
     SIGNAL title_rel_y : UNSIGNED(15 DOWNTO 0);
     SIGNAL in_title_sprite : STD_LOGIC;
@@ -907,9 +908,9 @@ BEGIN
         PORT MAP (
             clock          => clock_25MHz,
             show_djt       => '0',
-            sprite_id      => SPRITE_DEATH_TEXT,
-            palette_id     => PALETTE_DEATH,
-            scale_shift    => DEATH_SCALE_SHIFT,
+            sprite_id      => SPRITE_TITLE,
+            palette_id     => PALETTE_TITLE,
+            scale_shift    => TITLE_SCALE_SHIFT,
             rel_x          => title_rel_x,
             rel_y          => title_rel_y,
             color          => title_sprite_color,

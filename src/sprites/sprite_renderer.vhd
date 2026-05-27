@@ -471,8 +471,8 @@ BEGIN
                 active_valid       <= powerup_valid;
             
             WHEN SPRITE_TITLE =>
-                -- active_pixel_index <= djt_pixel_index;
-                -- active_valid       <= djt_valid;
+                active_pixel_index <= title_pixel_index;
+                active_valid       <= title_valid;
 
             WHEN OTHERS =>
                 IF show_djt = '1' THEN
