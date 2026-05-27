@@ -441,8 +441,6 @@ BEGIN
                         on_laser := true;
                         EXIT;
                     END IF;
-                ELSE
-                    NULL;
                 END IF;
             END IF;
         END LOOP;
