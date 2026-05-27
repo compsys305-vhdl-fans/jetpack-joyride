@@ -53,7 +53,7 @@ begin
             address_a => std_logic_vector(rom_addr),
             clock0 => clock,
             q_a => rom_q,
-            data_a => (others => '0'),
+            data_a => NULL,
             wren_a => '0',
             rden_a => '1'
         );

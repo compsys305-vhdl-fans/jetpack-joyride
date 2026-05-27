@@ -60,7 +60,7 @@ ARCHITECTURE rtl OF renderer IS
     END COMPONENT sprite_renderer;
 
     -- Signals for player sprite calculation
-    SIGNAL player_x_anchor      : UNSIGNED(9 DOWNTO 0) := TO_UNSIGNED(120, 10);
+    CONSTANT PLAYER_X_ANCHOR    : UNSIGNED(9 DOWNTO 0) := TO_UNSIGNED(120, 10);
     SIGNAL player_sprite_width  : POSITIVE;
     SIGNAL player_sprite_height : POSITIVE;
     SIGNAL player_scale_shift   : NATURAL;
@@ -637,11 +637,11 @@ BEGIN
     player_display_width <= player_sprite_width * 2;
     player_display_height <= player_sprite_height * 2;
 
-    PROCESS (player_display_width, player_x_anchor)
+    PROCESS (player_display_width)
         VARIABLE center_x : INTEGER;
         VARIABLE left_x : INTEGER;
     BEGIN
-        center_x := TO_INTEGER(player_x_anchor);
+        center_x := TO_INTEGER(PLAYER_X_ANCHOR);
         left_x := center_x - (player_display_width / 2);
 
         IF left_x < 0 THEN
@@ -711,7 +711,7 @@ BEGIN
         END IF;
     END PROCESS;
 
-    PROCESS (pixel_x, pixel_y_lookahead, paused)
+    PROCESS (pixel_x, pixel_y_lookahead, paused, menu_active, death)
         VARIABLE s_x : UNSIGNED(15 DOWNTO 0);
         VARIABLE s_y : UNSIGNED(15 DOWNTO 0);
         VARIABLE left_x : UNSIGNED(15 DOWNTO 0);

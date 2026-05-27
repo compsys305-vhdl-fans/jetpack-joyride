@@ -64,7 +64,6 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     COMPONENT lfsr IS
         PORT (
             clock : IN STD_LOGIC;
-            reset : IN STD_LOGIC;
             enable : IN STD_LOGIC;
             mouse_x : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
             mouse_y : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
@@ -142,7 +141,6 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL key0_prev : STD_LOGIC := '1';
     SIGNAL update_tick : STD_LOGIC := '0';
 
-    SIGNAL lfsr_reset : STD_LOGIC := '0';
     SIGNAL random_num : STD_LOGIC_VECTOR(19 DOWNTO 0);
 
     -- laser signals
@@ -262,7 +260,6 @@ BEGIN
 
     lfsr_inst: lfsr port map(
         clock => clock_50,
-        reset => lfsr_reset, -- currently unused
         enable => '1',  -- always enabled
         mouse_x => mouse_x,
         mouse_y => mouse_y,

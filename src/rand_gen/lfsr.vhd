@@ -4,7 +4,6 @@ USE IEEE.STD_LOGIC_1164.ALL;
 ENTITY lfsr IS
     PORT (
         clock : IN STD_LOGIC;
-        reset : IN STD_LOGIC;
         enable : IN STD_LOGIC;
         -- mouse position for entropy
         mouse_x : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
@@ -23,15 +22,12 @@ ARCHITECTURE galois of lfsr IS
     SIGNAL lfsr_s : STD_LOGIC_VECTOR(19 DOWNTO 0) := x"DEAD" & "0000";
     SIGNAL load_prev : STD_LOGIC := '0';
 BEGIN
-    lfsr_process: PROCESS (clock, reset)
+    lfsr_process: PROCESS (clock)
         VARIABLE fb : STD_LOGIC;
         VARIABLE lfsr_next : STD_LOGIC_VECTOR(19 DOWNTO 0);
         VARIABLE seed : STD_LOGIC_VECTOR(19 DOWNTO 0);
     BEGIN
-        IF reset = '1' THEN
-            lfsr_s <= x"DEAD" & "0000";
-            load_prev <= '0';
-        ELSIF RISING_EDGE(clock) THEN
+        IF RISING_EDGE(clock) THEN
             load_prev <= load;
             IF load = '1' and load_prev = '0' THEN
                 seed := mouse_x & mouse_y;

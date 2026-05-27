@@ -31,12 +31,7 @@
 //   Ver  :| Author            :| Mod. Date :| Changes Made:
 //   V1.0 :| Yue Yang          :| 08/25/2014:| Initial Revision
 // ============================================================================
-`define Enable_CLOCK2
-`define Enable_CLOCK3
-`define Enable_CLOCK4
 `define Enable_CLOCK
-`define Enable_DRAM
-`define Enable_GPIO
 `define Enable_HEX0
 `define Enable_HEX1
 `define Enable_HEX2
@@ -46,49 +41,14 @@
 `define Enable_KEY
 `define Enable_LEDR
 `define Enable_PS2
-`define Enable_RESET
-`define Enable_SD
 `define Enable_SW
 `define Enable_VGA
 
 module DE0_CV_golden_top (
-
-`ifdef Enable_CLOCK2
-      ///////// CLOCK2 "3.3-V LVTTL" /////////
-      input              CLOCK2_50,
-`endif	  
-
-`ifdef Enable_CLOCK3
-      ///////// CLOCK3 "3.3-V LVTTL" /////////
-      input              CLOCK3_50,
-`endif
-
-`ifdef Enable_CLOCK4
-      ///////// CLOCK4  "3.3-V LVTTL"  /////////
-      inout              CLOCK4_50,
-`endif	  
+  
 `ifdef Enable_CLOCK
       ///////// CLOCK  "3.3-V LVTTL" /////////
       input              CLOCK_50,
-`endif
-`ifdef Enable_DRAM
-      ///////// DRAM  "3.3-V LVTTL" /////////
-      output      [12:0] DRAM_ADDR,
-      output      [1:0]  DRAM_BA,
-      output             DRAM_CAS_N,
-      output             DRAM_CKE,
-      output             DRAM_CLK,
-      output             DRAM_CS_N,
-      inout       [15:0] DRAM_DQ,
-      output             DRAM_LDQM,
-      output             DRAM_RAS_N,
-      output             DRAM_UDQM,
-      output             DRAM_WE_N,
-`endif
-`ifdef Enable_GPIO
-      ///////// GPIO "3.3-V LVTTL" /////////
-      inout       [35:0] GPIO_0,
-      inout       [35:0] GPIO_1,
 `endif
 `ifdef Enable_HEX0
       ///////// HEX0  "3.3-V LVTTL" /////////
@@ -129,16 +89,6 @@ module DE0_CV_golden_top (
       inout              PS2_DAT,
       inout              PS2_DAT2,
 `endif
-`ifdef Enable_RESET
-      ///////// RESET "3.3-V LVTTL" /////////
-      input              RESET_N,
-`endif
-`ifdef Enable_SD
-      ///////// SD "3.3-V LVTTL" /////////
-      output             SD_CLK,
-      inout              SD_CMD,
-      inout       [3:0]  SD_DATA,
-`endif
 `ifdef Enable_SW
       ///////// SW "3.3-V LVTTL"/////////
       input       [9:0]  SW,
@@ -153,4 +103,3 @@ module DE0_CV_golden_top (
 `endif	 
 );
 endmodule 
-
