@@ -20,7 +20,7 @@ END ENTITY obstacle_manager;
 
 ARCHITECTURE rtl OF obstacle_manager IS
     CONSTANT BASE_LASER_SPEED_X : INTEGER := 4; -- pixels per frame
-    CONSTANT LASER_LENGTH : INTEGER := 100;
+    CONSTANT LASER_LENGTH : NATURAL := 100;
     CONSTANT Y_MARGIN : INTEGER := 40; -- Top/bottom margin for laser spawns
     CONSTANT MIN_LASER_DISTANCE : INTEGER := 32; -- Minimum vertical distance between horizontal lasers
 
@@ -82,6 +82,10 @@ BEGIN
         VARIABLE speed_x : INTEGER;
         VARIABLE safe_to_spawn : BOOLEAN;
         VARIABLE is_horizontal : BOOLEAN;
+        VARIABLE rand_val : INTEGER;
+        VARIABLE max_y : INTEGER;
+        VARIABLE y_range : INTEGER;
+        VARIABLE laser_end_x : INTEGER;
         VARIABLE temp_missiles : missile_pool_t;
         VARIABLE missile_speed_x : INTEGER;
         VARIABLE rand_missile_y : INTEGER;
@@ -136,13 +140,18 @@ BEGIN
                 -- Update existing lasers
                 FOR i IN 0 TO MAX_LASERS - 1 LOOP
                     IF temp_pool(i).is_active = '1' THEN
-                        IF TO_INTEGER(temp_pool(i).x1) < 0 THEN
+                        IF temp_pool(i).direction = HORIZONTAL THEN
+                            laser_end_x := TO_INTEGER(temp_pool(i).pos.x) + INTEGER(temp_pool(i).length);
+                        ELSE
+                            laser_end_x := TO_INTEGER(temp_pool(i).pos.x);
+                        END IF;
+
+                        IF laser_end_x < 0 THEN
                             -- Deactivate if off-screen
                             temp_pool(i) := INACTIVE_LASER;
                         ELSE
                             -- Move left
-                            temp_pool(i).x0 := temp_pool(i).x0 - speed_x;
-                            temp_pool(i).x1 := temp_pool(i).x1 - speed_x;
+                            temp_pool(i).pos.x := temp_pool(i).pos.x - speed_x;
                         END IF;
                     END IF;
                 END LOOP;
@@ -220,28 +229,27 @@ BEGIN
                             END CASE;
 
                             -- Generate a y-coordinate within the margins.
-                            -- NOTE: We use bit-masking instead of MOD because
-                            -- MOD on unsigned vectors is unreliable in Quartus synthesis.
-                            -- Mask to 8 bits (0..255), then add Y_MARGIN and clamp.
-                            rand_y := RESIZE(UNSIGNED(random_in(7 DOWNTO 0)), 10) + TO_UNSIGNED(Y_MARGIN, 10);
+                            -- Using modulo prevents clustering at the edges that happens with clamping.
+                            safe_to_spawn := true;
+                            rand_val := TO_INTEGER(UNSIGNED(random_in(9 DOWNTO 0)));
                             IF is_horizontal THEN
-                                -- Clamp to valid range: Y_MARGIN .. SCREEN_HEIGHT - Y_MARGIN
-                                IF rand_y > TO_UNSIGNED(SCREEN_HEIGHT - Y_MARGIN, 10) THEN
-                                    rand_y := TO_UNSIGNED(SCREEN_HEIGHT - Y_MARGIN, 10);
-                                END IF;
+                                max_y := SCREEN_HEIGHT - Y_MARGIN;
                             ELSE
-                                -- Clamp to valid range: Y_MARGIN .. SCREEN_HEIGHT - LASER_LENGTH - Y_MARGIN
-                                IF rand_y > TO_UNSIGNED(SCREEN_HEIGHT - LASER_LENGTH - Y_MARGIN, 10) THEN
-                                    rand_y := TO_UNSIGNED(SCREEN_HEIGHT - LASER_LENGTH - Y_MARGIN, 10);
-                                END IF;
+                                max_y := SCREEN_HEIGHT - Y_MARGIN - INTEGER(LASER_LENGTH);
                             END IF;
 
-                            safe_to_spawn := true;
+                            y_range := max_y - Y_MARGIN + 1;
+                            IF y_range <= 0 THEN
+                                safe_to_spawn := false;
+                                rand_y := TO_UNSIGNED(Y_MARGIN, 10);
+                            ELSE
+                                rand_y := TO_UNSIGNED(Y_MARGIN + (rand_val MOD y_range), 10);
+                            END IF;
                             -- Check if it collides with existing lasers
                             IF is_horizontal THEN
                                 FOR j IN 0 TO MAX_LASERS - 1 LOOP
-                                    IF i /= j AND temp_pool(j).is_active = '1' AND temp_pool(j).y0 = temp_pool(j).y1 THEN
-                                        IF ABS(TO_INTEGER(SIGNED(rand_y)) - TO_INTEGER(temp_pool(j).y0)) < MIN_LASER_DISTANCE THEN
+                                    IF i /= j AND temp_pool(j).is_active = '1' AND temp_pool(j).direction = HORIZONTAL THEN
+                                        IF ABS(TO_INTEGER(SIGNED(rand_y)) - TO_INTEGER(temp_pool(j).pos.y)) < MIN_LASER_DISTANCE THEN
                                             safe_to_spawn := false;
                                         END IF;
                                     END IF;
@@ -250,16 +258,13 @@ BEGIN
                             
                             IF safe_to_spawn THEN
                                 temp_pool(i).is_active := '1';
+                                temp_pool(i).pos.x := TO_SIGNED(SCREEN_WIDTH - 1, 12);
+                                temp_pool(i).pos.y := RESIZE(SIGNED('0' & rand_y), 12);
+                                temp_pool(i).length := LASER_LENGTH;
                                 IF is_horizontal THEN
-                                    temp_pool(i).y0 := RESIZE(SIGNED('0' & rand_y), 12);
-                                    temp_pool(i).y1 := temp_pool(i).y0;
-                                    temp_pool(i).x0 := TO_SIGNED(SCREEN_WIDTH - 1, 12);
-                                    temp_pool(i).x1 := TO_SIGNED(SCREEN_WIDTH - 1 + LASER_LENGTH, 12);
+                                    temp_pool(i).direction := HORIZONTAL;
                                 ELSE
-                                    temp_pool(i).y0 := RESIZE(SIGNED('0' & rand_y), 12);
-                                    temp_pool(i).y1 := temp_pool(i).y0 + LASER_LENGTH;
-                                    temp_pool(i).x0 := TO_SIGNED(SCREEN_WIDTH - 1, 12);
-                                    temp_pool(i).x1 := TO_SIGNED(SCREEN_WIDTH - 1, 12);
+                                    temp_pool(i).direction := VERTICAL;
                                 END IF;
                                 EXIT; -- exit loop after spawning one
                             END IF;

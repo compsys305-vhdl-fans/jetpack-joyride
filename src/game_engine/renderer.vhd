@@ -997,10 +997,9 @@ BEGIN
                 show_djt => show_djt,
                 pixel_x => pixel_x,
                 pixel_y => pixel_y_lookahead,
-                x0 => laser_pool(i).x0,
-                y0 => laser_pool(i).y0,
-                x1 => laser_pool(i).x1,
-                y1 => laser_pool(i).y1,
+                pos => laser_pool(i).pos,
+                direction => laser_pool(i).direction,
+                length => laser_pool(i).length,
                 is_active => laser_pool(i).is_active,
                 color_out => laser_colors(i),
                 is_transparent => laser_transparencies(i)

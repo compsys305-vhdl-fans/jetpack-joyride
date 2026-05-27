@@ -10,12 +10,18 @@ PACKAGE obstacle_types IS
     CONSTANT SCREEN_WIDTH : INTEGER := 640;
     CONSTANT SCREEN_HEIGHT : INTEGER := 480;
 
+    TYPE vec2 IS RECORD
+        x : SIGNED(11 DOWNTO 0);
+        y : SIGNED(11 DOWNTO 0);
+    END RECORD vec2;
+
+    TYPE laser_direction_t IS (HORIZONTAL, VERTICAL);
+
     TYPE laser_t IS RECORD
         is_active : STD_LOGIC;
-        x0 : SIGNED(11 DOWNTO 0);
-        y0 : SIGNED(11 DOWNTO 0);
-        x1 : SIGNED(11 DOWNTO 0);
-        y1 : SIGNED(11 DOWNTO 0);
+        pos : vec2;
+        direction : laser_direction_t;
+        length : NATURAL;
     END RECORD laser_t;
 
     TYPE laser_pool_t IS ARRAY (0 TO MAX_LASERS - 1) OF laser_t;
@@ -48,10 +54,9 @@ PACKAGE obstacle_types IS
     -- Default value for an inactive laser
     CONSTANT INACTIVE_LASER : laser_t := (
         is_active => '0',
-        x0        => (OTHERS => '0'),
-        y0        => (OTHERS => '0'),
-        x1        => (OTHERS => '0'),
-        y1        => (OTHERS => '0')
+        pos => (x => (OTHERS => '0'), y => (OTHERS => '0')),
+        direction => HORIZONTAL,
+        length => 0
     );
     
     -- Default value for a whole pool of inactive lasers

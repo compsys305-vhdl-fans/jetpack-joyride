@@ -402,12 +402,12 @@ BEGIN
 
         FOR i IN 0 TO MAX_LASERS - 1 LOOP
             IF laser_pool(i).is_active = '1' THEN
-                ax := TO_INTEGER(laser_pool(i).x0);
-                ay := TO_INTEGER(laser_pool(i).y0);
-                bx := TO_INTEGER(laser_pool(i).x1);
-                by := TO_INTEGER(laser_pool(i).y1);
+                ax := TO_INTEGER(laser_pool(i).pos.x);
+                ay := TO_INTEGER(laser_pool(i).pos.y);
 
-                IF ax = bx THEN
+                IF laser_pool(i).direction = VERTICAL THEN
+                    bx := ax;
+                    by := ay + INTEGER(laser_pool(i).length);
                     IF ay < by THEN
                         min_y := ay;
                         max_y := by;
@@ -423,7 +423,9 @@ BEGIN
                         on_laser := true;
                         EXIT;
                     END IF;
-                ELSIF ay = by THEN
+                ELSE
+                    bx := ax + INTEGER(laser_pool(i).length);
+                    by := ay;
                     IF ax < bx THEN
                         min_x := ax;
                         max_x := bx;
