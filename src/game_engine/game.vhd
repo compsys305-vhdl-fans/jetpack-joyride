@@ -155,6 +155,7 @@ BEGIN
 
                 CASE game_state IS
                     WHEN STATE_MENU =>
+                        death_timer := 100000000; -- reset timer for next time
                         active_vehicle <= "00";
                         IF mouse_left = '1' AND mouse_left_prev = '0' THEN
                             IF play_hit = '1' THEN
@@ -190,7 +191,6 @@ BEGIN
                         IF death_timer > 0 THEN
                             death_timer := death_timer - 1;
                         ELSE
-                            death_timer := 100000000; -- reset timer for next time
                             game_state <= STATE_MENU;
                         END IF;
                 END CASE;
