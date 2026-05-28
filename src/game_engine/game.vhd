@@ -24,7 +24,7 @@ ENTITY game IS
         grounded : OUT STD_LOGIC;
         teleporter_preview_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
         world_speed : OUT UNSIGNED(9 DOWNTO 0);
-        score_out : OUT UNSIGNED(31 DOWNTO 0)
+        score_out : OUT UNSIGNED(19 DOWNTO 0)
     );
 END game;
 
@@ -78,10 +78,10 @@ ARCHITECTURE behaviour OF game IS
     SIGNAL world_speed_reg : UNSIGNED(9 DOWNTO 0) := BASE_WORLD_SPEED;
     SIGNAL speed_counter : INTEGER RANGE 0 TO SPEED_UP_INTERVAL := SPEED_UP_INTERVAL;
 
-    SIGNAL distance_reg : UNSIGNED(31 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL distance_reg : UNSIGNED(19 DOWNTO 0) := (OTHERS => '0');
     SIGNAL coin_count_reg : UNSIGNED(15 DOWNTO 0) := (OTHERS => '0');
     SIGNAL distance_accumulator : INTEGER RANGE 0 TO 100 := 0;
-    SIGNAL score_reg : UNSIGNED(31 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL score_reg : UNSIGNED(19 DOWNTO 0) := (OTHERS => '0');
 
     FUNCTION point_in_rect(
         x : UNSIGNED(9 DOWNTO 0);
@@ -245,7 +245,7 @@ BEGIN
             IF reset = '1' OR game_state = STATE_MENU THEN
                 score_reg <= (OTHERS => '0');
             ELSIF is_playing = '1' THEN
-                score_reg <= distance_reg + RESIZE(coin_count_reg * 10, 32);
+                score_reg <= distance_reg + RESIZE(coin_count_reg * 10, score_reg'length);
             END IF;
         END IF;
     END PROCESS score_calc_proc;

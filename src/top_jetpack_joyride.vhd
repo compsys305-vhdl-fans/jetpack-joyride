@@ -95,7 +95,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             grounded : OUT STD_LOGIC;
             teleporter_preview_y : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
             world_speed : OUT UNSIGNED(9 DOWNTO 0);
-            score_out : OUT UNSIGNED(31 DOWNTO 0)
+            score_out : OUT UNSIGNED(19 DOWNTO 0)
         );
     END COMPONENT game;
 
@@ -156,7 +156,7 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
     SIGNAL coin_collected : STD_LOGIC;
     SIGNAL coin_collected_idx : UNSIGNED(2 DOWNTO 0);
     SIGNAL screen_flash : STD_LOGIC;
-    SIGNAL score_value : UNSIGNED(31 DOWNTO 0);
+    SIGNAL score_value : UNSIGNED(19 DOWNTO 0);
     -- death signal
     SIGNAL death_raw : STD_LOGIC;
     SIGNAL death_signal : STD_LOGIC;
@@ -185,6 +185,44 @@ ARCHITECTURE rtl OF top_jetpack_joyride IS
             WHEN OTHERS => RETURN "1111111";
         END CASE;
     END FUNCTION seven_seg_digit;
+
+    PROCEDURE extract_decimal_digit(
+        VARIABLE remaining : INOUT UNSIGNED;
+        CONSTANT place_value : IN NATURAL;
+        SIGNAL digit : OUT INTEGER
+    ) IS
+    BEGIN
+        IF remaining >= TO_UNSIGNED(9 * place_value, remaining'length) THEN
+            remaining := remaining - TO_UNSIGNED(9 * place_value, remaining'length);
+            digit <= 9;
+        ELSIF remaining >= TO_UNSIGNED(8 * place_value, remaining'length) THEN
+            remaining := remaining - TO_UNSIGNED(8 * place_value, remaining'length);
+            digit <= 8;
+        ELSIF remaining >= TO_UNSIGNED(7 * place_value, remaining'length) THEN
+            remaining := remaining - TO_UNSIGNED(7 * place_value, remaining'length);
+            digit <= 7;
+        ELSIF remaining >= TO_UNSIGNED(6 * place_value, remaining'length) THEN
+            remaining := remaining - TO_UNSIGNED(6 * place_value, remaining'length);
+            digit <= 6;
+        ELSIF remaining >= TO_UNSIGNED(5 * place_value, remaining'length) THEN
+            remaining := remaining - TO_UNSIGNED(5 * place_value, remaining'length);
+            digit <= 5;
+        ELSIF remaining >= TO_UNSIGNED(4 * place_value, remaining'length) THEN
+            remaining := remaining - TO_UNSIGNED(4 * place_value, remaining'length);
+            digit <= 4;
+        ELSIF remaining >= TO_UNSIGNED(3 * place_value, remaining'length) THEN
+            remaining := remaining - TO_UNSIGNED(3 * place_value, remaining'length);
+            digit <= 3;
+        ELSIF remaining >= TO_UNSIGNED(2 * place_value, remaining'length) THEN
+            remaining := remaining - TO_UNSIGNED(2 * place_value, remaining'length);
+            digit <= 2;
+        ELSIF remaining >= TO_UNSIGNED(place_value, remaining'length) THEN
+            remaining := remaining - TO_UNSIGNED(place_value, remaining'length);
+            digit <= 1;
+        ELSE
+            digit <= 0;
+        END IF;
+    END PROCEDURE extract_decimal_digit;
 
 BEGIN
     vga_pll_inst: ENTITY lib_vga_pll.vga_pll
@@ -374,21 +412,21 @@ BEGIN
     hex5 <= seven_seg_digit(score_digit5);
 
     PROCESS(update_tick)
-        VARIABLE score_int : INTEGER RANGE 0 TO 999999;
+        VARIABLE remaining_score : UNSIGNED(score_value'RANGE);
     BEGIN
         IF RISING_EDGE(update_tick) THEN
             IF score_value > TO_UNSIGNED(999999, score_value'length) THEN
-                score_int := 999999;
+                remaining_score := TO_UNSIGNED(999999, score_value'length);
             ELSE
-                score_int := TO_INTEGER(score_value);
+                remaining_score := score_value;
             END IF;
 
-            score_digit0 <= score_int MOD 10;
-            score_digit1 <= (score_int / 10) MOD 10;
-            score_digit2 <= (score_int / 100) MOD 10;
-            score_digit3 <= (score_int / 1000) MOD 10;
-            score_digit4 <= (score_int / 10000) MOD 10;
-            score_digit5 <= (score_int / 100000) MOD 10;
+            extract_decimal_digit(remaining_score, 100000, score_digit5);
+            extract_decimal_digit(remaining_score, 10000, score_digit4);
+            extract_decimal_digit(remaining_score, 1000, score_digit3);
+            extract_decimal_digit(remaining_score, 100, score_digit2);
+            extract_decimal_digit(remaining_score, 10, score_digit1);
+            extract_decimal_digit(remaining_score, 1, score_digit0);
         END IF;
     END PROCESS;
 

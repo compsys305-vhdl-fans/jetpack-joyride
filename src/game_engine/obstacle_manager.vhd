@@ -152,7 +152,7 @@ BEGIN
                     speed_x := BASE_LASER_SPEED_X;
                 END IF;
 
-                player_y_int := TO_INTEGER(UNSIGNED(player_y));
+                player_y_int := TO_INTEGER(SIGNED(player_y));
                 CASE player_vehicle IS
                     WHEN "00" =>
                         player_display_height := 32;
