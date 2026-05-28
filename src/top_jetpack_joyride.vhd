@@ -340,7 +340,6 @@ BEGIN
         coin_pool => coin_pool,
         powerup_pool => powerup_pool,
         screen_flash => screen_flash,
-        score_value => score_value,
         frame_count => frame_counter,
         random_in => random_num,
         world_speed => world_speed,

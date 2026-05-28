@@ -31,7 +31,6 @@ ENTITY renderer IS
         coin_pool            : IN coin_pool_t;
         powerup_pool         : IN powerup_pool_t;
         screen_flash         : IN STD_LOGIC;
-        score_value          : IN UNSIGNED(31 DOWNTO 0);
         frame_count          : IN UNSIGNED(7 DOWNTO 0);
         random_in            : IN STD_LOGIC_VECTOR(19 DOWNTO 0);
         world_speed          : IN UNSIGNED(9 DOWNTO 0);
@@ -222,7 +221,6 @@ ARCHITECTURE rtl OF renderer IS
     CONSTANT FONT_H : NATURAL := 7;
     CONSTANT FONT_SCALE : NATURAL := 2;
     CONSTANT FONT_SPACING : NATURAL := 1;
-    CONSTANT SCORE_FONT_SPACING : NATURAL := 3;
 
     CONSTANT PLAY_LEN : NATURAL := 4;
     CONSTANT TRAIN_LEN : NATURAL := 8;
@@ -444,13 +442,6 @@ ARCHITECTURE rtl OF renderer IS
         RETURN FALSE;
     END FUNCTION;
 
-    CONSTANT SCORE_DIGITS : NATURAL := 7;
-    CONSTANT SCORE_MARGIN_X : NATURAL := 16;
-    CONSTANT SCORE_MARGIN_Y : NATURAL := 16;
-    CONSTANT SCORE_CELL_WIDTH : NATURAL := (FONT_W + SCORE_FONT_SPACING) * FONT_SCALE;
-    CONSTANT SCORE_TEXT_WIDTH : NATURAL := (SCORE_DIGITS * FONT_W + (SCORE_DIGITS - 1) * SCORE_FONT_SPACING) * FONT_SCALE;
-    CONSTANT SCORE_TEXT_HEIGHT : NATURAL := FONT_H * FONT_SCALE;
-
     FUNCTION digit_row(digit : INTEGER; row : INTEGER) RETURN STD_LOGIC_VECTOR IS
         VARIABLE bits : STD_LOGIC_VECTOR(4 DOWNTO 0) := (OTHERS => '0');
     BEGIN
@@ -556,12 +547,7 @@ ARCHITECTURE rtl OF renderer IS
     SIGNAL menu_drawn_d : STD_LOGIC := '0';
     SIGNAL menu_color : STD_LOGIC_VECTOR(11 DOWNTO 0);
     SIGNAL menu_color_d : STD_LOGIC_VECTOR(11 DOWNTO 0) := (OTHERS => '0');
-
-    SIGNAL score_drawn_d : STD_LOGIC := '0';
     SIGNAL frame_count_prev : UNSIGNED(7 DOWNTO 0) := (OTHERS => '0');
-    TYPE score_digit_array IS ARRAY (0 TO SCORE_DIGITS - 1) OF INTEGER RANGE 0 TO 9;
-    SIGNAL score_digits_arr : score_digit_array := (OTHERS => 0);
-    SIGNAL score_digit_visible : STD_LOGIC_VECTOR(0 TO SCORE_DIGITS - 1) := (6 => '1', OTHERS => '0');
 
     CONSTANT CURSOR_HALF_SIZE : INTEGER := 2;
     CONSTANT CURSOR_COLOR : STD_LOGIC_VECTOR(11 DOWNTO 0) := x"FFF";
@@ -1039,14 +1025,6 @@ BEGIN
         );
 
     PROCESS(clock_25MHz)
-        VARIABLE score_int : INTEGER;
-        VARIABLE score_local_x : INTEGER;
-        VARIABLE score_local_y : INTEGER;
-        VARIABLE score_digit_idx : INTEGER RANGE 0 TO SCORE_DIGITS - 1;
-        VARIABLE score_digit_x : INTEGER;
-        VARIABLE score_row : INTEGER RANGE 0 TO FONT_H - 1;
-        VARIABLE score_col : INTEGER RANGE 0 TO FONT_W - 1;
-        VARIABLE score_row_bits : STD_LOGIC_VECTOR(4 DOWNTO 0);
     BEGIN
         IF RISING_EDGE(clock_25MHz) THEN
             IF frame_count /= frame_count_d THEN
@@ -1070,48 +1048,6 @@ BEGIN
             title_sprite_color_d <= title_sprite_color;
             menu_drawn_d <= menu_drawn;
             menu_color_d <= menu_color;
-
-            score_drawn_d <= '0';
-            IF menu_active = '0' THEN
-                score_local_x := TO_INTEGER(pixel_x) - SCORE_MARGIN_X;
-                score_local_y := TO_INTEGER(pixel_y_lookahead) - SCORE_MARGIN_Y;
-
-                IF (score_local_x >= 0) AND (score_local_x < SCORE_TEXT_WIDTH) AND
-                   (score_local_y >= 0) AND (score_local_y < SCORE_TEXT_HEIGHT) THEN
-                    score_digit_idx := score_local_x / SCORE_CELL_WIDTH;
-                    score_digit_x := score_local_x - (score_digit_idx * SCORE_CELL_WIDTH);
-
-                    IF (score_digit_x < FONT_W * FONT_SCALE) AND (score_digit_visible(score_digit_idx) = '1') THEN
-                        score_row := score_local_y / FONT_SCALE;
-                        score_col := score_digit_x / FONT_SCALE;
-                        score_row_bits := digit_row(score_digits_arr(score_digit_idx), score_row);
-
-                        IF score_row_bits(FONT_W - 1 - score_col) = '1' THEN
-                            score_drawn_d <= '1';
-                        END IF;
-                    END IF;
-                END IF;
-            END IF;
-
-            IF frame_count /= frame_count_prev THEN
-                score_int := TO_INTEGER(score_value);
-
-                score_digits_arr(0) <= (score_int / 1000000) MOD 10;
-                score_digits_arr(1) <= (score_int / 100000) MOD 10;
-                score_digits_arr(2) <= (score_int / 10000) MOD 10;
-                score_digits_arr(3) <= (score_int / 1000) MOD 10;
-                score_digits_arr(4) <= (score_int / 100) MOD 10;
-                score_digits_arr(5) <= (score_int / 10) MOD 10;
-                score_digits_arr(6) <= score_int MOD 10;
-
-                IF score_int >= 1000000 THEN score_digit_visible(0) <= '1'; ELSE score_digit_visible(0) <= '0'; END IF;
-                IF score_int >= 100000 THEN score_digit_visible(1) <= '1'; ELSE score_digit_visible(1) <= '0'; END IF;
-                IF score_int >= 10000 THEN score_digit_visible(2) <= '1'; ELSE score_digit_visible(2) <= '0'; END IF;
-                IF score_int >= 1000 THEN score_digit_visible(3) <= '1'; ELSE score_digit_visible(3) <= '0'; END IF;
-                IF score_int >= 100 THEN score_digit_visible(4) <= '1'; ELSE score_digit_visible(4) <= '0'; END IF;
-                IF score_int >= 10 THEN score_digit_visible(5) <= '1'; ELSE score_digit_visible(5) <= '0'; END IF;
-                score_digit_visible(6) <= '1';
-            END IF;
             frame_count_prev <= frame_count;
             in_coin_sprite_d <= in_coin_sprite;
             in_powerup_sprite_d <= in_powerup_sprite;
@@ -1217,7 +1153,7 @@ BEGIN
     END PROCESS;
 
     PROCESS (cursor_on_d, menu_drawn_d, menu_color_d, death_drawn, death_sprite_color, pause_drawn, pause_sprite_color,
-             score_drawn_d, show_djt, player_drawn, sprite_color, missile_drawn, missile_sprite_color,
+             show_djt, player_drawn, sprite_color, missile_drawn, missile_sprite_color,
              coin_drawn, coin_sprite_color, powerup_drawn, powerup_sprite_color, base_color_d,
              combined_laser_is_transparent, combined_laser_is_sprite_pixel, combined_laser_color, screen_flash, title_drawn, title_sprite_color_d)
         VARIABLE base_r, base_g, base_b : INTEGER RANGE 0 TO 15;
@@ -1248,10 +1184,6 @@ BEGIN
             final_r := TO_INTEGER(UNSIGNED(pause_sprite_color(11 DOWNTO 8)));
             final_g := TO_INTEGER(UNSIGNED(pause_sprite_color(7 DOWNTO 4)));
             final_b := TO_INTEGER(UNSIGNED(pause_sprite_color(3 DOWNTO 0)));
-        ELSIF score_drawn_d = '1' THEN
-            final_r := 15;
-            final_g := 15;
-            final_b := 15;
         ELSIF show_djt = '1' THEN
             final_r := TO_INTEGER(UNSIGNED(base_color_d(11 DOWNTO 8)));
             final_g := TO_INTEGER(UNSIGNED(base_color_d(7 DOWNTO 4)));
