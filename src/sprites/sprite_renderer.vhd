@@ -103,8 +103,8 @@ ARCHITECTURE rtl OF sprite_renderer IS
     SIGNAL missile1_valid, missile2_valid             : STD_LOGIC;
 
     -- Coin Sprite Signals
-    SIGNAL coin1_pixel_index, coin3_pixel_index : UNSIGNED(7 DOWNTO 0);
-    SIGNAL coin1_valid, coin3_valid             : STD_LOGIC;
+    SIGNAL coin1_pixel_index, coin2_pixel_index, coin3_pixel_index, coin4_pixel_index : UNSIGNED(7 DOWNTO 0);
+    SIGNAL coin1_valid, coin2_valid, coin3_valid, coin4_valid             : STD_LOGIC;
 
     -- Powerup Sprite Signals
     SIGNAL powerup_pixel_index : UNSIGNED(7 DOWNTO 0);
@@ -292,9 +292,17 @@ BEGIN
         GENERIC MAP (IMAGE_WIDTH => 16, IMAGE_HEIGHT => 16, MIF_FILE => "../res/coin/coin1.mif")
         PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => coin1_pixel_index, valid => coin1_valid);
 
+    coin2_rom: image_loader
+        GENERIC MAP (IMAGE_WIDTH => 16, IMAGE_HEIGHT => 16, MIF_FILE => "../res/coin/coin2.mif")
+        PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => coin2_pixel_index, valid => coin2_valid);
+
     coin3_rom: image_loader
         GENERIC MAP (IMAGE_WIDTH => 16, IMAGE_HEIGHT => 16, MIF_FILE => "../res/coin/coin3.mif")
         PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => coin3_pixel_index, valid => coin3_valid);
+
+    coin4_rom: image_loader
+        GENERIC MAP (IMAGE_WIDTH => 16, IMAGE_HEIGHT => 16, MIF_FILE => "../res/coin/coin4.mif")
+        PORT MAP (clock => clock, x => local_x, y => local_y, pixel_index => coin4_pixel_index, valid => coin4_valid);
 
     powerup_rom: image_loader
         GENERIC MAP (IMAGE_WIDTH => 32, IMAGE_HEIGHT => 32, MIF_FILE => "../res/powerup/powerup.mif")
@@ -335,7 +343,10 @@ BEGIN
             pause_pixel_index, pause_valid,
             warning_pixel_index, warning_valid,
             missile1_pixel_index, missile1_valid, missile2_pixel_index, missile2_valid,
-            coin1_pixel_index, coin1_valid, coin3_pixel_index, coin3_valid,
+            coin1_pixel_index, coin1_valid,
+            coin2_pixel_index, coin2_valid,
+            coin3_pixel_index, coin3_valid,
+            coin4_pixel_index, coin4_valid,
             powerup_pixel_index, powerup_valid,
             title_pixel_index, title_valid)
     BEGIN
@@ -458,12 +469,22 @@ BEGIN
                 END IF;
 
             WHEN SPRITE_COIN =>
+                -- 11 22 33 44 33 22 (6 frames, 12Hz)
                 IF get_anim_frame(sprite_id, anim_tick) = 0 THEN
                     active_pixel_index <= coin1_pixel_index;
                     active_valid       <= coin1_valid;
-                ELSE
+                ELSIF get_anim_frame(sprite_id, anim_tick) = 1 THEN
+                    active_pixel_index <= coin2_pixel_index;
+                    active_valid       <= coin2_valid;
+                ELSIF get_anim_frame(sprite_id, anim_tick) = 2 THEN
                     active_pixel_index <= coin3_pixel_index;
                     active_valid       <= coin3_valid;
+                ELSIF get_anim_frame(sprite_id, anim_tick) = 3 THEN
+                    active_pixel_index <= coin4_pixel_index;
+                    active_valid       <= coin4_valid;
+                ELSE
+                    active_pixel_index <= coin1_pixel_index;
+                    active_valid       <= coin1_valid;
                 END IF;
 
             WHEN SPRITE_POWERUP =>

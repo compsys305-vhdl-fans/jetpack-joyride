@@ -126,7 +126,7 @@ PACKAGE BODY sprite_palettes_pkg IS
     ) RETURN INTEGER IS
     BEGIN
         CASE sprite_id IS
-            WHEN SPRITE_BARRY_RUN | SPRITE_BARRY_FLY | SPRITE_STOMPER_FLY | SPRITE_STOMPER_FALL | SPRITE_MISSILE | SPRITE_COIN | SPRITE_POWERUP => 
+            WHEN SPRITE_BARRY_RUN | SPRITE_BARRY_FLY | SPRITE_STOMPER_FLY | SPRITE_STOMPER_FALL | SPRITE_MISSILE | SPRITE_POWERUP =>
                 -- 200ms per frame (3 ticks, 12Hz)
                 IF (anim_tick MOD 6) < 3 THEN
                     RETURN 0;
@@ -158,6 +158,24 @@ PACKAGE BODY sprite_palettes_pkg IS
                     RETURN 1;
                 END IF;
 
+            WHEN SPRITE_COIN =>
+                -- 11 22 33 44 33 22 (6 frames, 12Hz)
+                CASE anim_tick IS
+                    WHEN 0 | 1 =>
+                        RETURN 0;
+                    WHEN 2 | 3 =>
+                        RETURN 1;
+                    WHEN 4 | 5 =>
+                        RETURN 2;
+                    WHEN 6 | 7 =>
+                        RETURN 3;
+                    WHEN 8 | 9 =>
+                        RETURN 2;
+                    WHEN 10 | 11 =>
+                        RETURN 1;
+                    WHEN OTHERS =>
+                        RETURN 0;
+                END CASE;
             WHEN OTHERS =>
                 -- Non-animated sprites (e.g., Bird)
                 RETURN 0;
