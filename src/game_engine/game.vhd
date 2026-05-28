@@ -131,7 +131,9 @@ BEGIN
         teleporter_preview_y => teleporter_preview_pos
     );
 
-    menu_state: PROCESS (clock_50MHz) BEGIN
+    menu_state: PROCESS (clock_50MHz)
+        VARIABLE death_timer : INTEGER RANGE 0 TO 100000000 := 0; -- ~2 second delay
+    BEGIN
         IF RISING_EDGE(clock_50MHz) THEN
             vert_sync_prev <= vert_sync;
             IF reset = '1' THEN
@@ -185,7 +187,10 @@ BEGIN
                             END IF;
                         END IF;
                     WHEN STATE_DEATH =>
-                        IF mouse_left = '1' AND mouse_left_prev = '0' THEN
+                        IF death_timer > 0 THEN
+                            death_timer := death_timer - 1;
+                        ELSE
+                            death_timer := 100000000; -- reset timer for next time
                             game_state <= STATE_MENU;
                         END IF;
                 END CASE;
