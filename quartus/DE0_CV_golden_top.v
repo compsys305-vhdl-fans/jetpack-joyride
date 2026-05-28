@@ -40,6 +40,7 @@
 `define Enable_HEX5
 `define Enable_KEY
 `define Enable_LEDR
+`define Enable_RESET
 `define Enable_PS2
 `define Enable_SW
 `define Enable_VGA
@@ -88,6 +89,10 @@ module DE0_CV_golden_top (
       inout              PS2_CLK2,
       inout              PS2_DAT,
       inout              PS2_DAT2,
+`endif
+`ifdef Enable_RESET
+      ///////// RESET "3.3-V LVTTL" /////////
+      input              RESET_N,
 `endif
 `ifdef Enable_SW
       ///////// SW "3.3-V LVTTL"/////////

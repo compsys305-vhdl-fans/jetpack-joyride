@@ -12,6 +12,7 @@ ENTITY top_jetpack_joyride IS
         clock_50 : IN STD_LOGIC;
         key : IN STD_LOGIC_VECTOR(3 DOWNTO 0);
         sw : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
+        reset_n : IN STD_LOGIC;
 
         ledr : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
         hex0 : OUT STD_LOGIC_VECTOR(6 DOWNTO 0);
@@ -189,7 +190,7 @@ BEGIN
     vga_pll_inst: ENTITY lib_vga_pll.vga_pll
         PORT MAP (
             refclk => clock_50,
-            rst => NOT key(3),
+            rst => NOT reset_n,
             outclk_0 => clock_25,
             locked => vga_pll_locked
         );
@@ -361,8 +362,7 @@ BEGIN
         END IF;
     END PROCESS;
 
-    mouse_reset <= NOT KEY(3);  -- active low reset
-    ledr(1 DOWNTO 0) <= player_vehicle;
+    mouse_reset <= NOT reset_n;
     ledr(9) <= death_signal;
     ledr(8 DOWNTO 2) <= sw(8 DOWNTO 2);
 
