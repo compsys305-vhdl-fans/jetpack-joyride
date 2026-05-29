@@ -25,6 +25,8 @@ log/
 *_model_dump.txt
 qar_info.json
 quartus/devkits/
+*.map
+*.pof
 
 # ignore venv
 meta/.venv
